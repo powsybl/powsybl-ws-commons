@@ -117,3 +117,12 @@ queryBegin: '?'
 customQueryBegin: '?'
 customQuery:
 #dbName:
+
+powsybl-ws:
+  # To set postgres database or schema prefixes (default empty)
+  # please use a separator '_' at prefix end for readiness 
+  postgres:
+    databaseOrSchema:
+      prefix: 
+
+dbPrefix: ${postgres.databaseOrSchema.prefix:}

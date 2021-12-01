@@ -118,7 +118,9 @@ customQueryBegin: '?'
 customQuery:
 #dbName:
 
-# to set elasticsearch index names prefixes (default empty)
-# please use a separator '_' at prefix end for readiness
-index:
-  prefix: 
+powsybl-ws:
+  # To set elasticsearch index names prefixes (default empty)
+  # please use a separator '_' at prefix end for readiness
+  elasticsearch:
+    index:
+      prefix: 

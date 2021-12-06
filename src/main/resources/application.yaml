@@ -119,9 +119,14 @@ customQuery:
 #dbName:
 
 powsybl-ws:
-  
+  # To set elasticsearch index names prefixes (default empty)
+  # please use a separator '_' at prefix end for readiness
+  elasticsearch:
+    index:
+      prefix:
+
   # To set rabbitmq bidings destination prefixes (default empty)
-  # please use a separator '_' at prefix end for readiness 
+  # please use a separator '_' at prefix end for readiness
   rabbitmq:
     destination:
       prefix:

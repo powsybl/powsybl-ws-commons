@@ -143,4 +143,4 @@ powsybl-ws:
     keyspace:
       prefix:
 
-dbPrefix: ${postgres.databaseOrSchema.prefix:}
+dbPrefix: ${powsybl-ws.postgres.databaseOrSchema.prefix:}

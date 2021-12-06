@@ -137,4 +137,10 @@ powsybl-ws:
     databaseOrSchema:
       prefix:
 
+  # To set cassandra keyspace prefixes (default empty)
+  # please use a separator '_' at prefix end for readiness
+  cassandra:
+    keyspace:
+      prefix:
+
 dbPrefix: ${postgres.databaseOrSchema.prefix:}

@@ -8,6 +8,8 @@ server:
   # for exception messages in the returned json for errors
   error:
     include-message: always
+  # increase max url length
+  max-http-header-size: 64000
 
 logging:
   level:

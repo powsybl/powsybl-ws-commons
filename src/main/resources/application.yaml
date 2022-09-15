@@ -127,22 +127,24 @@ customQuery:
 #dbName:
 
 powsybl-ws:
+  environment:
+
   # To set elasticsearch index names prefixes (default empty)
   # please use a separator '_' at prefix end for readiness
   elasticsearch:
     index:
-      prefix:
+      prefix: ${powsybl-ws.environment:}
 
   # To set rabbitmq bidings destination prefixes (default empty)
   # please use a separator '_' at prefix end for readiness
   rabbitmq:
     destination:
-      prefix:
+      prefix: ${powsybl-ws.environment:}
 
   # To set postgres database or schema prefixes (default empty)
   # please use a separator '_' at prefix end for readiness
   postgres:
     databaseOrSchema:
-      prefix:
+      prefix: ${powsybl-ws.environment:}
 
 dbPrefix: ${powsybl-ws.postgres.databaseOrSchema.prefix:}

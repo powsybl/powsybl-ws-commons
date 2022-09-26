@@ -114,17 +114,19 @@ spring:
 
 
 powsybl-ws:
+  environment:
+
   # To set elasticsearch index names prefixes (default empty)
   # please use a separator '_' at prefix end for readiness
   elasticsearch:
     index:
-      prefix:
+      prefix: ${powsybl-ws.environment:}
 
   # To set rabbitmq bidings destination prefixes (default empty)
   # please use a separator '_' at prefix end for readiness
   rabbitmq:
     destination:
-      prefix:
+      prefix: ${powsybl-ws.environment:}
 
   database:
     # default values
@@ -164,7 +166,7 @@ powsybl-ws:
     # To set postgres database or schema prefixes (default empty)
     # please use a separator '_' at prefix end for readiness
     databaseOrSchema:
-      prefix:
+      prefix: ${powsybl-ws.environment:}
 
     # customQuery allows a microservice to set query parameters specific to itself.
     # if customQuery is empty, set queryBegin to "?", otherwise set it to "&".

@@ -1,6 +1,6 @@
 # to have the hostname in /actuator/info
 info:
-  hostname: ${HOSTNAME}
+  hostname: ${HOSTNAME:}
 
 server:
   # for springdoc swagger-ui behind a reverse proxy (X-FORWARDED-*)

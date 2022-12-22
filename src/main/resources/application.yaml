@@ -184,4 +184,4 @@ powsybl-ws:
     #name:
   # default values for loadflow providers "Hades2" or "OpenLoadFlow"
   loadflow:
-    default-provider: Hades2
+    default-provider: OpenLoadFlow

@@ -18,7 +18,7 @@ public final class Utils {
 
     public static void initProperties() {
         String powsyblWsSkipInitProperties = System.getProperty("powsyblWsSkipInitProperties");
-        if  (powsyblWsSkipInitProperties != null && !powsyblWsSkipInitProperties.equals("false")) {
+        if (powsyblWsSkipInitProperties != null && !powsyblWsSkipInitProperties.equals("false")) {
             return;
         }
 

@@ -42,6 +42,7 @@
     <properties>
         <java.version>11</java.version>
         <powsybl-dependencies.version>2023.1.1</powsybl-dependencies.version>
+        <junit.version>4.13.2</junit.version>
     </properties>
 
     <dependencyManagement>
@@ -65,7 +66,7 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>4.13.2</version>
+            <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

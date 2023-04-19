@@ -41,7 +41,7 @@
 
     <properties>
         <java.version>11</java.version>
-        <powsybl-core.version>5.2.1</powsybl-core.version>
+        <powsybl-dependencies.version>2023.1.1</powsybl-dependencies.version>
     </properties>
 
     <dependencyManagement>
@@ -49,8 +49,8 @@
             <!-- imports -->
             <dependency>
                 <groupId>com.powsybl</groupId>
-                <artifactId>powsybl-core</artifactId>
-                <version>${powsybl-core.version}</version>
+                <artifactId>powsybl-dependencies</artifactId>
+                <version>${powsybl-dependencies.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

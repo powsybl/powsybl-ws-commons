@@ -15,6 +15,7 @@ logging:
   level:
     # To print db information at startup for postgres
     com.zaxxer.hikari.HikariConfig: DEBUG
+    org.springframework.jdbc.datasource.SimpleDriverDataSource: DEBUG
 
 management:
   endpoints:

@@ -16,6 +16,10 @@ public final class Utils {
     private Utils() {
     }
 
+    /**
+     * @deprecated for Tomcat 9, not Tomcat 10 with SpringBoot3
+     */
+    @Deprecated(since = "1.7.0")
     public static void initProperties() {
         String powsyblWsSkipInitProperties = System.getProperty("powsyblWsSkipInitProperties");
         if (powsyblWsSkipInitProperties != null && !powsyblWsSkipInitProperties.equals("false")) {

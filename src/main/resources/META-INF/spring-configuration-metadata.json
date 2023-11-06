@@ -1,0 +1,16 @@
+{
+  "properties": [
+    {
+      "name": "powsybl-ws.skip-init",
+      "type": "java.lang.Boolean",
+      "description": "Whether PowSyBl beans should be auto-configured.",
+      "defaultValue": "false"
+    },
+    {
+      "name": "powsybl-ws.tomcat.encodedSolidusHandling",
+      "type": "java.lang.Boolean",
+      "description": "Whether PowSyBl should auto-configure Tomcat connectors' attribute \"encodedSolidusHandling\"=PASS_THROUGH.",
+      "defaultValue": "true"
+    }
+  ]
+}

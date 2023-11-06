@@ -17,6 +17,11 @@ import org.springframework.boot.web.server.WebServerFactoryCustomizer;
 
 @DisplayNameGeneration(DisplayNameGenerator.Simple.class)
 class SpringBootAutoConfigurationTest implements WithAssertions {
+    /*
+     * We can't test if spring.factories or org.springframework.boot.autoconfigure.AutoConfiguration.imports
+     * is detected because we aren't in a JAR during our tests...
+     * so we limit tests to the configuration of the contexts.
+     */
     private final WebApplicationContextRunner contextRunner = new WebApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of(SpringBootAutoConfigurationTest.class));
 
@@ -36,27 +41,24 @@ class SpringBootAutoConfigurationTest implements WithAssertions {
     void testWhenIsWebApplication() {
         this.contextRunner
             //.withUserConfiguration(MyConfiguration.class)
-            .run(context -> {
-                assertIsWebAppWithTomcatConfigured(context);
-            });
+            .run(context -> assertIsWebAppWithTomcatConfigured(context));
+        //TODO not found bean TomcatAutoCustomization
     }
 
     @Test
     void testWhenIsWebApplicationWithPropertySkipFalse() {
         this.contextRunner
             .withPropertyValues("powsybl-ws.skip-init=false")
-            .run(context -> {
-                assertIsWebAppWithTomcatConfigured(context);
-            });
+            .run(context -> assertIsWebAppWithTomcatConfigured(context));
+        //TODO not found bean TomcatAutoCustomization
     }
 
     @Test
     void testWhenIsWebApplicationWithPropertySkipInvalid() {
         this.contextRunner
             .withPropertyValues("powsybl-ws.skip-init=foo")
-            .run(context -> {
-                assertIsWebAppWithTomcatConfigured(context);
-            });
+            .run(context -> assertIsWebAppWithTomcatConfigured(context));
+        //TODO not found bean TomcatAutoCustomization
     }
 
     @Test
@@ -65,7 +67,19 @@ class SpringBootAutoConfigurationTest implements WithAssertions {
             .withPropertyValues("powsybl-ws.skip-init=true")
             .run(context -> {
                 assertThat(context).hasNotFailed();
-                assertThat(context).hasSingleBean(TomcatAutoCustomization.class);
+                assertThat(context).hasSingleBean(TomcatAutoCustomization.class); //TODO not found
+                assertThat(context).doesNotHaveBean(WebServerFactoryCustomizer.class);
+                assertThat(context).hasSingleBean(ConfigurableTomcatWebServerFactory.class);
+            });
+    }
+
+    @Test
+    void autoConfigurationIsIgnoredIfPropertyEnableIsFalse() {
+        this.contextRunner
+            .withPropertyValues("powsybl-ws.tomcat.encoded-solidus-handling=false")
+            .run(context -> {
+                assertThat(context).hasNotFailed();
+                assertThat(context).hasSingleBean(TomcatAutoCustomization.class); //TODO not found
                 assertThat(context).doesNotHaveBean(WebServerFactoryCustomizer.class);
                 assertThat(context).hasSingleBean(ConfigurableTomcatWebServerFactory.class);
             });
@@ -78,7 +92,7 @@ class SpringBootAutoConfigurationTest implements WithAssertions {
             .run(context -> {
                 assertThat(context).hasNotFailed();
                 assertThat(context).doesNotHaveBean(TomcatAutoCustomization.class);
-                assertThat(context).hasSingleBean(ConfigurableTomcatWebServerFactory.class);
+                assertThat(context).hasSingleBean(ConfigurableTomcatWebServerFactory.class); //TODO not found
             });
     }
 

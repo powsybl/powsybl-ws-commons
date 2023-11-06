@@ -7,17 +7,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.AllNestedConditions;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.embedded.tomcat.ConfigurableTomcatWebServerFactory;
 import org.springframework.boot.web.server.WebServerFactoryCustomizer;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Conditional;
-
-import static com.powsybl.ws.commons.TomcatAutoCustomization.TomcatAutoCustomizationConditions;
 
 @AutoConfiguration
-@Conditional({ TomcatAutoCustomizationConditions.class })
+@EnableConfigurationProperties({ PowsyblProperties.class })
+//@Conditional({ TomcatAutoCustomizationConditions.class })
 public class TomcatAutoCustomization {
     private static final Logger LOGGER = LoggerFactory.getLogger(TomcatAutoCustomization.class);
 
@@ -45,10 +43,10 @@ public class TomcatAutoCustomization {
         @ConditionalOnClass({ Tomcat.class })
         static class OnClassTomcat { }
 
-        @ConditionalOnProperty(prefix = "powsybl-ws", name = "skip-init", havingValue = "false")
+        /*@ConditionalOnProperty(prefix = "powsybl-ws", name = "skip-init", havingValue = "false")
         static class OnPropertySkipInit { }
 
         @ConditionalOnProperty(prefix = "powsybl-ws", name = "tomcat.encodedSolidusHandling", havingValue = "true", matchIfMissing = true)
-        static class OnPropertyTomcatEncodeSlashPassthrough { }
+        static class OnPropertyTomcatEncodeSlashPassthrough { }*/
     }
 }

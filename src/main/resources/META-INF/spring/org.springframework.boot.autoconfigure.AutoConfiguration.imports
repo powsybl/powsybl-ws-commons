@@ -1,0 +1,2 @@
+# AutoConfigureCache auto-configuration imports
+com.powsybl.ws.commons.TomcatAutoCustomization

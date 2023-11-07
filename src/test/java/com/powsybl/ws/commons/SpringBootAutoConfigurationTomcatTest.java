@@ -1,6 +1,7 @@
 package com.powsybl.ws.commons;
 
 import com.powsybl.ws.commons.springboot.PowsyblWsCommonAutoConfiguration;
+import com.powsybl.ws.commons.springboot.TomcatCustomization;
 import com.powsybl.ws_common_spring_test.SpringBootApplicationForTest;
 import org.apache.catalina.startup.Tomcat;
 import org.assertj.core.api.WithAssertions;
@@ -14,6 +15,7 @@ import org.springframework.boot.test.context.assertj.AssertableWebApplicationCon
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
 import org.springframework.boot.web.embedded.tomcat.ConfigurableTomcatWebServerFactory;
+import org.springframework.boot.web.embedded.tomcat.TomcatConnectorCustomizer;
 
 @SuppressWarnings("Convert2MethodRef")
 @DisplayNameGeneration(DisplayNameGenerator.Simple.class)
@@ -61,6 +63,8 @@ class SpringBootAutoConfigurationTomcatTest implements WithAssertions {
                 assertThat(context).hasSingleBean(ConfigurableTomcatWebServerFactory.class);
                 assertThat(context).hasSingleBean(PowsyblWsCommonAutoConfiguration.class);
                 assertThat(context).doesNotHaveBean("powsyblCustomizeTomcatConnector");
+                assertThat(context).doesNotHaveBean(TomcatCustomization.class);
+                assertThat(context).doesNotHaveBean(TomcatConnectorCustomizer.class);
             });
     }
 
@@ -73,6 +77,8 @@ class SpringBootAutoConfigurationTomcatTest implements WithAssertions {
                 assertThat(context).doesNotHaveBean(ConfigurableTomcatWebServerFactory.class);
                 assertThat(context).hasSingleBean(PowsyblWsCommonAutoConfiguration.class);
                 assertThat(context).doesNotHaveBean("powsyblCustomizeTomcatConnector");
+                assertThat(context).doesNotHaveBean(TomcatCustomization.class);
+                assertThat(context).doesNotHaveBean(TomcatConnectorCustomizer.class);
             });
     }
 
@@ -85,6 +91,8 @@ class SpringBootAutoConfigurationTomcatTest implements WithAssertions {
                 assertThat(context).doesNotHaveBean(ConfigurableTomcatWebServerFactory.class);
                 assertThat(context).hasSingleBean(PowsyblWsCommonAutoConfiguration.class);
                 assertThat(context).doesNotHaveBean("powsyblCustomizeTomcatConnector");
+                assertThat(context).doesNotHaveBean(TomcatCustomization.class);
+                assertThat(context).doesNotHaveBean(TomcatConnectorCustomizer.class);
             });
     }
 }

@@ -1,2 +1,2 @@
 # AutoConfigureCache auto-configuration imports
-com.powsybl.ws.commons.TomcatAutoCustomization
+com.powsybl.ws.commons.springboot.PowsyblWsCommonAutoConfiguration

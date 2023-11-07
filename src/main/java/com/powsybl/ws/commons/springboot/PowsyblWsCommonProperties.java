@@ -1,16 +1,19 @@
-package com.powsybl.ws.commons;
+package com.powsybl.ws.commons.springboot;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @Data
-@ConfigurationProperties(prefix = "powsybl-ws")
-public class PowsyblProperties {
+@ConfigurationProperties(prefix = "powsybl-ws.common")
+public class PowsyblWsCommonProperties {
     /**
-     * Whether PowSyBl beans should be auto-configured.
+     * Whether powsybl-ws-common auto-configure module/beans should be skipped.
      */
     private boolean skipInit = false;
 
+    /**
+     * Configuration specific of Tomcat (if present).
+     */
     private TomcatPowsyblProperties tomcat = new TomcatPowsyblProperties();
 
     @Data

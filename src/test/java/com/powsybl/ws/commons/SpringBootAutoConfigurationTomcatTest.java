@@ -10,12 +10,10 @@ import org.junit.jupiter.api.DisplayNameGenerator;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.FilteredClassLoader;
-import org.springframework.boot.test.context.assertj.ApplicationContextAssertProvider;
 import org.springframework.boot.test.context.assertj.AssertableWebApplicationContext;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
 import org.springframework.boot.web.embedded.tomcat.ConfigurableTomcatWebServerFactory;
-import org.springframework.context.ApplicationContext;
 
 @SuppressWarnings("Convert2MethodRef")
 @DisplayNameGeneration(DisplayNameGenerator.Simple.class)
@@ -38,14 +36,14 @@ class SpringBootAutoConfigurationTomcatTest implements WithAssertions {
     @Test
     void testWhenPropertyEnableIsInvalid() {
         this.contextRunner
-            .withPropertyValues("powsybl-ws.tomcat.encoded-solidus-handling=foo")
-            .run(context -> assertIsWebAppWithTomcatConfigured(context));
+            .withPropertyValues("powsybl-ws.common.tomcat.encoded-solidus-handling=foo")
+            .run(context -> assertThat(context).hasFailed());
     }
 
     @Test
     void testWhenPropertyEnableIsTrue() {
         this.contextRunner
-            .withPropertyValues("powsybl-ws.tomcat.encoded-solidus-handling=true")
+            .withPropertyValues("powsybl-ws.common.tomcat.encoded-solidus-handling=true")
             .run(context -> assertIsWebAppWithTomcatConfigured(context));
     }
 
@@ -53,7 +51,8 @@ class SpringBootAutoConfigurationTomcatTest implements WithAssertions {
         assertThat(context).hasNotFailed();
         assertThat(context).hasSingleBean(ConfigurableTomcatWebServerFactory.class); //auto-configuration from spring-boot
         assertThat(context).hasSingleBean(PowsyblWsCommonAutoConfiguration.class); //@Configuration class
-        assertThat(context).hasBean("powsyblCustomizeTomcatFactory"); //@Bean created
+        //assertThat(context).hasBean("powsyblCustomizeTomcatFactory"); //@Bean created
+        assertThat(context).hasBean("powsyblCustomizeTomcatConnector"); //@Bean created
         //assertThat(context).getBean(Connector.class).as("Tomcat Catalina connector")
         //        .hasFieldOrPropertyWithValue("encodedSolidusHandling", EncodedSolidusHandling.PASS_THROUGH.getValue());
     }
@@ -61,20 +60,27 @@ class SpringBootAutoConfigurationTomcatTest implements WithAssertions {
     @Test
     void testWhenPropertyEnableIsFalse() {
         this.contextRunner
-            .withPropertyValues("powsybl-ws.tomcat.encoded-solidus-handling=false")
-            .run(context -> assertIsWebAppWithTomcatNotConfigured(context));
+            .withPropertyValues("powsybl-ws.common.tomcat.encoded-solidus-handling=false")
+            .run(context -> {
+                assertThat(context).hasNotFailed();
+                assertThat(context).hasSingleBean(ConfigurableTomcatWebServerFactory.class);
+                assertThat(context).hasSingleBean(PowsyblWsCommonAutoConfiguration.class);
+                //assertThat(context).doesNotHaveBean("powsyblCustomizeTomcatFactory");
+                assertThat(context).doesNotHaveBean("powsyblCustomizeTomcatConnector");
+                //assertThat(context).getBean(Connector.class).as("Tomcat Catalina connector").isNull();
+            });
     }
 
     @Test
     void testWhenTomcatNotPresent() {
         this.contextRunner
             .withClassLoader(new FilteredClassLoader(Tomcat.class))
-            //.run(context -> assertIsWebAppWithTomcatNotConfigured(context));
             .run(context -> {
                 assertThat(context).hasNotFailed();
                 assertThat(context).doesNotHaveBean(ConfigurableTomcatWebServerFactory.class);
                 assertThat(context).hasSingleBean(PowsyblWsCommonAutoConfiguration.class);
-                assertThat(context).doesNotHaveBean("powsyblCustomizeTomcatFactory");
+                //assertThat(context).doesNotHaveBean("powsyblCustomizeTomcatFactory");
+                assertThat(context).doesNotHaveBean("powsyblCustomizeTomcatConnector");
             });
     }
 
@@ -82,20 +88,12 @@ class SpringBootAutoConfigurationTomcatTest implements WithAssertions {
     void testWhenIsNotWebApplication() {
         new ApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of(SpringBootApplicationForTest.class, PowsyblWsCommonAutoConfiguration.class))
-            //.run(context -> assertIsWebAppWithTomcatNotConfigured(context));
             .run(context -> {
                 assertThat(context).hasNotFailed();
                 assertThat(context).doesNotHaveBean(ConfigurableTomcatWebServerFactory.class);
                 assertThat(context).hasSingleBean(PowsyblWsCommonAutoConfiguration.class);
-                assertThat(context).doesNotHaveBean("powsyblCustomizeTomcatFactory");
+                //assertThat(context).doesNotHaveBean("powsyblCustomizeTomcatFactory");
+                assertThat(context).doesNotHaveBean("powsyblCustomizeTomcatConnector");
             });
-    }
-
-    private /*static*/ void assertIsWebAppWithTomcatNotConfigured(@NonNull final ApplicationContextAssertProvider<? extends ApplicationContext> context) {
-        assertThat(context).hasNotFailed();
-        assertThat(context).hasSingleBean(ConfigurableTomcatWebServerFactory.class);
-        assertThat(context).hasSingleBean(PowsyblWsCommonAutoConfiguration.class);
-        assertThat(context).doesNotHaveBean("powsyblCustomizeTomcatFactory");
-        //assertThat(context).getBean(Connector.class).as("Tomcat Catalina connector").isNull();
     }
 }

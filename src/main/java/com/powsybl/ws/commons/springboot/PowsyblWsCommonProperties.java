@@ -4,7 +4,7 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @Data
-@ConfigurationProperties(prefix = "powsybl-ws.common")
+@ConfigurationProperties(prefix = "powsybl-ws.common", ignoreInvalidFields = false, ignoreUnknownFields = false)
 public class PowsyblWsCommonProperties {
     /**
      * Whether powsybl-ws-common auto-configure module/beans should be skipped.

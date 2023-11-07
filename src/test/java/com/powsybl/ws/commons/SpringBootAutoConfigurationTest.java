@@ -49,7 +49,7 @@ class SpringBootAutoConfigurationTest implements WithAssertions {
         this.contextRunner.withPropertyValues("powsybl-ws.common.skip-init=foo")
             .run(context -> {
                 assertThat(context).hasNotFailed();
-                assertThat(context).hasSingleBean(PowsyblWsCommonAutoConfiguration.class);
+                assertThat(context).doesNotHaveBean(PowsyblWsCommonAutoConfiguration.class);
             });
     }
 

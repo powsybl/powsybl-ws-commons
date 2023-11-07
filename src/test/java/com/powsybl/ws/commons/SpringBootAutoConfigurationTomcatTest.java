@@ -28,9 +28,7 @@ class SpringBootAutoConfigurationTomcatTest implements WithAssertions {
 
     @Test
     void testNormally() {
-        this.contextRunner
-            //.withUserConfiguration(MyConfiguration.class)
-            .run(context -> assertIsWebAppWithTomcatConfigured(context));
+        this.contextRunner.run(context -> assertIsWebAppWithTomcatConfigured(context));
     }
 
     @Test
@@ -47,14 +45,11 @@ class SpringBootAutoConfigurationTomcatTest implements WithAssertions {
             .run(context -> assertIsWebAppWithTomcatConfigured(context));
     }
 
-    private /*static*/ void assertIsWebAppWithTomcatConfigured(@NonNull final AssertableWebApplicationContext context) {
+    private void assertIsWebAppWithTomcatConfigured(@NonNull final AssertableWebApplicationContext context) {
         assertThat(context).hasNotFailed();
         assertThat(context).hasSingleBean(ConfigurableTomcatWebServerFactory.class); //auto-configuration from spring-boot
         assertThat(context).hasSingleBean(PowsyblWsCommonAutoConfiguration.class); //@Configuration class
-        //assertThat(context).hasBean("powsyblCustomizeTomcatFactory"); //@Bean created
         assertThat(context).hasBean("powsyblCustomizeTomcatConnector"); //@Bean created
-        //assertThat(context).getBean(Connector.class).as("Tomcat Catalina connector")
-        //        .hasFieldOrPropertyWithValue("encodedSolidusHandling", EncodedSolidusHandling.PASS_THROUGH.getValue());
     }
 
     @Test
@@ -65,9 +60,7 @@ class SpringBootAutoConfigurationTomcatTest implements WithAssertions {
                 assertThat(context).hasNotFailed();
                 assertThat(context).hasSingleBean(ConfigurableTomcatWebServerFactory.class);
                 assertThat(context).hasSingleBean(PowsyblWsCommonAutoConfiguration.class);
-                //assertThat(context).doesNotHaveBean("powsyblCustomizeTomcatFactory");
                 assertThat(context).doesNotHaveBean("powsyblCustomizeTomcatConnector");
-                //assertThat(context).getBean(Connector.class).as("Tomcat Catalina connector").isNull();
             });
     }
 
@@ -79,7 +72,6 @@ class SpringBootAutoConfigurationTomcatTest implements WithAssertions {
                 assertThat(context).hasNotFailed();
                 assertThat(context).doesNotHaveBean(ConfigurableTomcatWebServerFactory.class);
                 assertThat(context).hasSingleBean(PowsyblWsCommonAutoConfiguration.class);
-                //assertThat(context).doesNotHaveBean("powsyblCustomizeTomcatFactory");
                 assertThat(context).doesNotHaveBean("powsyblCustomizeTomcatConnector");
             });
     }
@@ -92,7 +84,6 @@ class SpringBootAutoConfigurationTomcatTest implements WithAssertions {
                 assertThat(context).hasNotFailed();
                 assertThat(context).doesNotHaveBean(ConfigurableTomcatWebServerFactory.class);
                 assertThat(context).hasSingleBean(PowsyblWsCommonAutoConfiguration.class);
-                //assertThat(context).doesNotHaveBean("powsyblCustomizeTomcatFactory");
                 assertThat(context).doesNotHaveBean("powsyblCustomizeTomcatConnector");
             });
     }

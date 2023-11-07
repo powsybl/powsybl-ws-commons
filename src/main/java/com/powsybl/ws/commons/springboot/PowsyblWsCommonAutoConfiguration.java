@@ -15,21 +15,6 @@ import org.springframework.context.annotation.Bean;
 @ConditionalOnProperty(prefix = "powsybl-ws.common", name = "skip-init", havingValue = "false", matchIfMissing = true)
 @EnableConfigurationProperties({ PowsyblWsCommonProperties.class })
 public class PowsyblWsCommonAutoConfiguration {
-    /*@ConditionalOnWebApplication
-    @ConditionalOnClass({ Tomcat.class })
-    @ConditionalOnProperty(prefix = "powsybl-ws.common", name = "tomcat.encoded-solidus-handling", matchIfMissing = true)
-    @Bean
-    public WebServerFactoryCustomizer<ConfigurableTomcatWebServerFactory> powsyblCustomizeTomcatFactory() {
-        if (!config.getTomcat().isEncodedSolidusHandling()) {
-            return null;
-        } else {
-            return factory -> {
-                log.info("Add hook to Tomcat connector customizer");
-                factory.addConnectorCustomizers(new TomcatCustomization());
-            };
-        }
-    }*/
-
     @ConditionalOnWebApplication
     @ConditionalOnClass({ Tomcat.class })
     @ConditionalOnProperty(prefix = "powsybl-ws.common", name = "tomcat.encoded-solidus-handling", matchIfMissing = true)

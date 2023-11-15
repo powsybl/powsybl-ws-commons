@@ -15,15 +15,17 @@ SecuredZipInputStream
 ## Spring-Boot auto-configure module
 A module using Spring-Boot `@AutoConfigure` mecanism is provided
 by this library to configure spring-boot modules.  
-This spring-boot module is configurable by the properties domain `powsybl-ws.common.*`.
+This spring-boot module is configurable by the properties domain `powsybl-ws.autoconfigure.*`.
 
 ### Skip whole module initialization
 To skip all of the module initialization and configuration, you can
-set Spring property `powsybl-ws.common.skip-init=true`.
+exclude it: `@SpringBootApplication(exclude={PowsyblWsCommonAutoConfiguration.class})`,
+alias for `@EnableAutoConfiguration(exclude={PowsyblWsCommonAutoConfiguration.class})`.
 
 ### Tomcat configuration
-The following properties are available under `powsybl.common.tomcat.*`:
+The following properties are available under `powsybl.autoconfigure.tomcat-customize.*`:
 
 | Property                 | type    | default | Description                                                                                                                                                                                                                                                                          |
 |--------------------------|---------|---------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| enable                   | boolean | true    | Enable Tomcat Connector customization                                                                                                                                                                                                                                                |
 | encoded-solidus-handling | boolean | true    | Set Tomcat Connector [`encodedSolidusHandling` attribute](https://tomcat.apache.org/tomcat-10.1-doc/config/http.html#Common_Attributes) to [`PASS_THROUGH` value](https://tomcat.apache.org/tomcat-10.1-doc/api/org/apache/tomcat/util/buf/EncodedSolidusHandling.html#PASS_THROUGH) |

@@ -12,7 +12,7 @@ public class PowsyblWsCommonProperties {
     private TomcatPowsyblProperties tomcatCustomize = new TomcatPowsyblProperties();
 
     @Data
-    public class TomcatPowsyblProperties {
+    public static class TomcatPowsyblProperties {
         /**
          * Enable PowSyBl autoconfiguration of Tomcat
          */

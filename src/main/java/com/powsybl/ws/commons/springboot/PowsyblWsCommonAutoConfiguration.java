@@ -1,7 +1,9 @@
 package com.powsybl.ws.commons.springboot;
 
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.catalina.startup.Tomcat;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -12,14 +14,16 @@ import org.springframework.context.annotation.Bean;
 
 @Slf4j
 @AutoConfiguration
-@ConditionalOnProperty(prefix = "powsybl-ws.common", name = "skip-init", havingValue = "false", matchIfMissing = true)
 @EnableConfigurationProperties({ PowsyblWsCommonProperties.class })
+@AllArgsConstructor(onConstructor_ = {@Autowired})
 public class PowsyblWsCommonAutoConfiguration {
+    private final PowsyblWsCommonProperties properties;
+
     @ConditionalOnWebApplication
     @ConditionalOnClass({ Tomcat.class })
-    @ConditionalOnProperty(prefix = "powsybl-ws.common", name = "tomcat.encoded-solidus-handling", matchIfMissing = true)
-    @Bean
+    @ConditionalOnProperty(prefix = "powsybl-ws.autoconfigure", name = "tomcat-customize.enable", matchIfMissing = true)
+    @Bean(name = "powsyblTomcatConnectorCustomizer")
     public TomcatConnectorCustomizer powsyblCustomizeTomcatConnector() {
-        return new TomcatCustomization();
+        return new TomcatCustomization(properties.getTomcatCustomize());
     }
 }

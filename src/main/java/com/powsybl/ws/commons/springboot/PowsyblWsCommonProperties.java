@@ -4,20 +4,20 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @Data
-@ConfigurationProperties(prefix = "powsybl-ws.common", ignoreInvalidFields = false, ignoreUnknownFields = false)
+@ConfigurationProperties(prefix = "powsybl-ws.autoconfigure")
 public class PowsyblWsCommonProperties {
-    /**
-     * Whether powsybl-ws-common auto-configure module/beans should be skipped.
-     */
-    private boolean skipInit = false;
-
     /**
      * Configuration specific of Tomcat (if present).
      */
-    private TomcatPowsyblProperties tomcat = new TomcatPowsyblProperties();
+    private TomcatPowsyblProperties tomcatCustomize = new TomcatPowsyblProperties();
 
     @Data
     public class TomcatPowsyblProperties {
+        /**
+         * Enable PowSyBl autoconfiguration of Tomcat
+         */
+        private boolean enable = true;
+
         /**
          * Whether PowSyBl should auto-configure Tomcat connectors' attribute "encodedSolidusHandling"=PASS_THROUGH.
          */

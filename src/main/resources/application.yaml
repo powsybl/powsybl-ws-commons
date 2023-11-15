@@ -120,13 +120,13 @@ powsybl-ws:
   environment:
 
   # To set elasticsearch index names prefixes (default empty)
-  # please use a separator '_' at prefix end for readiness
+  # please use a separator '_' at prefix end for readability
   elasticsearch:
     index:
       prefix: ${powsybl-ws.environment:}
 
   # To set rabbitmq bidings destination prefixes (default empty)
-  # please use a separator '_' at prefix end for readiness
+  # please use a separator '_' at prefix end for readability
   rabbitmq:
     destination:
       prefix: ${powsybl-ws.environment:}
@@ -167,7 +167,7 @@ powsybl-ws:
     # url=${powsybl-ws.database.urlManySchemas}
 
     # To set postgres database or schema prefixes (default empty)
-    # please use a separator '_' at prefix end for readiness
+    # please use a separator '_' at prefix end for readability
     databaseOrSchema:
       prefix: ${powsybl-ws.environment:}
 

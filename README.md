@@ -13,7 +13,7 @@ SecuredZipInputStream
 
 
 ## Spring-Boot auto-configure module
-A module using Spring-Boot `@AutoConfigure` mecanism is provided
+A module using Spring-Boot `@AutoConfigure` mechanism is provided
 by this library to configure spring-boot modules.  
 This spring-boot module is configurable by the properties domain `powsybl-ws.autoconfigure.*`.
 

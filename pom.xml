@@ -39,7 +39,7 @@
 
     <properties>
         <java.version>11</java.version>
-        <powsybl-dependencies.version>2023.3.1</powsybl-dependencies.version>
+        <powsybl-ws-dependencies.version>2.5.0</powsybl-ws-dependencies.version>
     </properties>
 
     <dependencyManagement>
@@ -47,15 +47,8 @@
             <!-- imports -->
             <dependency>
                 <groupId>com.powsybl</groupId>
-                <artifactId>powsybl-dependencies</artifactId>
-                <version>${powsybl-dependencies.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-dependencies</artifactId>
-                <version>3.1.5</version>
+                <artifactId>powsybl-ws-dependencies</artifactId>
+                <version>${powsybl-ws-dependencies.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

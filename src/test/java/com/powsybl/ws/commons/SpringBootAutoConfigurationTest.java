@@ -17,7 +17,7 @@ import org.springframework.boot.web.server.WebServerFactoryCustomizer;
 @DisplayNameGeneration(DisplayNameGenerator.Simple.class)
 class SpringBootAutoConfigurationTest implements WithAssertions {
     /*
-     * We can't test if spring.factories or org.springframework.boot.autoconfigure.AutoConfiguration.imports
+     * We can't test if org.springframework.boot.autoconfigure.AutoConfiguration.imports
      * is detected because we aren't in a JAR during our tests...
      * so we limit tests to the effects of configuration values.
      */

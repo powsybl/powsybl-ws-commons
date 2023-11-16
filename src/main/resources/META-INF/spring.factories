@@ -1,2 +1,0 @@
-org.springframework.boot.web.embedded.tomcat.TomcatConnectorCustomizer=\
-com.powsybl.ws.commons.springboot.TomcatCustomization

@@ -20,7 +20,8 @@ This spring-boot module is configurable by the properties domain `powsybl-ws.aut
 ### Skip whole module initialization
 To skip all of the module initialization and configuration, you can
 exclude it: `@SpringBootApplication(exclude={PowsyblWsCommonAutoConfiguration.class})`,
-alias for `@EnableAutoConfiguration(exclude={PowsyblWsCommonAutoConfiguration.class})`.
+alias for `@EnableAutoConfiguration(exclude={PowsyblWsCommonAutoConfiguration.class})`,
+or use the `spring.autoconfigure.exclude` property.
 
 ### Tomcat configuration
 The following properties are available under `powsybl.autoconfigure.tomcat-customize.*`:

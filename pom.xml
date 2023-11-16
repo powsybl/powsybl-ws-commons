@@ -73,6 +73,10 @@
             <artifactId>slf4j-api</artifactId>
         </dependency>
 
+        <!-- Using "optional=true" to avoid forcing projects using this library to have a transitive dependency on spring-boot.
+             Additionally, using optional=true has no drawbacks in our case and is coherent with only defining an
+             autoconfiguration. Because an autoconfiguration is automatically activated or ignored without doing anything
+             depending on the context. -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot</artifactId>

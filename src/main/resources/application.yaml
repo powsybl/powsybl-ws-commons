@@ -85,6 +85,9 @@ spring:
         # Used when action: create is uncommented
         hbm2ddl:
           delimiter: ;
+        query:
+          # Explicitly fail the warning "HHH000104: firstResult/maxResults specified with collection fetch; applying in memory!"
+          fail_on_pagination_over_collection_fetch: true
       # Uncomment action to automatically generate the database sql schema file
       javax:
         persistence:

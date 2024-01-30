@@ -39,7 +39,7 @@
 
     <properties>
         <java.version>11</java.version>
-        <powsybl-dependencies.version>2023.3.2</powsybl-dependencies.version>
+        <powsybl-dependencies.version>2023.4.1</powsybl-dependencies.version>
         <springboot.version>3.1.2</springboot.version>
     </properties>
 

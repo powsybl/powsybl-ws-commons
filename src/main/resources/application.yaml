@@ -10,6 +10,10 @@ server:
     include-message: always
   # increase max url length
   max-http-header-size: 64000
+  # enable monitoring of tomcat threads and thread pool
+  tomcat:
+    mbeanregistry:
+      enabled: true
 
 logging:
   level:
@@ -21,7 +25,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: "health,info"
+        include: health, info, prometheus
   info:
     git:
       mode: full

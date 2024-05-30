@@ -40,6 +40,8 @@
     <properties>
         <powsybl-dependencies.version>2024.1.0</powsybl-dependencies.version>
         <springboot.version>3.1.2</springboot.version>
+        <spring-cloud-stream.version>4.0.3</spring-cloud-stream.version>
+        <powsybl-network-store-client.version>1.11.0</powsybl-network-store-client.version>
     </properties>
 
     <dependencyManagement>
@@ -132,12 +134,12 @@
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-stream</artifactId>
-            <version>4.0.3</version> <!-- TODO : nécessaire mais pas dans les dép de powsybl -> faire une lib séparée ?-->
+            <version>${spring-cloud-stream.version}</version>
         </dependency>
         <dependency>
             <groupId>com.powsybl</groupId>
             <artifactId>powsybl-network-store-client</artifactId>
-            <version>1.11.0</version> <!-- TODO : nécessaire mais pas dans les dép de powsybl -> faire une lib séparée ?-->
+            <version>${powsybl-network-store-client.version}</version>
         </dependency>
         <dependency>
             <groupId>org.aspectj</groupId>

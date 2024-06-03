@@ -144,12 +144,21 @@ public abstract class AbstractWorkerService<S, R extends AbstractComputationRunC
                     LOGGER.error(NotificationService.getFailedMessage(getComputationType()), e);
                     publishFail(resultContext, e.getMessage());
                     resultService.delete(resultContext.getResultUuid());
+                    this.handleNonCancellationException(resultContext, e);
                 }
             } finally {
                 futures.remove(resultContext.getResultUuid());
                 cancelComputationRequests.remove(resultContext.getResultUuid());
             }
         };
+    }
+
+    /**
+     * Handle exception in consumeRun that is not a CancellationException
+     * @param resultContext The context of the computation
+     * @param exception The exception to handle
+     */
+    protected void handleNonCancellationException(AbstractResultContext<R> resultContext, Exception exception) {
     }
 
     public Consumer<Message<String>> consumeCancel() {
@@ -169,9 +178,15 @@ public abstract class AbstractWorkerService<S, R extends AbstractComputationRunC
                 message, resultContext.getRunContext().getUserId(), getComputationType(), additionalHeaders);
     }
 
-    protected abstract void sendResultMessage(AbstractResultContext<R> resultContext, S result);
+    protected void sendResultMessage(AbstractResultContext<R> resultContext, S ignoredResult) {
+        notificationService.sendResultMessage(resultContext.getResultUuid(), resultContext.getRunContext().getReceiver(),
+                resultContext.getRunContext().getUserId(), null);
+    }
 
-    protected abstract void publishFail(AbstractResultContext<R> resultContext, String message);
+    protected void publishFail(AbstractResultContext<R> resultContext, String message) {
+        notificationService.publishFail(resultContext.getResultUuid(), resultContext.getRunContext().getReceiver(),
+                message, resultContext.getRunContext().getUserId(), getComputationType(), null);
+    }
 
     /**
      * Do some extra task before running the computation, e.g. print log or init extra data for the run context
@@ -183,9 +198,6 @@ public abstract class AbstractWorkerService<S, R extends AbstractComputationRunC
 
     protected S run(R runContext, UUID resultUuid) throws Exception {
         String provider = runContext.getProvider();
-        if (provider == null) {
-            provider = "";
-        }
         AtomicReference<ReportNode> rootReporter = new AtomicReference<>(ReportNode.NO_OP);
         ReportNode reportNode = ReportNode.NO_OP;
 
@@ -204,7 +216,7 @@ public abstract class AbstractWorkerService<S, R extends AbstractComputationRunC
         preRun(runContext);
         CompletableFuture<S> future = runAsync(runContext, provider, resultUuid);
         S result = future == null ? null : observer.observeRun("run", runContext, future::get);
-        postRun(runContext, rootReporter);
+        postRun(runContext, rootReporter, result);
         return result;
     }
 
@@ -212,8 +224,9 @@ public abstract class AbstractWorkerService<S, R extends AbstractComputationRunC
      * Do some extra task after running the computation
      * @param runContext This context may be used for extra task in overriding classes
      * @param rootReportNode root of the reporter tree
+     * @param ignoredResult The result of the computation
      */
-    protected void postRun(R runContext, AtomicReference<ReportNode> rootReportNode) {
+    protected void postRun(R runContext, AtomicReference<ReportNode> rootReportNode, S ignoredResult) {
         if (runContext.getReportInfos().reportUuid() != null) {
             observer.observe("report.send", runContext, () -> reportService.sendReport(runContext.getReportInfos().reportUuid(), rootReportNode.get()));
         }

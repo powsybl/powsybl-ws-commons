@@ -21,6 +21,7 @@ import org.springframework.messaging.Message;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
@@ -205,8 +206,8 @@ public abstract class AbstractWorkerService<S, R extends AbstractComputationRunC
             final String reportType = runContext.getReportInfos().computationType();
             String rootReporterId = runContext.getReportInfos().reporterId() == null ? reportType : runContext.getReportInfos().reporterId() + "@" + reportType;
             rootReporter.set(ReportNode.newRootReportNode().withMessageTemplate(rootReporterId, rootReporterId).build());
-            reportNode = rootReporter.get().newReportNode().withMessageTemplate(reportType, String.format("%s (%s)", reportType, provider))
-                    .withUntypedValue("providerToUse", provider).add();
+            reportNode = rootReporter.get().newReportNode().withMessageTemplate(reportType, reportType + (provider != null ? " (" + provider + ")" : ""))
+                    .withUntypedValue("providerToUse", Objects.requireNonNullElse(provider, "")).add();
             // Delete any previous computation logs
             observer.observe("report.delete",
                     runContext, () -> reportService.deleteReport(runContext.getReportInfos().reportUuid(), reportType));

@@ -19,7 +19,9 @@ import com.powsybl.ws.commons.computation.service.UuidGeneratorService;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.observation.ObservationRegistry;
+import lombok.Getter;
 import lombok.NonNull;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.assertj.core.api.WithAssertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,7 +36,10 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
+import static com.powsybl.ws.commons.ComputationTest.MockComputationStatus.COMPLETED;
 import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_RECEIVER;
 import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_RESULT_UUID;
 import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_USER_ID;
@@ -61,80 +66,129 @@ class ComputationTest implements WithAssertions {
     @Mock
     private Network network;
 
-    public class MockComputationResult {}
-    public class MockComputationParameters {}
+    public static class MockComputationResult { }
+
+    public static class MockComputationParameters { }
+
     public enum MockComputationStatus {
         NOT_DONE,
         RUNNING,
         COMPLETED
     }
+
     @Service
-    public class MockComputationResultService extends AbstractComputationResultService<MockComputationStatus> {
+    public static class MockComputationResultService extends AbstractComputationResultService<MockComputationStatus> {
         @Override
-        public void insertStatus(List<UUID> resultUuids, MockComputationStatus status) {}
+        public void insertStatus(List<UUID> resultUuids, MockComputationStatus status) { }
+
         @Override
-        public void delete(UUID resultUuid) {}
+        public void delete(UUID resultUuid) { }
+
         @Override
-        public void deleteAll() {}
+        public void deleteAll() { }
+
         @Override
         public MockComputationStatus findStatus(UUID resultUuid) {
             return null;
         }
     }
+
     @Service
-    public class MockComputationObserver extends AbstractComputationObserver<MockComputationResult, MockComputationParameters> {
+    public static class MockComputationObserver extends AbstractComputationObserver<MockComputationResult, MockComputationParameters> {
         protected MockComputationObserver(@NonNull ObservationRegistry observationRegistry, @NonNull MeterRegistry meterRegistry) {
             super(observationRegistry, meterRegistry);
         }
+
         @Override
         protected String getComputationType() {
             return COMPUTATION_TYPE;
         }
+
         @Override
         protected String getResultStatus(MockComputationResult res) {
             return res != null ? "OK" : "NOK";
         }
     }
-    public class MockComputationRunContext extends AbstractComputationRunContext<MockComputationParameters> {
-        protected MockComputationRunContext(UUID networkUuid, String variantId, String receiver, ReportInfos reportInfos, String userId, String provider, MockComputationParameters parameters) {
+
+    public static class MockComputationRunContext extends AbstractComputationRunContext<MockComputationParameters> {
+        // makes the mock computation to behave in a specific way
+        @Getter @Setter
+        ComputationResultWanted computationResWanted = ComputationResultWanted.SUCCESS;
+
+        protected MockComputationRunContext(UUID networkUuid, String variantId, String receiver, ReportInfos reportInfos,
+                                            String userId, String provider, MockComputationParameters parameters) {
             super(networkUuid, variantId, receiver, reportInfos, userId, provider, parameters);
         }
     }
-    public class MockComputationResultContext extends AbstractResultContext<MockComputationRunContext> {
+
+    public static class MockComputationResultContext extends AbstractResultContext<MockComputationRunContext> {
         protected MockComputationResultContext(UUID resultUuid, MockComputationRunContext runContext) {
             super(resultUuid, runContext);
         }
     }
+
     @Service
     public class MockComputationService extends AbstractComputationService<MockComputationRunContext, MockComputationResultService, MockComputationStatus> {
         protected MockComputationService(NotificationService notificationService, MockComputationResultService resultService, ObjectMapper objectMapper, UuidGeneratorService uuidGeneratorService, String defaultProvider) {
             super(notificationService, resultService, objectMapper, uuidGeneratorService, defaultProvider);
         }
+
         @Override
         public List<String> getProviders() {
             return List.of();
         }
+
         @Override
         public UUID runAndSaveResult(MockComputationRunContext runContext) {
             return resultUuid;
         }
     }
+
+    enum ComputationResultWanted {
+        SUCCESS,
+        FAIL,
+        SLOW_SUCCESS
+    }
+
     @Service
     public class MockComputationWorkerService extends AbstractWorkerService<MockComputationResult, MockComputationRunContext, MockComputationParameters, MockComputationResultService> {
         protected MockComputationWorkerService(NetworkStoreService networkStoreService, NotificationService notificationService, ReportService reportService, MockComputationResultService resultService, ExecutionService executionService, AbstractComputationObserver<MockComputationResult, MockComputationParameters> observer, ObjectMapper objectMapper) {
             super(networkStoreService, notificationService, reportService, resultService, executionService, observer, objectMapper);
         }
+
         @Override
         protected AbstractResultContext<MockComputationRunContext> fromMessage(Message<String> message) {
             return resultContext;
         }
+
         @Override
-        protected void saveResult(Network network, AbstractResultContext<MockComputationRunContext> resultContext, MockComputationResult result) {}
+        protected void saveResult(Network network, AbstractResultContext<MockComputationRunContext> resultContext, MockComputationResult result) { }
+
         @Override
-        protected String getComputationType() { return COMPUTATION_TYPE;}
+        protected String getComputationType() {
+            return COMPUTATION_TYPE;
+        }
+
         @Override
         protected CompletableFuture<MockComputationResult> getCompletableFuture(MockComputationRunContext runContext, String provider, UUID resultUuid) {
-            return CompletableFuture.supplyAsync(MockComputationResult::new);
+            final CompletableFuture<MockComputationResult> completableFuture = new CompletableFuture<>();
+            switch (runContext.getComputationResWanted()) {
+                case FAIL:
+                    completableFuture.completeExceptionally(new RuntimeException("Computation failed"));
+                    break;
+                case SLOW_SUCCESS:
+                    ExecutorService executorService = Executors.newFixedThreadPool(1);
+                    executorService.submit(() -> {
+                        Thread.sleep(5000);
+                        // TODO : try something like this : await().atMost(2, Duration.SECONDS).until(didTheThing());  // Compliant
+                        completableFuture.complete(new MockComputationResult());
+                        return COMPLETED;
+                    });
+                    break;
+                case SUCCESS:
+                    return CompletableFuture.supplyAsync(MockComputationResult::new);
+            }
+            return completableFuture;
         }
     }
 
@@ -153,6 +207,7 @@ class ComputationTest implements WithAssertions {
     final String receiver = "MockComputation_Receiver";
     final String provider = "MockComputation_Provider";
     Message<String> message;
+    MockComputationRunContext runContext;
 
     @BeforeEach
     void init() {
@@ -171,12 +226,8 @@ class ComputationTest implements WithAssertions {
                 .setHeader(HEADER_RECEIVER, receiver)
                 .setHeader(HEADER_USER_ID, userId);
         message = builder.build();
-    }
 
-    @Test
-    void testComputationImplementation() throws Exception {
-        // inits
-        final MockComputationRunContext runContext = new MockComputationRunContext(networkUuid, null, receiver,
+        runContext = new MockComputationRunContext(networkUuid, null, receiver,
                 new ReportInfos(reportUuid, reporterId, COMPUTATION_TYPE), userId, provider, new MockComputationParameters());
         runContext.setNetwork(network);
         resultContext = new MockComputationResultContext(resultUuid, runContext);
@@ -184,10 +235,15 @@ class ComputationTest implements WithAssertions {
         when(networkStoreService.getNetwork(eq(networkUuid), any(PreloadingStrategy.class)))
                 .thenReturn(network);
         when(network.getVariantManager()).thenReturn(variantManager);
+    }
+
+    @Test
+    void testComputationImplementation() {
+        // inits
+        runContext.setComputationResWanted(ComputationResultWanted.SUCCESS);
 
         // execution / cleaning
         workerService.consumeRun().accept(message);
-        workerService.consumeCancel().accept(message);
 
         // test the course
         // TODO : comment vérifier qu'il n'y a plus rien à annuler (plus rien dans les futures)
@@ -195,6 +251,18 @@ class ComputationTest implements WithAssertions {
                 .sendResultMessage(resultUuid, receiver, userId, null);
     }
 
-    // TODO : faire un test publishFail ??
-    // TODO : et une annulation ?? (avec un getCompletableFuture qui aurait un léger délai pour pouvoir annuler)
+    @Test
+    void testComputationFailed() {
+        // inits
+        runContext.setComputationResWanted(ComputationResultWanted.FAIL);
+
+        // execution / cleaning
+        workerService.consumeRun().accept(message);
+
+        // test the course
+        verify(notificationService, times(1))
+                .publishFail(resultUuid, receiver, "java.lang.RuntimeException: Computation failed", userId, COMPUTATION_TYPE, null);
+    }
+
+    // TODO : et une fonction qui teste l'annulation ?? (avec un getCompletableFuture SLOW_SUCCESS qui aurait un léger délai pour pouvoir annuler ?)
 }

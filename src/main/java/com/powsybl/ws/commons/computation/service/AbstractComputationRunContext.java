@@ -9,8 +9,7 @@ package com.powsybl.ws.commons.computation.service;
 import com.powsybl.commons.report.ReportNode;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.ws.commons.computation.dto.ReportInfos;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 
 import java.util.UUID;
 
@@ -18,8 +17,7 @@ import java.util.UUID;
  * @author Mathieu Deharbe <mathieu.deharbe at rte-france.com>
  * @param <P> parameters structure specific to the computation
  */
-@Getter
-@Setter
+@Data
 public abstract class AbstractComputationRunContext<P> {
     private final UUID networkUuid;
     private final String variantId;

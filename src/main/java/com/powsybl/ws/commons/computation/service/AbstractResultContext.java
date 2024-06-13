@@ -8,7 +8,7 @@ package com.powsybl.ws.commons.computation.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.Getter;
+import lombok.Data;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
 
@@ -23,7 +23,7 @@ import static com.powsybl.ws.commons.computation.service.NotificationService.*;
  * @author Mathieu Deharbe <mathieu.deharbe at rte-france.com>
  * @param <R> run context specific to a computation, including parameters
  */
-@Getter
+@Data
 public abstract class AbstractResultContext<R extends AbstractComputationRunContext<?>> {
 
     protected static final String RESULT_UUID_HEADER = "resultUuid";

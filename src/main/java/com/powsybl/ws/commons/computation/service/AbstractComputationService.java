@@ -7,6 +7,7 @@
 package com.powsybl.ws.commons.computation.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.AccessLevel;
 import lombok.Getter;
 import org.springframework.util.CollectionUtils;
 
@@ -20,15 +21,14 @@ import java.util.UUID;
  * @param <T> run service specific to a computation
  * @param <S> enum status specific to a computation
  */
+@Getter(AccessLevel.PROTECTED)
 public abstract class AbstractComputationService<R extends AbstractComputationRunContext<?>, T extends AbstractComputationResultService<S>, S> {
-
-    protected ObjectMapper objectMapper;
-    protected NotificationService notificationService;
+    private final ObjectMapper objectMapper;
+    private final NotificationService notificationService;
+    private final UuidGeneratorService uuidGeneratorService;
+    private final T resultService;
     @Getter
     private final String defaultProvider;
-
-    protected UuidGeneratorService uuidGeneratorService;
-    protected T resultService;
 
     protected AbstractComputationService(NotificationService notificationService,
                                          T resultService,

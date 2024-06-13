@@ -6,12 +6,11 @@
  */
 package com.powsybl.ws.commons.computation.utils.annotations;
 
+import lombok.experimental.StandardException;
+
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
-
+@StandardException
 public class PostCompletionException extends RuntimeException {
-    public PostCompletionException(Throwable t) {
-        super(t);
-    }
 }

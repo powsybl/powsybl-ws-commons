@@ -10,9 +10,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 /**
  * @author Anis Touri <anis.touri at rte-france.com
@@ -21,27 +19,25 @@ import java.util.List;
 public class PostCompletionAdapter implements TransactionSynchronization {
     private static final ThreadLocal<List<Runnable>> RUNNABLE = new ThreadLocal<>();
 
-    // register a new runnable for post completion execution
+    // register a new runnable for post-completion execution
     public void execute(Runnable runnable) {
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             List<Runnable> runnables = RUNNABLE.get();
             if (runnables == null) {
-                runnables = new ArrayList<>(Collections.singletonList(runnable));
-            } else {
-                runnables.add(runnable);
+                runnables = new LinkedList<>();
+                RUNNABLE.set(runnables);
             }
-            RUNNABLE.set(runnables);
+            runnables.add(runnable);
             TransactionSynchronizationManager.registerSynchronization(this);
-            return;
+        } else {
+            // if transaction synchronization is not active
+            runnable.run();
         }
-        // if transaction synchronisation is not active
-        runnable.run();
     }
 
     @Override
     public void afterCompletion(int status) {
-        List<Runnable> runnables = RUNNABLE.get();
-        runnables.forEach(Runnable::run);
+        RUNNABLE.get().forEach(Runnable::run);
         RUNNABLE.remove();
     }
 }

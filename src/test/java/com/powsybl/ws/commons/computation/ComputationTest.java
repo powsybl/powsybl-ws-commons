@@ -1,4 +1,4 @@
-package com.powsybl.ws.commons;
+package com.powsybl.ws.commons.computation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.iidm.network.Network;
@@ -39,7 +39,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import static com.powsybl.ws.commons.ComputationTest.MockComputationStatus.COMPLETED;
+import static com.powsybl.ws.commons.computation.ComputationTest.MockComputationStatus.COMPLETED;
 import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_RECEIVER;
 import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_RESULT_UUID;
 import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_USER_ID;

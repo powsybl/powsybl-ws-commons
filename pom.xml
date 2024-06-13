@@ -38,9 +38,10 @@
     </developers>
 
     <properties>
+        <!-- versions used in https://github.com/powsybl/powsybl-ws-dependencies/blob/main/pom.xml -->
         <powsybl-dependencies.version>2024.1.0</powsybl-dependencies.version>
         <springboot.version>3.1.2</springboot.version>
-        <spring-cloud-stream.version>4.0.3</spring-cloud-stream.version>
+        <spring-cloud.version>2022.0.3</spring-cloud.version>
         <powsybl-network-store-client.version>1.12.0</powsybl-network-store-client.version>
     </properties>
 
@@ -51,6 +52,13 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-dependencies</artifactId>
                 <version>${springboot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -96,7 +104,6 @@
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-stream</artifactId>
-            <version>${spring-cloud-stream.version}</version>
             <optional>true</optional>
         </dependency>
         <dependency>

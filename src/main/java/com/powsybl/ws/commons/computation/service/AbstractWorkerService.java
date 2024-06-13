@@ -168,17 +168,6 @@ public abstract class AbstractWorkerService<S, R extends AbstractComputationRunC
 
     protected abstract void saveResult(Network network, AbstractResultContext<R> resultContext, S result);
 
-    protected void sendResultMessage(AbstractResultContext<R> resultContext, Map<String, Object> additionalHeaders) {
-        notificationService.sendResultMessage(resultContext.getResultUuid(), resultContext.getRunContext().getReceiver(),
-                resultContext.getRunContext().getUserId(), additionalHeaders);
-
-    }
-
-    protected void publishFail(AbstractResultContext<R> resultContext, String message, Map<String, Object> additionalHeaders) {
-        notificationService.publishFail(resultContext.getResultUuid(), resultContext.getRunContext().getReceiver(),
-                message, resultContext.getRunContext().getUserId(), getComputationType(), additionalHeaders);
-    }
-
     protected void sendResultMessage(AbstractResultContext<R> resultContext, S ignoredResult) {
         notificationService.sendResultMessage(resultContext.getResultUuid(), resultContext.getRunContext().getReceiver(),
                 resultContext.getRunContext().getUserId(), null);

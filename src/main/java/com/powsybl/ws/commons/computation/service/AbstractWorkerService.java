@@ -46,7 +46,6 @@ public abstract class AbstractWorkerService<S, R extends AbstractComputationRunC
     protected final ObjectMapper objectMapper;
     protected final NetworkStoreService networkStoreService;
     protected final ReportService reportService;
-    protected final ExecutionService executionService;
     protected final NotificationService notificationService;
     protected final AbstractComputationObserver<S, P> observer;
     protected final Map<UUID, CompletableFuture<S>> futures = new ConcurrentHashMap<>();
@@ -57,14 +56,12 @@ public abstract class AbstractWorkerService<S, R extends AbstractComputationRunC
                                     NotificationService notificationService,
                                     ReportService reportService,
                                     T resultService,
-                                    ExecutionService executionService,
                                     AbstractComputationObserver<S, P> observer,
                                     ObjectMapper objectMapper) {
         this.networkStoreService = networkStoreService;
         this.notificationService = notificationService;
         this.reportService = reportService;
         this.resultService = resultService;
-        this.executionService = executionService;
         this.observer = observer;
         this.objectMapper = objectMapper;
     }

@@ -55,7 +55,6 @@ spring:
     user: ${powsybl-ws.database.login}
     password: ${powsybl-ws.database.password}
 
-
   # for microservices with r2dbc
   r2dbc:
     url: r2dbc:${powsybl-ws.database.url}
@@ -192,3 +191,7 @@ powsybl-ws:
     customQueryBegin: '?'
     customQuery:
     #name:
+
+  computation:
+    task-execution:
+      thread-name-prefix: computation-task-

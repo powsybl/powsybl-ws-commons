@@ -12,6 +12,7 @@ import com.powsybl.ws.commons.computation.service.AbstractComputationRunContext;
 import com.powsybl.ws.commons.computation.service.AbstractComputationService;
 import com.powsybl.ws.commons.computation.service.AbstractResultContext;
 import com.powsybl.ws.commons.computation.service.AbstractWorkerService;
+import com.powsybl.ws.commons.computation.service.CancelContext;
 import com.powsybl.ws.commons.computation.service.ExecutionService;
 import com.powsybl.ws.commons.computation.service.NotificationService;
 import com.powsybl.ws.commons.computation.service.ReportService;
@@ -37,10 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
-import static com.powsybl.ws.commons.computation.ComputationTest.MockComputationStatus.COMPLETED;
 import static com.powsybl.ws.commons.computation.ComputationTest.MockComputationStatus.NOT_DONE;
 import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_RECEIVER;
 import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_RESULT_UUID;
@@ -48,6 +46,7 @@ import static com.powsybl.ws.commons.computation.service.NotificationService.HEA
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -63,7 +62,7 @@ class ComputationTest implements WithAssertions {
     @Mock
     private ExecutionService executionService;
     @Mock
-    private UuidGeneratorService uuidGeneratorService;
+    private UuidGeneratorService uuidGeneratorService = new UuidGeneratorService();
     @Mock
     private NotificationService notificationService;
     @Mock
@@ -157,8 +156,7 @@ class ComputationTest implements WithAssertions {
 
     enum ComputationResultWanted {
         SUCCESS,
-        FAIL,
-        SLOW_SUCCESS
+        FAIL
     }
 
     public class MockComputationWorkerService extends AbstractWorkerService<MockComputationResult, MockComputationRunContext, MockComputationParameters, MockComputationResultService> {
@@ -186,15 +184,6 @@ class ComputationTest implements WithAssertions {
                 case FAIL:
                     completableFuture.completeExceptionally(new RuntimeException("Computation failed"));
                     break;
-                case SLOW_SUCCESS:
-                    ExecutorService executorService = Executors.newFixedThreadPool(1);
-                    executorService.submit(() -> {
-                        Thread.sleep(5000);
-                        // TODO : try something like this : await().atMost(2, Duration.SECONDS).until(didTheThing());  // Compliant
-                        completableFuture.complete(new MockComputationResult());
-                        return COMPLETED;
-                    });
-                    break;
                 case SUCCESS:
                     return CompletableFuture.supplyAsync(MockComputationResult::new);
             }
@@ -202,7 +191,6 @@ class ComputationTest implements WithAssertions {
         }
     }
 
-    private MockComputationResultService resultService;
     @Mock
     private VariantManager variantManager;
     @Mock
@@ -222,7 +210,7 @@ class ComputationTest implements WithAssertions {
 
     @BeforeEach
     void init() {
-        resultService = new MockComputationResultService();
+        MockComputationResultService resultService = new MockComputationResultService();
         workerService = new MockComputationWorkerService(
                 networkStoreService,
                 notificationService,
@@ -282,7 +270,7 @@ class ComputationTest implements WithAssertions {
     }
 
     @Test
-    void testComputationService() {
+    void testComputationCancelled() {
         MockComputationStatus baseStatus = NOT_DONE;
         computationService.setStatus(List.of(resultUuid), baseStatus);
         assertEquals(baseStatus, computationService.getStatus(resultUuid));
@@ -290,11 +278,16 @@ class ComputationTest implements WithAssertions {
         computationService.stop(resultUuid, receiver);
 
         // test the course
-        /*Message<String> cancelMessage = MessageBuilder.withPayload("")
+        verify(notificationService, times(1))
+                .sendCancelMessage(isA(Message.class));
+
+        // TODO : how to get the message from the previous call instead of creating this one ?
+        Message<String> cancelMessage = MessageBuilder.withPayload("")
                 .setHeader(HEADER_RESULT_UUID, resultUuid.toString())
                 .setHeader(HEADER_RECEIVER, receiver)
                 .build();
-        verify(notificationService, times(1))
-                .sendCancelMessage(cancelMessage);*/
+        CancelContext cancelContext = CancelContext.fromMessage(cancelMessage);
+        assertEquals(resultUuid, cancelContext.resultUuid());
+        assertEquals(receiver, cancelContext.receiver());
     }
 }

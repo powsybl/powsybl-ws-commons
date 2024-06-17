@@ -9,7 +9,6 @@ package com.powsybl.ws.commons.computation.utils.annotations;
 /**
  * @author Slimane Amar <slimane.amar at rte-france.com>
  */
-
 public class PostCompletionException extends RuntimeException {
     public PostCompletionException(Throwable t) {
         super(t);

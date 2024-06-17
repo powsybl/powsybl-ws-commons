@@ -10,6 +10,7 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationRegistry;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
 
@@ -18,7 +19,7 @@ import lombok.NonNull;
  * @param <R> powsybl Result class specific to the computation
  * @param <P> powsybl and gridsuite parameters specifics to the computation
  */
-@Getter
+@Getter(AccessLevel.PROTECTED)
 public abstract class AbstractComputationObserver<R, P> {
     protected static final String OBSERVATION_PREFIX = "app.computation.";
     protected static final String PROVIDER_TAG_NAME = "provider";

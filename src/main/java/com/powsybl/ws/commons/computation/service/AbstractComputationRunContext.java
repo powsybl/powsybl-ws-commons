@@ -26,8 +26,8 @@ public abstract class AbstractComputationRunContext<P> {
     private final String receiver;
     private final ReportInfos reportInfos;
     private final String userId;
-    private String provider;
-    private P parameters;
+    private final String provider;
+    private final P parameters;
     private ReportNode reportNode;
     private Network network;
 

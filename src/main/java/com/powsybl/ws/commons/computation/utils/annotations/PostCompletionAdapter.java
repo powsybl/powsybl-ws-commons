@@ -32,10 +32,10 @@ public class PostCompletionAdapter implements TransactionSynchronization {
             }
             RUNNABLE.set(runnables);
             TransactionSynchronizationManager.registerSynchronization(this);
-            return;
+        } else {
+            // if transaction synchronisation is not active
+            runnable.run();
         }
-        // if transaction synchronisation is not active
-        runnable.run();
     }
 
     @Override

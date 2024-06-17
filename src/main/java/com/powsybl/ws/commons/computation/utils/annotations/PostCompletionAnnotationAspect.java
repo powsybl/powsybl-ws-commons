@@ -24,24 +24,13 @@ public class PostCompletionAnnotationAspect {
 
     @Around("@annotation(com.powsybl.ws.commons.computation.utils.annotations.PostCompletion)")
     public Object executePostCompletion(final ProceedingJoinPoint pjp) {
-        postCompletionAdapter.execute(new PjpAfterCompletionRunnable(pjp));
-        return null;
-    }
-
-    private static final class PjpAfterCompletionRunnable implements Runnable {
-        private final ProceedingJoinPoint pjp;
-
-        public PjpAfterCompletionRunnable(ProceedingJoinPoint pjp) {
-            this.pjp = pjp;
-        }
-
-        @Override
-        public void run() {
+        postCompletionAdapter.execute(() -> {
             try {
                 pjp.proceed(pjp.getArgs());
             } catch (Throwable e) {
                 throw new PostCompletionException(e);
             }
-        }
+        });
+        return null;
     }
 }

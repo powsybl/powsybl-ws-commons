@@ -24,11 +24,10 @@ public abstract class AbstractComputationService<R extends AbstractComputationRu
 
     protected ObjectMapper objectMapper;
     protected NotificationService notificationService;
-    @Getter
-    private final String defaultProvider;
-
     protected UuidGeneratorService uuidGeneratorService;
     protected T resultService;
+    @Getter
+    private final String defaultProvider;
 
     protected AbstractComputationService(NotificationService notificationService,
                                          T resultService,

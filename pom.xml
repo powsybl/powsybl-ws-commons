@@ -93,6 +93,12 @@
             <artifactId>spring-boot-starter-tomcat</artifactId>
             <optional>true</optional>
         </dependency>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-stream</artifactId>
+            <version>${spring-cloud-stream.version}</version>
+            <optional>true</optional>
+        </dependency>
 
         <!-- APT libraries -->
         <dependency>
@@ -132,51 +138,20 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-stream</artifactId>
-            <version>${spring-cloud-stream.version}</version>
-        </dependency>
-        <dependency>
             <groupId>org.aspectj</groupId>
             <artifactId>aspectjweaver</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.powsybl</groupId>
-            <artifactId>powsybl-commons</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.powsybl</groupId>
-            <artifactId>powsybl-computation</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.powsybl</groupId>
-            <artifactId>powsybl-computation-local</artifactId>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.micrometer</groupId>
-            <artifactId>micrometer-registry-prometheus</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-
-        <!-- powsybl-network-store multimodule (no bom) -->
-        <dependency>
-            <groupId>com.powsybl</groupId>
-            <artifactId>powsybl-network-store-iidm-impl</artifactId>
-            <version>${powsybl-network-store-client.version}</version>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>com.powsybl</groupId>
             <artifactId>powsybl-network-store-client</artifactId>
             <version>${powsybl-network-store-client.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.powsybl</groupId>
-            <artifactId>powsybl-network-store-model</artifactId>
-            <version>${powsybl-network-store-client.version}</version>
+            <optional>true</optional>
         </dependency>
     </dependencies>
 </project>

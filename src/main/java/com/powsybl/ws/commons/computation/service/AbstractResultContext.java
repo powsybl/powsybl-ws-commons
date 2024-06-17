@@ -8,7 +8,7 @@ package com.powsybl.ws.commons.computation.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.Getter;
+import lombok.Data;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
 
@@ -17,13 +17,15 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
-import static com.powsybl.ws.commons.computation.service.NotificationService.*;
+import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_PROVIDER;
+import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_RECEIVER;
+import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_USER_ID;
 
 /**
  * @author Mathieu Deharbe <mathieu.deharbe at rte-france.com>
  * @param <R> run context specific to a computation, including parameters
  */
-@Getter
+@Data
 public abstract class AbstractResultContext<R extends AbstractComputationRunContext<?>> {
 
     protected static final String RESULT_UUID_HEADER = "resultUuid";
@@ -49,11 +51,13 @@ public abstract class AbstractResultContext<R extends AbstractComputationRunCont
     }
 
     public Message<String> toMessage(ObjectMapper objectMapper) {
-        String parametersJson;
-        try {
-            parametersJson = objectMapper.writeValueAsString(runContext.getParameters());
-        } catch (JsonProcessingException e) {
-            throw new UncheckedIOException(e);
+        String parametersJson = "";
+        if (objectMapper != null) {
+            try {
+                parametersJson = objectMapper.writeValueAsString(runContext.getParameters());
+            } catch (JsonProcessingException e) {
+                throw new UncheckedIOException(e);
+            }
         }
         return MessageBuilder.withPayload(parametersJson)
                 .setHeader(RESULT_UUID_HEADER, resultUuid.toString())
@@ -69,7 +73,7 @@ public abstract class AbstractResultContext<R extends AbstractComputationRunCont
                 .build();
     }
 
-    protected Map<String, String> getSpecificMsgHeaders() {
+    protected Map<String, Object> getSpecificMsgHeaders() {
         return Map.of();
     }
 }

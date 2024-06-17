@@ -8,6 +8,7 @@ package com.powsybl.ws.commons.computation.utils;
 
 import com.powsybl.commons.PowsyblException;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.lang.Nullable;
 import org.springframework.messaging.MessageHeaders;
 
 /**
@@ -32,11 +33,7 @@ public final class MessageUtils {
      * Prevent the message from being too long for RabbitMQ.
      * @apiNote the beginning and ending are both kept, it should make it easier to identify
      */
-    public static String shortenMessage(String msg) {
-        if (msg == null) {
-            return null;
-        }
-
+    public static String shortenMessage(@Nullable final String msg) {
         return StringUtils.abbreviateMiddle(msg, " ... ", MSG_MAX_LENGTH);
     }
 }

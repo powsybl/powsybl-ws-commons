@@ -31,18 +31,21 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
-import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import static com.powsybl.ws.commons.computation.ComputationTest.MockComputationStatus.COMPLETED;
+import static com.powsybl.ws.commons.computation.ComputationTest.MockComputationStatus.NOT_DONE;
 import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_RECEIVER;
 import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_RESULT_UUID;
 import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_USER_ID;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
@@ -60,6 +63,8 @@ class ComputationTest implements WithAssertions {
     @Mock
     private ExecutionService executionService;
     @Mock
+    private UuidGeneratorService uuidGeneratorService;
+    @Mock
     private NotificationService notificationService;
     @Mock
     private ObjectMapper objectMapper;
@@ -76,24 +81,31 @@ class ComputationTest implements WithAssertions {
         COMPLETED
     }
 
-    @Service
     public static class MockComputationResultService extends AbstractComputationResultService<MockComputationStatus> {
-        @Override
-        public void insertStatus(List<UUID> resultUuids, MockComputationStatus status) { }
+        Map<UUID, MockComputationStatus> mockDBStatus = new HashMap<>();
 
         @Override
-        public void delete(UUID resultUuid) { }
+        public void insertStatus(List<UUID> resultUuids, MockComputationStatus status) {
+            resultUuids.forEach(uuid ->
+                    mockDBStatus.put(uuid, status));
+        }
 
         @Override
-        public void deleteAll() { }
+        public void delete(UUID resultUuid) {
+            mockDBStatus.remove(resultUuid);
+        }
+
+        @Override
+        public void deleteAll() {
+            mockDBStatus.clear();
+        }
 
         @Override
         public MockComputationStatus findStatus(UUID resultUuid) {
-            return null;
+            return mockDBStatus.get(resultUuid);
         }
     }
 
-    @Service
     public static class MockComputationObserver extends AbstractComputationObserver<MockComputationResult, MockComputationParameters> {
         protected MockComputationObserver(@NonNull ObservationRegistry observationRegistry, @NonNull MeterRegistry meterRegistry) {
             super(observationRegistry, meterRegistry);
@@ -127,7 +139,6 @@ class ComputationTest implements WithAssertions {
         }
     }
 
-    @Service
     public class MockComputationService extends AbstractComputationService<MockComputationRunContext, MockComputationResultService, MockComputationStatus> {
         protected MockComputationService(NotificationService notificationService, MockComputationResultService resultService, ObjectMapper objectMapper, UuidGeneratorService uuidGeneratorService, String defaultProvider) {
             super(notificationService, resultService, objectMapper, uuidGeneratorService, defaultProvider);
@@ -150,7 +161,6 @@ class ComputationTest implements WithAssertions {
         SLOW_SUCCESS
     }
 
-    @Service
     public class MockComputationWorkerService extends AbstractWorkerService<MockComputationResult, MockComputationRunContext, MockComputationParameters, MockComputationResultService> {
         protected MockComputationWorkerService(NetworkStoreService networkStoreService, NotificationService notificationService, ReportService reportService, MockComputationResultService resultService, ExecutionService executionService, AbstractComputationObserver<MockComputationResult, MockComputationParameters> observer, ObjectMapper objectMapper) {
             super(networkStoreService, notificationService, reportService, resultService, executionService, observer, objectMapper);
@@ -192,12 +202,13 @@ class ComputationTest implements WithAssertions {
         }
     }
 
-    @Mock
     private MockComputationResultService resultService;
     @Mock
     private VariantManager variantManager;
     @Mock
     private MockComputationWorkerService workerService;
+    @Mock
+    private MockComputationService computationService;
     private MockComputationResultContext resultContext;
     final UUID networkUuid = UUID.fromString("11111111-1111-1111-1111-111111111111");
     final UUID reportUuid = UUID.fromString("22222222-2222-2222-2222-222222222222");
@@ -211,6 +222,7 @@ class ComputationTest implements WithAssertions {
 
     @BeforeEach
     void init() {
+        resultService = new MockComputationResultService();
         workerService = new MockComputationWorkerService(
                 networkStoreService,
                 notificationService,
@@ -220,6 +232,8 @@ class ComputationTest implements WithAssertions {
                 new MockComputationObserver(ObservationRegistry.create(), new SimpleMeterRegistry()),
                 objectMapper
         );
+        computationService = new MockComputationService(notificationService, resultService, objectMapper, uuidGeneratorService, provider);
+
         MessageBuilder<String> builder = MessageBuilder
                 .withPayload("")
                 .setHeader(HEADER_RESULT_UUID, resultUuid.toString())
@@ -231,22 +245,24 @@ class ComputationTest implements WithAssertions {
                 new ReportInfos(reportUuid, reporterId, COMPUTATION_TYPE), userId, provider, new MockComputationParameters());
         runContext.setNetwork(network);
         resultContext = new MockComputationResultContext(resultUuid, runContext);
+    }
 
+    void initComputationExecution() {
         when(networkStoreService.getNetwork(eq(networkUuid), any(PreloadingStrategy.class)))
                 .thenReturn(network);
         when(network.getVariantManager()).thenReturn(variantManager);
     }
 
     @Test
-    void testComputationImplementation() {
+    void testComputationSuccess() {
         // inits
+        initComputationExecution();
         runContext.setComputationResWanted(ComputationResultWanted.SUCCESS);
 
         // execution / cleaning
         workerService.consumeRun().accept(message);
 
         // test the course
-        // TODO : comment vérifier qu'il n'y a plus rien à annuler (plus rien dans les futures)
         verify(notificationService, times(1))
                 .sendResultMessage(resultUuid, receiver, userId, null);
     }
@@ -254,6 +270,7 @@ class ComputationTest implements WithAssertions {
     @Test
     void testComputationFailed() {
         // inits
+        initComputationExecution();
         runContext.setComputationResWanted(ComputationResultWanted.FAIL);
 
         // execution / cleaning
@@ -264,5 +281,20 @@ class ComputationTest implements WithAssertions {
                 .publishFail(resultUuid, receiver, "java.lang.RuntimeException: Computation failed", userId, COMPUTATION_TYPE, null);
     }
 
-    // TODO : et une fonction qui teste l'annulation ?? (avec un getCompletableFuture SLOW_SUCCESS qui aurait un léger délai pour pouvoir annuler ?)
+    @Test
+    void testComputationService() {
+        MockComputationStatus baseStatus = NOT_DONE;
+        computationService.setStatus(List.of(resultUuid), baseStatus);
+        assertEquals(baseStatus, computationService.getStatus(resultUuid));
+
+        computationService.stop(resultUuid, receiver);
+
+        // test the course
+        /*Message<String> cancelMessage = MessageBuilder.withPayload("")
+                .setHeader(HEADER_RESULT_UUID, resultUuid.toString())
+                .setHeader(HEADER_RECEIVER, receiver)
+                .build();
+        verify(notificationService, times(1))
+                .sendCancelMessage(cancelMessage);*/
+    }
 }

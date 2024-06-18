@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
 
@@ -56,14 +57,15 @@ import static org.mockito.Mockito.when;
 class ComputationTest implements WithAssertions {
     private static final String COMPUTATION_TYPE = "mockComputation";
     @Mock
+    private VariantManager variantManager;
+    @Mock
     private NetworkStoreService networkStoreService;
     @Mock
     private ReportService reportService;
+    private final ExecutionService executionService = new ExecutionService();
+    private final UuidGeneratorService uuidGeneratorService = new UuidGeneratorService();
     @Mock
-    private ExecutionService executionService;
-    @Mock
-    private UuidGeneratorService uuidGeneratorService = new UuidGeneratorService();
-    @Mock
+    private StreamBridge publisher;
     private NotificationService notificationService;
     @Mock
     private ObjectMapper objectMapper;
@@ -182,7 +184,7 @@ class ComputationTest implements WithAssertions {
             final CompletableFuture<MockComputationResult> completableFuture = new CompletableFuture<>();
             switch (runContext.getComputationResWanted()) {
                 case FAIL:
-                    completableFuture.completeExceptionally(new RuntimeException("Computation failed"));
+                    completableFuture.completeExceptionally(new RuntimeException("Computation failed but with an artificially longer messaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaage"));
                     break;
                 case SUCCESS:
                     return CompletableFuture.supplyAsync(MockComputationResult::new);
@@ -191,11 +193,7 @@ class ComputationTest implements WithAssertions {
         }
     }
 
-    @Mock
-    private VariantManager variantManager;
-    @Mock
     private MockComputationWorkerService workerService;
-    @Mock
     private MockComputationService computationService;
     private MockComputationResultContext resultContext;
     final UUID networkUuid = UUID.fromString("11111111-1111-1111-1111-111111111111");
@@ -211,6 +209,7 @@ class ComputationTest implements WithAssertions {
     @BeforeEach
     void init() {
         MockComputationResultService resultService = new MockComputationResultService();
+        notificationService = new NotificationService(publisher);
         workerService = new MockComputationWorkerService(
                 networkStoreService,
                 notificationService,
@@ -251,8 +250,7 @@ class ComputationTest implements WithAssertions {
         workerService.consumeRun().accept(message);
 
         // test the course
-        verify(notificationService, times(1))
-                .sendResultMessage(resultUuid, receiver, userId, null);
+        verify(notificationService.getPublisher(), times(1)).send(eq("publishResult-out-0"), isA(Message.class));
     }
 
     @Test
@@ -265,8 +263,7 @@ class ComputationTest implements WithAssertions {
         workerService.consumeRun().accept(message);
 
         // test the course
-        verify(notificationService, times(1))
-                .publishFail(resultUuid, receiver, "java.lang.RuntimeException: Computation failed", userId, COMPUTATION_TYPE, null);
+        verify(notificationService.getPublisher(), times(1)).send(eq("publishFailed-out-0"), isA(Message.class));
     }
 
     @Test
@@ -278,10 +275,8 @@ class ComputationTest implements WithAssertions {
         computationService.stop(resultUuid, receiver);
 
         // test the course
-        verify(notificationService, times(1))
-                .sendCancelMessage(isA(Message.class));
+        verify(notificationService.getPublisher(), times(1)).send(eq("publishCancel-out-0"), isA(Message.class));
 
-        // TODO : how to get the message from the previous call instead of creating this one ?
         Message<String> cancelMessage = MessageBuilder.withPayload("")
                 .setHeader(HEADER_RESULT_UUID, resultUuid.toString())
                 .setHeader(HEADER_RECEIVER, receiver)

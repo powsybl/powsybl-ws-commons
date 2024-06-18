@@ -16,11 +16,11 @@ import java.util.UUID;
 
 /**
  * @author Mathieu Deharbe <mathieu.deharbe at rte-france.com>
- * @param <R> run context specific to a computation, including parameters
+ * @param <C> run context specific to a computation, including parameters
  * @param <T> run service specific to a computation
  * @param <S> enum status specific to a computation
  */
-public abstract class AbstractComputationService<R extends AbstractComputationRunContext<?>, T extends AbstractComputationResultService<S>, S> {
+public abstract class AbstractComputationService<C extends AbstractComputationRunContext<?>, T extends AbstractComputationResultService<S>, S> {
 
     protected ObjectMapper objectMapper;
     protected NotificationService notificationService;
@@ -47,7 +47,7 @@ public abstract class AbstractComputationService<R extends AbstractComputationRu
 
     public abstract List<String> getProviders();
 
-    public abstract UUID runAndSaveResult(R runContext);
+    public abstract UUID runAndSaveResult(C runContext);
 
     public void deleteResult(UUID resultUuid) {
         resultService.delete(resultUuid);

@@ -1,6 +1,5 @@
 package com.powsybl.ws_common_spring_test;
 
-import com.powsybl.ws.commons.computation.config.JacksonConfig;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /**
@@ -10,6 +9,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SuppressWarnings({
     "java:S2187" //this isn't a class containing tests
 })
-@SpringBootApplication(scanBasePackageClasses = {JacksonConfig.class})
+@SpringBootApplication
 public class SpringBootApplicationForTest {
 }

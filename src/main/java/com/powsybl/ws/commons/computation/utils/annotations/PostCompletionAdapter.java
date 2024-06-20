@@ -10,8 +10,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -26,11 +25,10 @@ public class PostCompletionAdapter implements TransactionSynchronization {
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             List<Runnable> runnables = RUNNABLE.get();
             if (runnables == null) {
-                runnables = new ArrayList<>(Collections.singletonList(runnable));
-            } else {
-                runnables.add(runnable);
+                runnables = new LinkedList<>();
+                RUNNABLE.set(runnables);
             }
-            RUNNABLE.set(runnables);
+            runnables.add(runnable);
             TransactionSynchronizationManager.registerSynchronization(this);
         } else {
             // if transaction synchronisation is not active

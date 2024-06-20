@@ -10,9 +10,12 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
 import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.support.MessageBuilder;
 
+import javax.annotation.Nullable;
 import java.io.UncheckedIOException;
+import java.time.Clock;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -50,7 +53,7 @@ public abstract class AbstractResultContext<R extends AbstractComputationRunCont
         this.runContext = Objects.requireNonNull(runContext);
     }
 
-    public Message<String> toMessage(ObjectMapper objectMapper) {
+    public Message<String> toMessage(@Nullable final Clock clock, @Nullable final ObjectMapper objectMapper) {
         String parametersJson = "";
         if (objectMapper != null) {
             try {
@@ -59,7 +62,11 @@ public abstract class AbstractResultContext<R extends AbstractComputationRunCont
                 throw new UncheckedIOException(e);
             }
         }
-        return MessageBuilder.withPayload(parametersJson)
+        MessageBuilder<String> messageBuilder = MessageBuilder.withPayload(parametersJson);
+        if (clock != null) {
+            messageBuilder.setHeader(MessageHeaders.TIMESTAMP, clock.millis());
+        }
+        return messageBuilder
                 .setHeader(RESULT_UUID_HEADER, resultUuid.toString())
                 .setHeader(NETWORK_UUID_HEADER, runContext.getNetworkUuid().toString())
                 .setHeader(VARIANT_ID_HEADER, runContext.getVariantId())

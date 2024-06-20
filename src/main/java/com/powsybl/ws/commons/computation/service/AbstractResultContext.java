@@ -69,11 +69,11 @@ public abstract class AbstractResultContext<C extends AbstractComputationRunCont
                 .setHeader(REPORT_UUID_HEADER, runContext.getReportInfos().reportUuid() != null ? runContext.getReportInfos().reportUuid().toString() : null)
                 .setHeader(REPORTER_ID_HEADER, runContext.getReportInfos().reporterId())
                 .setHeader(REPORT_TYPE_HEADER, runContext.getReportInfos().computationType())
-                .copyHeaders(getSpecificMsgHeaders())
+                .copyHeaders(getSpecificMsgHeaders(objectMapper))
                 .build();
     }
 
-    protected Map<String, String> getSpecificMsgHeaders() {
+    protected Map<String, String> getSpecificMsgHeaders(ObjectMapper ignoredObjectMapper) {
         return Map.of();
     }
 }

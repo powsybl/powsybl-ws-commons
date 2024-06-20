@@ -40,7 +40,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
-import static com.powsybl.ws.commons.computation.ComputationTest.MockComputationStatus.NOT_DONE;
 import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_RECEIVER;
 import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_RESULT_UUID;
 import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_USER_ID;
@@ -72,17 +71,13 @@ class ComputationTest implements WithAssertions {
     @Mock
     private Network network;
 
-    public static class MockComputationResult { }
-
-    public static class MockComputationParameters { }
-
-    public enum MockComputationStatus {
+    private enum MockComputationStatus {
         NOT_DONE,
         RUNNING,
         COMPLETED
     }
 
-    public static class MockComputationResultService extends AbstractComputationResultService<MockComputationStatus> {
+    private static class MockComputationResultService extends AbstractComputationResultService<MockComputationStatus> {
         Map<UUID, MockComputationStatus> mockDBStatus = new HashMap<>();
 
         @Override
@@ -107,7 +102,7 @@ class ComputationTest implements WithAssertions {
         }
     }
 
-    public static class MockComputationObserver extends AbstractComputationObserver<MockComputationResult, MockComputationParameters> {
+    private static class MockComputationObserver extends AbstractComputationObserver<Object, Object> {
         protected MockComputationObserver(@NonNull ObservationRegistry observationRegistry, @NonNull MeterRegistry meterRegistry) {
             super(observationRegistry, meterRegistry);
         }
@@ -118,29 +113,29 @@ class ComputationTest implements WithAssertions {
         }
 
         @Override
-        protected String getResultStatus(MockComputationResult res) {
+        protected String getResultStatus(Object res) {
             return res != null ? "OK" : "NOK";
         }
     }
 
-    public static class MockComputationRunContext extends AbstractComputationRunContext<MockComputationParameters> {
+    private static class MockComputationRunContext extends AbstractComputationRunContext<Object> {
         // makes the mock computation to behave in a specific way
         @Getter @Setter
         ComputationResultWanted computationResWanted = ComputationResultWanted.SUCCESS;
 
         protected MockComputationRunContext(UUID networkUuid, String variantId, String receiver, ReportInfos reportInfos,
-                                            String userId, String provider, MockComputationParameters parameters) {
+                                            String userId, String provider, Object parameters) {
             super(networkUuid, variantId, receiver, reportInfos, userId, provider, parameters);
         }
     }
 
-    public static class MockComputationResultContext extends AbstractResultContext<MockComputationRunContext> {
+    private static class MockComputationResultContext extends AbstractResultContext<MockComputationRunContext> {
         protected MockComputationResultContext(UUID resultUuid, MockComputationRunContext runContext) {
             super(resultUuid, runContext);
         }
     }
 
-    public class MockComputationService extends AbstractComputationService<MockComputationRunContext, MockComputationResultService, MockComputationStatus> {
+    private static class MockComputationService extends AbstractComputationService<MockComputationRunContext, MockComputationResultService, MockComputationStatus> {
         protected MockComputationService(NotificationService notificationService, MockComputationResultService resultService, ObjectMapper objectMapper, UuidGeneratorService uuidGeneratorService, String defaultProvider) {
             super(notificationService, resultService, objectMapper, uuidGeneratorService, defaultProvider);
         }
@@ -152,17 +147,17 @@ class ComputationTest implements WithAssertions {
 
         @Override
         public UUID runAndSaveResult(MockComputationRunContext runContext) {
-            return resultUuid;
+            return RESULT_UUID;
         }
     }
 
-    enum ComputationResultWanted {
+    private enum ComputationResultWanted {
         SUCCESS,
         FAIL
     }
 
-    public class MockComputationWorkerService extends AbstractWorkerService<MockComputationResult, MockComputationRunContext, MockComputationParameters, MockComputationResultService> {
-        protected MockComputationWorkerService(NetworkStoreService networkStoreService, NotificationService notificationService, ReportService reportService, MockComputationResultService resultService, ExecutionService executionService, AbstractComputationObserver<MockComputationResult, MockComputationParameters> observer, ObjectMapper objectMapper) {
+    private static class MockComputationWorkerService extends AbstractWorkerService<Object, MockComputationRunContext, Object, MockComputationResultService> {
+        protected MockComputationWorkerService(NetworkStoreService networkStoreService, NotificationService notificationService, ReportService reportService, MockComputationResultService resultService, ExecutionService executionService, AbstractComputationObserver<Object, Object> observer, ObjectMapper objectMapper) {
             super(networkStoreService, notificationService, reportService, resultService, executionService, observer, objectMapper);
         }
 
@@ -172,7 +167,7 @@ class ComputationTest implements WithAssertions {
         }
 
         @Override
-        protected void saveResult(Network network, AbstractResultContext<MockComputationRunContext> resultContext, MockComputationResult result) { }
+        protected void saveResult(Network network, AbstractResultContext<MockComputationRunContext> resultContext, Object result) { }
 
         @Override
         protected String getComputationType() {
@@ -180,14 +175,14 @@ class ComputationTest implements WithAssertions {
         }
 
         @Override
-        protected CompletableFuture<MockComputationResult> getCompletableFuture(MockComputationRunContext runContext, String provider, UUID resultUuid) {
-            final CompletableFuture<MockComputationResult> completableFuture = new CompletableFuture<>();
+        protected CompletableFuture<Object> getCompletableFuture(MockComputationRunContext runContext, String provider, UUID resultUuid) {
+            final CompletableFuture<Object> completableFuture = new CompletableFuture<>();
             switch (runContext.getComputationResWanted()) {
                 case FAIL:
-                    completableFuture.completeExceptionally(new RuntimeException("Computation failed but with an artificially longer messaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaage"));
+                    completableFuture.completeExceptionally(new RuntimeException("Computation failed"));
                     break;
                 case SUCCESS:
-                    return CompletableFuture.supplyAsync(MockComputationResult::new);
+                    return CompletableFuture.supplyAsync(Object::new);
             }
             return completableFuture;
         }
@@ -195,10 +190,10 @@ class ComputationTest implements WithAssertions {
 
     private MockComputationWorkerService workerService;
     private MockComputationService computationService;
-    private MockComputationResultContext resultContext;
+    private static MockComputationResultContext resultContext;
     final UUID networkUuid = UUID.fromString("11111111-1111-1111-1111-111111111111");
     final UUID reportUuid = UUID.fromString("22222222-2222-2222-2222-222222222222");
-    final UUID resultUuid = UUID.fromString("33333333-3333-3333-3333-333333333333");
+    static final UUID RESULT_UUID = UUID.fromString("33333333-3333-3333-3333-333333333333");
     final String reporterId = "44444444-4444-4444-4444-444444444444";
     final String userId = "MockComputation_UserId";
     final String receiver = "MockComputation_Receiver";
@@ -223,18 +218,18 @@ class ComputationTest implements WithAssertions {
 
         MessageBuilder<String> builder = MessageBuilder
                 .withPayload("")
-                .setHeader(HEADER_RESULT_UUID, resultUuid.toString())
+                .setHeader(HEADER_RESULT_UUID, RESULT_UUID.toString())
                 .setHeader(HEADER_RECEIVER, receiver)
                 .setHeader(HEADER_USER_ID, userId);
         message = builder.build();
 
         runContext = new MockComputationRunContext(networkUuid, null, receiver,
-                new ReportInfos(reportUuid, reporterId, COMPUTATION_TYPE), userId, provider, new MockComputationParameters());
+                new ReportInfos(reportUuid, reporterId, COMPUTATION_TYPE), userId, provider, new Object());
         runContext.setNetwork(network);
-        resultContext = new MockComputationResultContext(resultUuid, runContext);
+        resultContext = new MockComputationResultContext(RESULT_UUID, runContext);
     }
 
-    void initComputationExecution() {
+    private void initComputationExecution() {
         when(networkStoreService.getNetwork(eq(networkUuid), any(PreloadingStrategy.class)))
                 .thenReturn(network);
         when(network.getVariantManager()).thenReturn(variantManager);
@@ -268,21 +263,21 @@ class ComputationTest implements WithAssertions {
 
     @Test
     void testComputationCancelled() {
-        MockComputationStatus baseStatus = NOT_DONE;
-        computationService.setStatus(List.of(resultUuid), baseStatus);
-        assertEquals(baseStatus, computationService.getStatus(resultUuid));
+        MockComputationStatus baseStatus = MockComputationStatus.NOT_DONE;
+        computationService.setStatus(List.of(RESULT_UUID), baseStatus);
+        assertEquals(baseStatus, computationService.getStatus(RESULT_UUID));
 
-        computationService.stop(resultUuid, receiver);
+        computationService.stop(RESULT_UUID, receiver);
 
         // test the course
         verify(notificationService.getPublisher(), times(1)).send(eq("publishCancel-out-0"), isA(Message.class));
 
         Message<String> cancelMessage = MessageBuilder.withPayload("")
-                .setHeader(HEADER_RESULT_UUID, resultUuid.toString())
+                .setHeader(HEADER_RESULT_UUID, RESULT_UUID.toString())
                 .setHeader(HEADER_RECEIVER, receiver)
                 .build();
         CancelContext cancelContext = CancelContext.fromMessage(cancelMessage);
-        assertEquals(resultUuid, cancelContext.resultUuid());
+        assertEquals(RESULT_UUID, cancelContext.resultUuid());
         assertEquals(receiver, cancelContext.receiver());
     }
 }

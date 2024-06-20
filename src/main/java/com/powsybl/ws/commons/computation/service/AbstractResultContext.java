@@ -23,10 +23,10 @@ import static com.powsybl.ws.commons.computation.service.NotificationService.HEA
 
 /**
  * @author Mathieu Deharbe <mathieu.deharbe at rte-france.com>
- * @param <R> run context specific to a computation, including parameters
+ * @param <C> run context specific to a computation, including parameters
  */
 @Data
-public abstract class AbstractResultContext<R extends AbstractComputationRunContext<?>> {
+public abstract class AbstractResultContext<C extends AbstractComputationRunContext<?>> {
 
     protected static final String RESULT_UUID_HEADER = "resultUuid";
 
@@ -43,9 +43,9 @@ public abstract class AbstractResultContext<R extends AbstractComputationRunCont
     protected static final String MESSAGE_ROOT_NAME = "parameters";
 
     private final UUID resultUuid;
-    private final R runContext;
+    private final C runContext;
 
-    protected AbstractResultContext(UUID resultUuid, R runContext) {
+    protected AbstractResultContext(UUID resultUuid, C runContext) {
         this.resultUuid = Objects.requireNonNull(resultUuid);
         this.runContext = Objects.requireNonNull(runContext);
     }

@@ -38,9 +38,10 @@
     </developers>
 
     <properties>
-        <java.version>11</java.version>
         <powsybl-dependencies.version>2024.1.0</powsybl-dependencies.version>
         <springboot.version>3.1.2</springboot.version>
+        <powsybl-network-store-client.version>1.12.0</powsybl-network-store-client.version>
+        <spring-cloud.version>2022.0.3</spring-cloud.version>
     </properties>
 
     <dependencyManagement>
@@ -52,6 +53,14 @@
                 <version>${springboot.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+                <optional>true</optional>
             </dependency>
             <dependency>
                 <groupId>com.powsybl</groupId>
@@ -92,6 +101,27 @@
             <artifactId>spring-boot-starter-tomcat</artifactId>
             <optional>true</optional>
         </dependency>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-stream</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.aspectj</groupId>
+            <artifactId>aspectjweaver</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>com.powsybl</groupId>
+            <artifactId>powsybl-network-store-client</artifactId>
+            <version>${powsybl-network-store-client.version}</version>
+            <optional>true</optional>
+        </dependency>
 
         <!-- APT libraries -->
         <dependency>
@@ -110,6 +140,7 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- test -->
         <dependency>
             <groupId>org.junit.vintage</groupId>
             <artifactId>junit-vintage-engine</artifactId>
@@ -124,6 +155,13 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
             <scope>test</scope>
+            <!-- excluded because there already is slf4j-simple (an slf4j implementation) in the classpath -->
+            <exclusions>
+                <exclusion>
+                    <groupId>ch.qos.logback</groupId>
+                    <artifactId>logback-classic</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

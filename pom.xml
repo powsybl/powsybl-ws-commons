@@ -155,6 +155,7 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
             <scope>test</scope>
+            <!-- excluded because there already is slf4j-simple (an slf4j implementation) in the classpath -->
             <exclusions>
                 <exclusion>
                     <groupId>ch.qos.logback</groupId>

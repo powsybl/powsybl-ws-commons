@@ -116,16 +116,21 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
         return result != null;
     }
 
+    protected abstract void addLogsWhenFailed(C runContext, AtomicReference<ReportNode> rootReportNode);
+
+    protected abstract boolean exceptionHasLogs(Exception e);
+
     public Consumer<Message<String>> consumeRun() {
         return message -> {
             AbstractResultContext<C> resultContext = fromMessage(message);
+            AtomicReference<ReportNode> rootReporter = new AtomicReference<>(ReportNode.NO_OP);
             try {
                 long startTime = System.nanoTime();
 
                 Network network = getNetwork(resultContext.getRunContext().getNetworkUuid(),
                         resultContext.getRunContext().getVariantId());
                 resultContext.getRunContext().setNetwork(network);
-                R result = run(resultContext.getRunContext(), resultContext.getResultUuid());
+                R result = run(resultContext.getRunContext(), resultContext.getResultUuid(), rootReporter);
 
                 LOGGER.info("Just run in {}s", TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime));
 
@@ -141,7 +146,11 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             } catch (Exception e) {
-                if (!(e instanceof CancellationException)) {
+                if (exceptionHasLogs(e)) {
+                    addLogsWhenFailed(resultContext.getRunContext(), rootReporter);
+                    publishFail(resultContext, e.getMessage());
+                    sendResultMessage(resultContext, null);
+                } else if (!(e instanceof CancellationException)) {
                     LOGGER.error(NotificationService.getFailedMessage(getComputationType()), e);
                     publishFail(resultContext, e.getMessage());
                     resultService.delete(resultContext.getResultUuid());
@@ -186,9 +195,8 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
         LOGGER.info("Run {} computation...", getComputationType());
     }
 
-    protected R run(C runContext, UUID resultUuid) throws Exception {
+    protected R run(C runContext, UUID resultUuid, AtomicReference<ReportNode> rootReporter) throws Exception {
         String provider = runContext.getProvider();
-        AtomicReference<ReportNode> rootReporter = new AtomicReference<>(ReportNode.NO_OP);
         ReportNode reportNode = ReportNode.NO_OP;
 
         if (runContext.getReportInfos() != null && runContext.getReportInfos().reportUuid() != null) {

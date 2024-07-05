@@ -116,9 +116,13 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
         return result != null;
     }
 
-    protected abstract void addLogsWhenFailed(C runContext, AtomicReference<ReportNode> rootReportNode);
+    protected void addLogsWhenFailed(C runContext, AtomicReference<ReportNode> rootReportNode) {
+        throw new UnsupportedOperationException("Not implemented");
+    }
 
-    protected abstract boolean exceptionHasLogs(Exception e);
+    protected boolean exceptionHasLogs(Exception exception) {
+        return false;
+    }
 
     public Consumer<Message<String>> consumeRun() {
         return message -> {
@@ -147,6 +151,7 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
                 Thread.currentThread().interrupt();
             } catch (Exception e) {
                 if (exceptionHasLogs(e)) {
+                    LOGGER.error(NotificationService.getFailedMessage(getComputationType()), e);
                     addLogsWhenFailed(resultContext.getRunContext(), rootReporter);
                     publishFail(resultContext, e.getMessage());
                     sendResultMessage(resultContext, null);

@@ -116,14 +116,6 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
         return result != null;
     }
 
-    protected void addLogsWhenFailed(C runContext, AtomicReference<ReportNode> rootReportNode) {
-        throw new UnsupportedOperationException("Not implemented");
-    }
-
-    protected boolean isFailureWithLogs(Exception exception) {
-        return false;
-    }
-
     public Consumer<Message<String>> consumeRun() {
         return message -> {
             AbstractResultContext<C> resultContext = fromMessage(message);
@@ -150,16 +142,11 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             } catch (Exception e) {
-                if (isFailureWithLogs(e)) {
-                    LOGGER.error(NotificationService.getFailedMessage(getComputationType()), e);
-                    addLogsWhenFailed(resultContext.getRunContext(), rootReporter);
-                    publishFail(resultContext, e.getMessage());
-                    sendResultMessage(resultContext, null);
-                } else if (!(e instanceof CancellationException)) {
+                if (!(e instanceof CancellationException)) {
                     LOGGER.error(NotificationService.getFailedMessage(getComputationType()), e);
                     publishFail(resultContext, e.getMessage());
                     resultService.delete(resultContext.getResultUuid());
-                    this.handleNonCancellationException(resultContext, e);
+                    this.handleNonCancellationException(resultContext, e, rootReporter);
                 }
             } finally {
                 futures.remove(resultContext.getResultUuid());
@@ -173,7 +160,7 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
      * @param resultContext The context of the computation
      * @param exception The exception to handle
      */
-    protected void handleNonCancellationException(AbstractResultContext<C> resultContext, Exception exception) {
+    protected void handleNonCancellationException(AbstractResultContext<C> resultContext, Exception exception, AtomicReference<ReportNode> rootReporter) {
     }
 
     public Consumer<Message<String>> consumeCancel() {

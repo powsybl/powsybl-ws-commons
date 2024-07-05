@@ -1,7 +1,6 @@
 package com.powsybl.ws.commons.computation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.commons.report.ReportNode;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManager;
 import com.powsybl.network.store.client.NetworkStoreService;
@@ -40,7 +39,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_RECEIVER;
 import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_RESULT_UUID;
@@ -166,16 +164,6 @@ class ComputationTest implements WithAssertions {
         @Override
         protected AbstractResultContext<MockComputationRunContext> fromMessage(Message<String> message) {
             return resultContext;
-        }
-
-        @Override
-        protected void addLogsWhenFailed(MockComputationRunContext runContext, AtomicReference<ReportNode> rootReportNode) {
-
-        }
-
-        @Override
-        protected boolean isFailureWithLogs(Exception e) {
-            return true;
         }
 
         @Override

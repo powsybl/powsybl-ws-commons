@@ -174,7 +174,7 @@ class ComputationTest implements WithAssertions {
         }
 
         @Override
-        protected boolean exceptionHasLogs(Exception e) {
+        protected boolean isFailureWithLogs(Exception e) {
             return true;
         }
 

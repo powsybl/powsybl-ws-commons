@@ -120,7 +120,7 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
         throw new UnsupportedOperationException("Not implemented");
     }
 
-    protected boolean exceptionHasLogs(Exception exception) {
+    protected boolean isFailureWithLogs(Exception exception) {
         return false;
     }
 
@@ -150,7 +150,7 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             } catch (Exception e) {
-                if (exceptionHasLogs(e)) {
+                if (isFailureWithLogs(e)) {
                     LOGGER.error(NotificationService.getFailedMessage(getComputationType()), e);
                     addLogsWhenFailed(resultContext.getRunContext(), rootReporter);
                     publishFail(resultContext, e.getMessage());

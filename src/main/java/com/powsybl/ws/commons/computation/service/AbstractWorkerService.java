@@ -119,13 +119,14 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
     public Consumer<Message<String>> consumeRun() {
         return message -> {
             AbstractResultContext<C> resultContext = fromMessage(message);
+            AtomicReference<ReportNode> rootReporter = new AtomicReference<>(ReportNode.NO_OP);
             try {
                 long startTime = System.nanoTime();
 
                 Network network = getNetwork(resultContext.getRunContext().getNetworkUuid(),
                         resultContext.getRunContext().getVariantId());
                 resultContext.getRunContext().setNetwork(network);
-                R result = run(resultContext.getRunContext(), resultContext.getResultUuid());
+                R result = run(resultContext.getRunContext(), resultContext.getResultUuid(), rootReporter);
 
                 LOGGER.info("Just run in {}s", TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime));
 
@@ -145,7 +146,7 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
                     LOGGER.error(NotificationService.getFailedMessage(getComputationType()), e);
                     publishFail(resultContext, e.getMessage());
                     resultService.delete(resultContext.getResultUuid());
-                    this.handleNonCancellationException(resultContext, e);
+                    this.handleNonCancellationException(resultContext, e, rootReporter);
                 }
             } finally {
                 futures.remove(resultContext.getResultUuid());
@@ -159,7 +160,7 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
      * @param resultContext The context of the computation
      * @param exception The exception to handle
      */
-    protected void handleNonCancellationException(AbstractResultContext<C> resultContext, Exception exception) {
+    protected void handleNonCancellationException(AbstractResultContext<C> resultContext, Exception exception, AtomicReference<ReportNode> rootReporter) {
     }
 
     public Consumer<Message<String>> consumeCancel() {
@@ -186,9 +187,8 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
         LOGGER.info("Run {} computation...", getComputationType());
     }
 
-    protected R run(C runContext, UUID resultUuid) throws Exception {
+    protected R run(C runContext, UUID resultUuid, AtomicReference<ReportNode> rootReporter) throws Exception {
         String provider = runContext.getProvider();
-        AtomicReference<ReportNode> rootReporter = new AtomicReference<>(ReportNode.NO_OP);
         ReportNode reportNode = ReportNode.NO_OP;
 
         if (runContext.getReportInfos() != null && runContext.getReportInfos().reportUuid() != null) {

@@ -62,7 +62,8 @@ public class ReportService {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         try {
-            restTemplate.exchange(getReportServerURI() + path, HttpMethod.PUT, new HttpEntity<>(objectMapper.writeValueAsString(reportNode), headers), ReportNode.class);
+            String str = objectMapper.writeValueAsString(reportNode);
+            restTemplate.exchange(getReportServerURI() + path, HttpMethod.PUT, new HttpEntity<>(str, headers), ReportNode.class);
         } catch (JsonProcessingException error) {
             throw new PowsyblException("Error sending report", error);
         }

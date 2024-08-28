@@ -153,7 +153,8 @@ class ComputationTest implements WithAssertions {
 
     private enum ComputationResultWanted {
         SUCCESS,
-        FAIL
+        FAIL,
+        COMPLETED
     }
 
     private static class MockComputationWorkerService extends AbstractWorkerService<Object, MockComputationRunContext, Object, MockComputationResultService> {
@@ -183,6 +184,8 @@ class ComputationTest implements WithAssertions {
                     break;
                 case SUCCESS:
                     return CompletableFuture.supplyAsync(Object::new);
+                case COMPLETED:
+                    return CompletableFuture.completedFuture(null);
             }
             return completableFuture;
         }
@@ -278,5 +281,30 @@ class ComputationTest implements WithAssertions {
         CancelContext cancelContext = CancelContext.fromMessage(cancelMessage);
         assertEquals(RESULT_UUID, cancelContext.resultUuid());
         assertEquals(receiver, cancelContext.receiver());
+    }
+
+    @Test
+    void testComputationCancelFailed() {
+        MockComputationStatus baseStatus = MockComputationStatus.COMPLETED;
+        computationService.setStatus(List.of(RESULT_UUID), baseStatus);
+        assertEquals(baseStatus, computationService.getStatus(RESULT_UUID));
+
+        computationService.stop(RESULT_UUID, receiver, userId);
+
+        // test the course
+        verify(notificationService.getPublisher(), times(1)).send(eq("publishCancel-out-0"), isA(Message.class));
+
+        Message<String> cancelMessage = MessageBuilder.withPayload("")
+                .setHeader(HEADER_RESULT_UUID, RESULT_UUID.toString())
+                .setHeader(HEADER_RECEIVER, receiver)
+                .setHeader(HEADER_USER_ID, userId)
+                .build();
+        CancelContext cancelContext = CancelContext.fromMessage(cancelMessage);
+        assertEquals(RESULT_UUID, cancelContext.resultUuid());
+        assertEquals(receiver, cancelContext.receiver());
+        assertEquals(userId, cancelContext.userId());
+
+        workerService.consumeCancel().accept(message);
+        verify(notificationService.getPublisher(), times(1)).send(eq("publishCancelFailed-out-0"), isA(Message.class));
     }
 }

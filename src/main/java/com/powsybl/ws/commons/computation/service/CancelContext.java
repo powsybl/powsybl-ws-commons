@@ -14,18 +14,22 @@ import org.springframework.messaging.support.MessageBuilder;
 import java.util.Objects;
 import java.util.UUID;
 
-import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_RECEIVER;
-import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_RESULT_UUID;
+import static com.powsybl.ws.commons.computation.service.NotificationService.*;
 
 
 /**
  * @author Anis Touri <anis.touri at rte-france.com>
  */
-public record CancelContext(UUID resultUuid, String receiver) {
+public record CancelContext(UUID resultUuid, String receiver, String userId) {
 
-    public CancelContext(UUID resultUuid, String receiver) {
+    public CancelContext(UUID resultUuid, String receiver, String userId) {
         this.resultUuid = Objects.requireNonNull(resultUuid);
         this.receiver = Objects.requireNonNull(receiver);
+        this.userId = userId;
+    }
+
+    public CancelContext(UUID resultUuid, String receiver) {
+        this(resultUuid, receiver, null);
     }
 
     public static CancelContext fromMessage(Message<String> message) {
@@ -33,13 +37,15 @@ public record CancelContext(UUID resultUuid, String receiver) {
         MessageHeaders headers = message.getHeaders();
         UUID resultUuid = UUID.fromString(MessageUtils.getNonNullHeader(headers, HEADER_RESULT_UUID));
         String receiver = headers.get(HEADER_RECEIVER, String.class);
-        return new CancelContext(resultUuid, receiver);
+        String userId = headers.get(HEADER_USER_ID, String.class);
+        return new CancelContext(resultUuid, receiver, userId);
     }
 
     public Message<String> toMessage() {
         return MessageBuilder.withPayload("")
                 .setHeader(HEADER_RESULT_UUID, resultUuid.toString())
                 .setHeader(HEADER_RECEIVER, receiver)
+                .setHeader(HEADER_USER_ID, userId)
                 .build();
     }
 }

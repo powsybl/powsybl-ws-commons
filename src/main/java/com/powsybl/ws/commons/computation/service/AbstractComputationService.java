@@ -45,6 +45,10 @@ public abstract class AbstractComputationService<C extends AbstractComputationRu
         notificationService.sendCancelMessage(new CancelContext(resultUuid, receiver).toMessage());
     }
 
+    public void stop(UUID resultUuid, String receiver, String userId) {
+        notificationService.sendCancelMessage(new CancelContext(resultUuid, receiver, userId).toMessage());
+    }
+
     public abstract List<String> getProviders();
 
     public abstract UUID runAndSaveResult(C runContext);

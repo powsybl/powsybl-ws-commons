@@ -71,7 +71,7 @@ class ReportServiceTest {
     @Test
     void testDeleteReport() {
         server.expect(MockRestRequestMatchers.method(HttpMethod.DELETE))
-                .andExpect(MockRestRequestMatchers.requestTo("http://report-server/v1/reports/" + REPORT_UUID + "?reportTypeFilter=MockReportType&errorOnReportNotFound=false"))
+                .andExpect(MockRestRequestMatchers.requestTo("http://report-server/v1/reports/" + REPORT_UUID + "?errorOnReportNotFound=false"))
                 .andExpect(MockRestRequestMatchers.content().bytes(new byte[0]))
                 .andRespond(MockRestResponseCreators.withSuccess());
         assertThatNoException().isThrownBy(() -> reportService.deleteReport(REPORT_UUID));
@@ -80,7 +80,7 @@ class ReportServiceTest {
     @Test
     void testDeleteReportFailed() {
         server.expect(MockRestRequestMatchers.method(HttpMethod.DELETE))
-                .andExpect(MockRestRequestMatchers.requestTo("http://report-server/v1/reports/" + REPORT_ERROR_UUID + "?reportTypeFilter=MockReportType&errorOnReportNotFound=false"))
+                .andExpect(MockRestRequestMatchers.requestTo("http://report-server/v1/reports/" + REPORT_ERROR_UUID + "?errorOnReportNotFound=false"))
                 .andExpect(MockRestRequestMatchers.content().bytes(new byte[0]))
                 .andRespond(MockRestResponseCreators.withServerError());
         assertThatThrownBy(() -> reportService.deleteReport(REPORT_ERROR_UUID)).isInstanceOf(RestClientException.class);

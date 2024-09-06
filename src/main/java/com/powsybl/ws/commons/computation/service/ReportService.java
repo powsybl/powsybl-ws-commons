@@ -69,12 +69,10 @@ public class ReportService {
         }
     }
 
-    public void deleteReport(UUID reportUuid, String reportType) {
+    public void deleteReport(UUID reportUuid) {
         Objects.requireNonNull(reportUuid);
 
         var path = UriComponentsBuilder.fromPath("{reportUuid}")
-                .queryParam(QUERY_PARAM_REPORT_TYPE_FILTER, reportType)
-                .queryParam(QUERY_PARAM_REPORT_THROW_ERROR, false)
                 .buildAndExpand(reportUuid)
                 .toUriString();
         var headers = new HttpHeaders();

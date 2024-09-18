@@ -94,20 +94,24 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
         }
     }
 
-    private void cancelAsync(CancelContext cancelContext) {
+    private boolean cancelAsync(CancelContext cancelContext) {
         lockRunAndCancel.lock();
+        boolean isCanceled = false;
         try {
             cancelComputationRequests.put(cancelContext.resultUuid(), cancelContext);
 
             // find the completableFuture associated with result uuid
             CompletableFuture<R> future = futures.get(cancelContext.resultUuid());
             if (future != null) {
-                future.cancel(true);  // cancel computation in progress
+                isCanceled = future.cancel(true);  // cancel computation in progress
+                if (isCanceled) {
+                    cleanResultsAndPublishCancel(cancelContext.resultUuid(), cancelContext.receiver());
+                }
             }
-            cleanResultsAndPublishCancel(cancelContext.resultUuid(), cancelContext.receiver());
         } finally {
             lockRunAndCancel.unlock();
         }
+        return isCanceled;
     }
 
     protected abstract AbstractResultContext<C> fromMessage(Message<String> message);
@@ -164,7 +168,13 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
     }
 
     public Consumer<Message<String>> consumeCancel() {
-        return message -> cancelAsync(CancelContext.fromMessage(message));
+        return message -> {
+            CancelContext cancelContext = CancelContext.fromMessage(message);
+            boolean isCancelled = cancelAsync(cancelContext);
+            if (!isCancelled) {
+                notificationService.publishCancelFailed(cancelContext.resultUuid(), cancelContext.receiver(), getComputationType(), cancelContext.userId());
+            }
+        };
     }
 
     protected abstract void saveResult(Network network, AbstractResultContext<C> resultContext, R result);

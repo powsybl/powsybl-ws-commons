@@ -7,7 +7,7 @@
 package com.powsybl.ws.commons;
 
 import com.google.common.io.ByteStreams;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -15,14 +15,14 @@ import java.util.Objects;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * @author Etienne Homer <etienne.homer at rte-france.com>
  */
-public class SecuredZipInputStreamTest {
+class SecuredZipInputStreamTest {
     @Test
-    public void test() throws IOException {
+    void test() throws IOException {
         byte[] fileContent = ByteStreams.toByteArray(Objects.requireNonNull(getClass().getResourceAsStream("/MicroGridTestConfiguration_T4_BE_BB_Complete_v2.zip")));
         try (SecuredZipInputStream tooManyEntriesSecuredZis = new SecuredZipInputStream(new ByteArrayInputStream(fileContent), 3, 1000000000)) {
             assertTrue(assertThrows(IllegalStateException.class, () -> readZip(tooManyEntriesSecuredZis))
@@ -40,7 +40,7 @@ public class SecuredZipInputStreamTest {
         }
     }
 
-    public int readZip(ZipInputStream zis) throws IOException {
+    private static int readZip(ZipInputStream zis) throws IOException {
         ZipEntry entry = zis.getNextEntry();
         int readBytes = 0;
         while (entry != null) {

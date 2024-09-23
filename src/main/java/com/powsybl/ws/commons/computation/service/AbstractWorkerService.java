@@ -209,13 +209,7 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
                     .withUntypedValue("providerToUse", Objects.requireNonNullElse(provider, "")).add();
             // Delete any previous computation logs
             observer.observe("report.delete",
-                    runContext, () -> {
-                        try {
-                            reportService.deleteReport(runContext.getReportInfos().reportUuid());
-                        } catch (Exception e) {
-                            LOGGER.error("Failed to delete report", e);
-                        }
-                    });
+                    runContext, () -> reportService.deleteReport(runContext.getReportInfos().reportUuid()));
         }
         runContext.setReportNode(reportNode);
 

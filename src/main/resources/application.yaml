@@ -9,7 +9,7 @@ server:
   error:
     include-message: always
   # increase max url length
-  max-http-header-size: 64000
+  max-http-request-header-size: 64000
   # enable monitoring of tomcat threads and thread pool
   tomcat:
     mbeanregistry:

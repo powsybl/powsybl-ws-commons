@@ -153,10 +153,18 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
                     this.handleNonCancellationException(resultContext, e, rootReporter);
                 }
             } finally {
-                futures.remove(resultContext.getResultUuid());
-                cancelComputationRequests.remove(resultContext.getResultUuid());
+                clean(resultContext);
             }
         };
+    }
+
+    /**
+     * Perform cleaning
+     * @param resultContext The context of the computation
+     */
+    protected void clean(AbstractResultContext<C> resultContext) {
+        futures.remove(resultContext.getResultUuid());
+        cancelComputationRequests.remove(resultContext.getResultUuid());
     }
 
     /**

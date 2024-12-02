@@ -27,10 +27,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -39,6 +36,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
+
+import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_DEBUG_DIR;
 
 /**
  * @author Mathieu Deharbe <mathieu.deharbe at rte-france.com>
@@ -197,14 +196,32 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
 
     protected abstract void saveResult(Network network, AbstractResultContext<C> resultContext, R result);
 
-    protected void sendResultMessage(AbstractResultContext<C> resultContext, R ignoredResult) {
-        notificationService.sendResultMessage(resultContext.getResultUuid(), resultContext.getRunContext().getReceiver(),
-                resultContext.getRunContext().getUserId(), null);
+    private Map<String, Object> getAdditionalHeaders(AbstractResultContext<C> resultContext, R ignoredResult) {
+        Map<String, Object> additionalHeaders = new HashMap<>();
+        if (resultContext.getRunContext().isDebug() && resultContext.getRunContext().getComputationManager() != null) {
+            additionalHeaders.put(HEADER_DEBUG_DIR, resultContext.getRunContext().getComputationManager().getLocalDir().toAbsolutePath().toString());
+        }
+        return additionalHeaders;
     }
 
-    protected void publishFail(AbstractResultContext<C> resultContext, String message) {
+    public Map<String, Object> getResultHeaders(AbstractResultContext<C> resultContext, R result) {
+        return getAdditionalHeaders(resultContext, result);
+    }
+
+    public Map<String, Object> getFailHeaders(AbstractResultContext<C> resultContext, R result) {
+        return getAdditionalHeaders(resultContext, result);
+    }
+
+    private void sendResultMessage(AbstractResultContext<C> resultContext, R result) {
+        Map<String, Object> additionalHeaders = getResultHeaders(resultContext, result);
+        notificationService.sendResultMessage(resultContext.getResultUuid(), resultContext.getRunContext().getReceiver(),
+                resultContext.getRunContext().getUserId(), additionalHeaders);
+    }
+
+    private void publishFail(AbstractResultContext<C> resultContext, String message) {
+        Map<String, Object> additionalHeaders = getFailHeaders(resultContext, null);
         notificationService.publishFail(resultContext.getResultUuid(), resultContext.getRunContext().getReceiver(),
-                message, resultContext.getRunContext().getUserId(), getComputationType(), null);
+                message, resultContext.getRunContext().getUserId(), getComputationType(), additionalHeaders);
     }
 
     /**

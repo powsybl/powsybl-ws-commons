@@ -8,7 +8,11 @@ package com.powsybl.ws.commons.computation.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.PowsyblException;
+import com.powsybl.commons.io.FileUtil;
 import com.powsybl.commons.report.ReportNode;
+import com.powsybl.computation.ComputationManager;
+import com.powsybl.computation.local.LocalComputationConfig;
+import com.powsybl.computation.local.LocalComputationManager;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.network.store.client.NetworkStoreService;
@@ -20,6 +24,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.messaging.Message;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -165,6 +173,11 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
     protected void clean(AbstractResultContext<C> resultContext) {
         futures.remove(resultContext.getResultUuid());
         cancelComputationRequests.remove(resultContext.getResultUuid());
+        // clean working directory
+        if (!resultContext.getRunContext().isDebug()) {
+            Path workDir = resultContext.getRunContext().getComputationManager().getLocalDir();
+            removeWorkingDirectory(workDir);
+        }
     }
 
     /**
@@ -199,10 +212,11 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
 
     /**
      * Do some extra task before running the computation, e.g. print log or init extra data for the run context
-     * @param ignoredRunContext This context may be used for further computation in overriding classes
+     * @param runContext This context may be used for further computation in overriding classes
      */
-    protected void preRun(C ignoredRunContext) {
+    protected void preRun(C runContext) {
         LOGGER.info("Run {} computation...", getComputationType());
+        runContext.setComputationManager(createComputationManager());
     }
 
     protected R run(C runContext, UUID resultUuid, AtomicReference<ReportNode> rootReporter) throws Exception {
@@ -262,4 +276,29 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
     protected abstract String getComputationType();
 
     protected abstract CompletableFuture<R> getCompletableFuture(C runContext, String provider, UUID resultUuid);
+
+    private ComputationManager createComputationManager() {
+        LocalComputationConfig localComputationConfig = LocalComputationConfig.load();
+        Path localDir = localComputationConfig.getLocalDir();
+        try {
+            String workDirPrefix = getComputationType().replaceAll("\\s+", "_").toLowerCase() + "_";
+            Path workDir = Files.createTempDirectory(localDir, workDirPrefix);
+            return new LocalComputationManager(new LocalComputationConfig(workDir, localComputationConfig.getAvailableCore()), executionService.getExecutorService());
+        } catch (IOException e) {
+            throw new UncheckedIOException(String.format("Error occurred while creating a working directory inside the local directory %s",
+                    localDir.toAbsolutePath()), e);
+        }
+    }
+
+    private void removeWorkingDirectory(Path workDir) {
+        if (workDir != null) {
+            try {
+                FileUtil.removeDir(workDir);
+            } catch (IOException e) {
+                LOGGER.error(String.format("%s: Error occurred while cleaning working directory at %s", getComputationType(), workDir.toAbsolutePath()), e);
+            }
+        } else {
+            LOGGER.info("{}: No working directory to clean", getComputationType());
+        }
+    }
 }

@@ -7,6 +7,7 @@
 package com.powsybl.ws.commons.computation.service;
 
 import com.powsybl.commons.report.ReportNode;
+import com.powsybl.computation.ComputationManager;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.ws.commons.computation.dto.ReportInfos;
 import lombok.Getter;
@@ -30,6 +31,8 @@ public abstract class AbstractComputationRunContext<P> {
     private P parameters;
     private ReportNode reportNode;
     private Network network;
+    private boolean debug;
+    private ComputationManager computationManager;
 
     protected AbstractComputationRunContext(UUID networkUuid, String variantId, String receiver, ReportInfos reportInfos,
                                             String userId, String provider, P parameters) {

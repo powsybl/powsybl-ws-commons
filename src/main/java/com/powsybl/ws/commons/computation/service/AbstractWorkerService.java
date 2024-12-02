@@ -8,7 +8,6 @@ package com.powsybl.ws.commons.computation.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.PowsyblException;
-import com.powsybl.commons.io.FileUtil;
 import com.powsybl.commons.report.ReportNode;
 import com.powsybl.computation.ComputationManager;
 import com.powsybl.computation.local.LocalComputationConfig;
@@ -30,6 +29,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
@@ -173,11 +173,8 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
     protected void clean(AbstractResultContext<C> resultContext) {
         futures.remove(resultContext.getResultUuid());
         cancelComputationRequests.remove(resultContext.getResultUuid());
-        // clean working directory
-        if (!resultContext.getRunContext().isDebug()) {
-            Path workDir = resultContext.getRunContext().getComputationManager().getLocalDir();
-            removeWorkingDirectory(workDir);
-        }
+
+        Optional.ofNullable(resultContext.getRunContext().getComputationManager()).ifPresent(ComputationManager::close);
     }
 
     /**
@@ -277,7 +274,11 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
 
     protected abstract CompletableFuture<R> getCompletableFuture(C runContext, String provider, UUID resultUuid);
 
-    private ComputationManager createComputationManager() {
+    /**
+     * set method as public to mock DockerLocalComputationManager when testing with test container
+     * @return a computation manager
+     */
+    public ComputationManager createComputationManager() {
         LocalComputationConfig localComputationConfig = LocalComputationConfig.load();
         Path localDir = localComputationConfig.getLocalDir();
         try {
@@ -287,18 +288,6 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
         } catch (IOException e) {
             throw new UncheckedIOException(String.format("Error occurred while creating a working directory inside the local directory %s",
                     localDir.toAbsolutePath()), e);
-        }
-    }
-
-    private void removeWorkingDirectory(Path workDir) {
-        if (workDir != null) {
-            try {
-                FileUtil.removeDir(workDir);
-            } catch (IOException e) {
-                LOGGER.error(String.format("%s: Error occurred while cleaning working directory at %s", getComputationType(), workDir.toAbsolutePath()), e);
-            }
-        } else {
-            LOGGER.info("{}: No working directory to clean", getComputationType());
         }
     }
 }

@@ -35,7 +35,7 @@ public abstract class AbstractComputationRunContext<P> {
     private ComputationManager computationManager;
 
     protected AbstractComputationRunContext(UUID networkUuid, String variantId, String receiver, ReportInfos reportInfos,
-                                            String userId, String provider, P parameters) {
+                                            String userId, String provider, P parameters, boolean debug) {
         this.networkUuid = networkUuid;
         this.variantId = variantId;
         this.receiver = receiver;
@@ -45,5 +45,6 @@ public abstract class AbstractComputationRunContext<P> {
         this.parameters = parameters;
         this.reportNode = ReportNode.NO_OP;
         this.network = null;
+        this.debug = debug;
     }
 }

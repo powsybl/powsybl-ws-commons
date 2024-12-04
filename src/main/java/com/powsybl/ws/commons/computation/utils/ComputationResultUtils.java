@@ -34,19 +34,20 @@ public final class ComputationResultUtils {
     private static String getNodeBreakerViolationLocationId(NodeBreakerViolationLocation nodeBreakerViolationLocation, Network network) {
         VoltageLevel vl = network.getVoltageLevel(nodeBreakerViolationLocation.getVoltageLevelId());
 
-        Set<String> busBarIds = nodeBreakerViolationLocation.getNodes().stream()
+        List<String> busBarIds = nodeBreakerViolationLocation.getNodes().stream()
                 .map(node -> vl.getNodeBreakerView().getTerminal(node))
                 .filter(Objects::nonNull)
                 .map(Terminal::getConnectable)
                 .filter(t -> t.getType() == BUSBAR_SECTION)
                 .map(Identifiable::getId)
-                .collect(Collectors.toSet());
+                .distinct()
+                .toList();
 
         String busId = null;
-        if (busBarIds.isEmpty()) {
-            busId = getBusId(vl, busBarIds);
+        if (!busBarIds.isEmpty()) {
+            busId = getBusId(vl, new HashSet<>(busBarIds));
         }
-        return formatViolationLocationId(busId != null ? Set.of(busId) : busBarIds, nodeBreakerViolationLocation.getVoltageLevelId());
+        return formatViolationLocationId(busId != null ? List.of() : busBarIds, busId != null ? busId : nodeBreakerViolationLocation.getVoltageLevelId());
     }
 
     private static String getBusId(VoltageLevel voltageLevel, Set<String> sjbIds) {
@@ -57,25 +58,24 @@ public final class ComputationResultUtils {
                 return busSjbIds.equals(sjbIds);
             })
             .findFirst();
-        return bus.isPresent() ? bus.get().getId() : null;
+        return bus.map(Identifiable::getId).orElse(null);
     }
 
-    private static String formatViolationLocationId(Set<String> elementsIds, String subjectId) {
-        if (elementsIds.size() > 1) {
-            return subjectId + " (" + String.join(", ", elementsIds) + " )";
-        }
-        Optional<String> firstElement = elementsIds.stream().findFirst();
-        return firstElement.orElse(subjectId);
+    private static String formatViolationLocationId(List<String> elementsIds, String subjectId) {
+        return !elementsIds.isEmpty() ?
+            subjectId + " (" + String.join(", ", elementsIds) + ")" :
+            subjectId;
     }
 
     private static String getBusBreakerViolationLocationId(BusBreakerViolationLocation busBreakerViolationLocation, Network network, String subjectId) {
-        Set<String> busBreakerIds = busBreakerViolationLocation
+        List<String> busBreakerIds = busBreakerViolationLocation
                 .getBusView(network)
                 .getBusStream()
                 .map(Identifiable::getId)
-                .collect(Collectors.toSet());
+                .distinct()
+                .toList();
 
-        return formatViolationLocationId(busBreakerIds, subjectId);
+        return busBreakerIds.size() == 1 ? formatViolationLocationId(List.of(), busBreakerIds.get(0)) : formatViolationLocationId(busBreakerIds, subjectId);
     }
 
 }

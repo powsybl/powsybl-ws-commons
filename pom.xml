@@ -125,9 +125,8 @@
          <dependency>
             <groupId>com.powsybl</groupId>
             <artifactId>powsybl-security-analysis-api</artifactId>
+             <optional>true</optional>
         </dependency>
-
-
 
         <!-- APT libraries -->
         <dependency>
@@ -168,12 +167,6 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.powsybl</groupId>
-            <artifactId>powsybl-network-store-iidm-impl</artifactId>
-            <version>1.20.0</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

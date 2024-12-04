@@ -345,7 +345,6 @@ class ComputationUtilTest {
         return network;
     }
 
-
     @Test
     void testGetIdFromViolationWithBusBreaker() {
         // Setup

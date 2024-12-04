@@ -188,6 +188,164 @@ class ComputationUtilTest {
         return network;
     }
 
+    /**
+     * <pre>
+     *                   G
+     *              C    |
+     * BBS1 -------[+]------- BBS2     VL1
+     *         |        [+] B1
+     *         |         |
+     *     L1  |         | L2
+     *         |         |
+     *     B3 [+]       [+] B4
+     * BBS3 -----------------          VL2
+     *             |
+     *             LD
+     * </pre>
+     * 6 buses
+     * 6 branches
+     *
+     *            G
+     *            |
+     *      o--C--o
+     *      |     |
+     *      |     B1
+     *      |     |
+     *      |     o
+     *      |     |
+     *      L1    L2
+     *      |     |
+     *      o     o
+     *      |     |
+     *      B3    B4
+     *      |     |
+     *      ---o---
+     *         |
+     *         LD
+     *
+     * @author Gael Macharel {@literal <gael.macherel at artelys.com>}
+     */
+    public static Network createNodeBreakerNetwork() {
+        Network network = Network.create("test", "test");
+        Substation s = network.newSubstation()
+                .setId("S")
+                .add();
+        VoltageLevel vl1 = s.newVoltageLevel()
+                .setId("VL1")
+                .setNominalV(400)
+                .setLowVoltageLimit(370.)
+                .setHighVoltageLimit(420.)
+                .setTopologyKind(TopologyKind.NODE_BREAKER)
+                .add();
+        vl1.getNodeBreakerView().newBusbarSection()
+                .setId("BBS1")
+                .setNode(0)
+                .add();
+        vl1.getNodeBreakerView().newBusbarSection()
+                .setId("BBS2")
+                .setNode(1)
+                .add();
+        vl1.getNodeBreakerView().newDisconnector()
+                .setId("D")
+                .setNode1(0)
+                .setNode2(6)
+                .add();
+        vl1.getNodeBreakerView().newBreaker()
+                .setId("C")
+                .setNode1(6)
+                .setNode2(1)
+                .setRetained(true)
+                .add();
+        vl1.getNodeBreakerView().newBreaker()
+                .setId("B1")
+                .setNode1(1)
+                .setNode2(3)
+                .add();
+        vl1.getNodeBreakerView().newInternalConnection()
+                .setNode1(1)
+                .setNode2(4)
+                .add();
+        vl1.getNodeBreakerView().newInternalConnection()
+                .setNode1(0)
+                .setNode2(5)
+                .add();
+        vl1.newGenerator()
+                .setId("G")
+                .setNode(4)
+                .setMinP(0.0)
+                .setMaxP(1000.0)
+                .setVoltageRegulatorOn(true)
+                .setTargetV(398)
+                .setTargetP(603.77)
+                .setTargetQ(301.0)
+                .add();
+
+        VoltageLevel vl2 = s.newVoltageLevel()
+                .setId("VL2")
+                .setNominalV(400)
+                .setTopologyKind(TopologyKind.NODE_BREAKER)
+                .setLowVoltageLimit(370.)
+                .setHighVoltageLimit(420.)
+                .add();
+        vl2.getNodeBreakerView().newBusbarSection()
+                .setId("BBS3")
+                .setNode(0)
+                .add();
+        vl2.getNodeBreakerView().newBreaker()
+                .setId("B3")
+                .setNode1(0)
+                .setNode2(1)
+                .setRetained(true)
+                .add();
+        vl2.getNodeBreakerView().newBreaker()
+                .setId("B4")
+                .setNode1(0)
+                .setNode2(2)
+                .add();
+        vl2.getNodeBreakerView().newInternalConnection()
+                .setNode1(0)
+                .setNode2(3)
+                .add();
+        vl2.newLoad()
+                .setId("LD")
+                .setNode(3)
+                .setP0(600.0)
+                .setQ0(200.0)
+                .add();
+
+        network.newLine()
+                .setId("L1")
+                .setVoltageLevel1("VL1")
+                .setNode1(5)
+                .setVoltageLevel2("VL2")
+                .setNode2(1)
+                .setR(3.0)
+                .setX(33.0)
+                .setB1(386E-6 / 2)
+                .setB2(386E-6 / 2)
+                .add();
+
+        network.newLine()
+                .setId("L2")
+                .setVoltageLevel1("VL1")
+                .setNode1(3)
+                .setVoltageLevel2("VL2")
+                .setNode2(2)
+                .setR(3.0)
+                .setX(33.0)
+                .setB1(386E-6 / 2)
+                .setB2(386E-6 / 2)
+                .add();
+
+        network.getLine("L1").newCurrentLimits1().setPermanentLimit(940.0).add();
+        network.getLine("L1").newCurrentLimits2().setPermanentLimit(940.0).add();
+        network.getLine("L2").newCurrentLimits1().setPermanentLimit(940.0).add();
+        network.getLine("L2").newCurrentLimits2().setPermanentLimit(940.0).add();
+
+        return network;
+    }
+
+
     @Test
     void testGetIdFromViolationWithBusBreaker() {
         // Setup
@@ -211,20 +369,20 @@ class ComputationUtilTest {
         assertEquals("SubjectId", ComputationResultUtils.getViolationLocationId(limitViolation, network));
     }
 
-//    @Test
-//    void testGetIdFromViolationWithNodeBreaker() {
-//        // Create a real network instead of mocking it
-//        Network network = createNetwork("testNetwork", true);
-//
-//        NodeBreakerViolationLocation nodeBreakerViolationLocation = mock(NodeBreakerViolationLocation.class);
-//        when(nodeBreakerViolationLocation.getType()).thenReturn(ViolationLocation.Type.NODE_BREAKER);
-//        when(nodeBreakerViolationLocation.getVoltageLevelId()).thenReturn("VLHV1");
-//
-//        LimitViolation limitViolation = mock(LimitViolation.class);
-//        when(limitViolation.getViolationLocation()).thenReturn(Optional.of(nodeBreakerViolationLocation));
-//        when(limitViolation.getSubjectId()).thenReturn("VLHV1");
-//
-//        String result = ComputationResultUtils.getViolationLocationId(limitViolation, network);
-//        assertEquals("VL1", result);
-//    }
+    @Test
+    void testGetIdFromViolationWithNodeBreaker() {
+        // Create a real network instead of mocking it
+        Network network = createNodeBreakerNetwork();
+
+        NodeBreakerViolationLocation nodeBreakerViolationLocation = mock(NodeBreakerViolationLocation.class);
+        when(nodeBreakerViolationLocation.getType()).thenReturn(ViolationLocation.Type.NODE_BREAKER);
+        when(nodeBreakerViolationLocation.getVoltageLevelId()).thenReturn("VL1");
+
+        LimitViolation limitViolation = mock(LimitViolation.class);
+        when(limitViolation.getViolationLocation()).thenReturn(Optional.of(nodeBreakerViolationLocation));
+        when(limitViolation.getSubjectId()).thenReturn("VLHV1");
+
+        String result = ComputationResultUtils.getViolationLocationId(limitViolation, network);
+        assertEquals("VL1", result);
+    }
 }

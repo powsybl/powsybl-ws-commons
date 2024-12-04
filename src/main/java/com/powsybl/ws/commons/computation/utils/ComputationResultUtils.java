@@ -61,13 +61,11 @@ public final class ComputationResultUtils {
     }
 
     private static String formatViolationLocationId(Set<String> elementsIds, String subjectId) {
-        if (elementsIds.size() == 1) {
-            return elementsIds.stream().findFirst().get();
-        } else if (elementsIds.isEmpty()) {
-            return subjectId;
-        } else {
+        if (elementsIds.size() > 1) {
             return subjectId + " (" + String.join(", ", elementsIds) + " )";
         }
+        Optional<String> firstElement = elementsIds.stream().findFirst();
+        return firstElement.orElse(subjectId);
     }
 
     private static String getBusBreakerViolationLocationId(BusBreakerViolationLocation busBreakerViolationLocation, Network network, String subjectId) {

@@ -63,14 +63,12 @@ class ComputationUtilTest {
                 .setB(0.0)
                 .add();
 
-
         if (createVariant) {
             network.getVariantManager().cloneVariant(VariantManagerConstants.INITIAL_VARIANT_ID, VARIANT_1_ID);
         }
 
         return network;
     }
-
 
     public static Network createNodeBreakerNetwork() {
         Network network = Network.create("test", "test");

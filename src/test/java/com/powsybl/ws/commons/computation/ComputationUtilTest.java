@@ -11,8 +11,10 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -89,23 +91,28 @@ class ComputationUtilTest {
     void testViolationLocationIdBusBreaker() {
         // Setup
         Network network = createBusBreakerNetwork();
-        BusBreakerViolationLocation busBreakerLocation = new BusBreakerViolationLocation(List.of("NGEN"));
-        LimitViolation limitViolation = mock(LimitViolation.class);
-        when(limitViolation.getViolationLocation()).thenReturn(Optional.of(busBreakerLocation));
+        BusBreakerViolationLocation busBreakerViolationLocation = mock(BusBreakerViolationLocation.class);
+        when(busBreakerViolationLocation.getType()).thenReturn(ViolationLocation.Type.BUS_BREAKER);
+        when(busBreakerViolationLocation.getBusIds()).thenReturn(List.of("NGEN"));
+        when(busBreakerViolationLocation.getBusView(any())).thenReturn(() -> Stream.empty());
 
+        LimitViolation limitViolation = mock(LimitViolation.class);
+        when(limitViolation.getViolationLocation()).thenReturn(Optional.of(busBreakerViolationLocation));
+        when(limitViolation.getSubjectId()).thenReturn("VLGEN");
+
+        assertEquals("VLGEN", ComputationResultUtils.getViolationLocationId(limitViolation, network));
+
+        VoltageLevel voltageLevel = network.getVoltageLevel("VLGEN");
+        Bus ngen = voltageLevel.getBusView().getBus("VLGEN_0");
+        when(busBreakerViolationLocation.getBusView(any())).thenReturn(() -> Stream.of(ngen));
         assertEquals("VLGEN_0", ComputationResultUtils.getViolationLocationId(limitViolation, network));
-    }
 
-    @Test
-    void testViolationLocationIdWithNoLocation() {
-        // Setup
-        Network network = mock(Network.class);
-        LimitViolation limitViolation = mock(LimitViolation.class);
+        Bus ngen2 = voltageLevel.getBusBreakerView().newBus()
+                .setId("NGEN2")
+                .add();
 
-        when(limitViolation.getViolationLocation()).thenReturn(Optional.empty());
-        when(limitViolation.getSubjectId()).thenReturn("SubjectId");
-
-        assertEquals("SubjectId", ComputationResultUtils.getViolationLocationId(limitViolation, network));
+        when(busBreakerViolationLocation.getBusView(any())).thenReturn(() -> Stream.of(ngen, ngen2));
+        assertEquals("VLGEN (VLGEN_0, NGEN2)", ComputationResultUtils.getViolationLocationId(limitViolation, network));
     }
 
     @Test

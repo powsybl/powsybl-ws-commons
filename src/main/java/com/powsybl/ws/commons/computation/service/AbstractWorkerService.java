@@ -224,7 +224,13 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
         preRun(runContext);
         CompletableFuture<R> future = runAsync(runContext, provider, resultUuid);
         R result = future == null ? null : observer.observeRun("run", runContext, future::get);
-        postRun(runContext, rootReporter, result);
+        try {
+            postRun(runContext, rootReporter, result);
+        } catch (Exception e) {
+            // As the exception occurs after a successful run of the computation we don't want the whole computation to fail
+            // Then we just log the error
+            LOGGER.error("An error occurred after computation run", e);
+        }
         return result;
     }
 
@@ -236,7 +242,11 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
      */
     protected void postRun(C runContext, AtomicReference<ReportNode> rootReportNode, R ignoredResult) {
         if (runContext.getReportInfos().reportUuid() != null) {
-            observer.observe("report.send", runContext, () -> reportService.sendReport(runContext.getReportInfos().reportUuid(), rootReportNode.get()));
+            try {
+                observer.observe("report.send", runContext, () -> reportService.sendReport(runContext.getReportInfos().reportUuid(), rootReportNode.get()));
+            } catch (Exception e) {
+                throw new PostRunException("An error occurred while sending reports", e);
+            }
         }
     }
 

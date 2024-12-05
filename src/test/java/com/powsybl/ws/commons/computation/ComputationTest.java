@@ -6,17 +6,7 @@ import com.powsybl.iidm.network.VariantManager;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.client.PreloadingStrategy;
 import com.powsybl.ws.commons.computation.dto.ReportInfos;
-import com.powsybl.ws.commons.computation.service.AbstractComputationObserver;
-import com.powsybl.ws.commons.computation.service.AbstractComputationResultService;
-import com.powsybl.ws.commons.computation.service.AbstractComputationRunContext;
-import com.powsybl.ws.commons.computation.service.AbstractComputationService;
-import com.powsybl.ws.commons.computation.service.AbstractResultContext;
-import com.powsybl.ws.commons.computation.service.AbstractWorkerService;
-import com.powsybl.ws.commons.computation.service.CancelContext;
-import com.powsybl.ws.commons.computation.service.ExecutionService;
-import com.powsybl.ws.commons.computation.service.NotificationService;
-import com.powsybl.ws.commons.computation.service.ReportService;
-import com.powsybl.ws.commons.computation.service.UuidGeneratorService;
+import com.powsybl.ws.commons.computation.service.*;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.observation.ObservationRegistry;
@@ -47,9 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isA;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith({ MockitoExtension.class })
 @Slf4j
@@ -306,5 +294,20 @@ class ComputationTest implements WithAssertions {
 
         workerService.consumeCancel().accept(message);
         verify(notificationService.getPublisher(), times(1)).send(eq("publishCancelFailed-out-0"), isA(Message.class));
+    }
+
+    @Test
+    void testComputationSuccessIfPostRunFails() {
+        // inits
+        initComputationExecution();
+        runContext.setComputationResWanted(ComputationResultWanted.SUCCESS);
+
+        doThrow(new PostRunException("Error occurred while sending reports")).when(reportService).sendReport(any(), any());
+
+        // execution / cleaning
+        workerService.consumeRun().accept(message);
+
+        // test the course
+        verify(notificationService.getPublisher(), times(1)).send(eq("publishResult-out-0"), isA(Message.class));
     }
 }

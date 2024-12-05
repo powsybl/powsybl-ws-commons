@@ -60,12 +60,13 @@ public class ReportService {
         var headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
+        String str;
         try {
-            String str = objectMapper.writeValueAsString(reportNode);
-            restTemplate.exchange(getReportServerURI() + path, HttpMethod.PUT, new HttpEntity<>(str, headers), ReportNode.class);
+            str = objectMapper.writeValueAsString(reportNode);
         } catch (JsonProcessingException error) {
-            throw new PowsyblException("Error sending report", error);
+            throw new PowsyblException("Impossible to serialize ReportNode", error);
         }
+        restTemplate.exchange(getReportServerURI() + path, HttpMethod.PUT, new HttpEntity<>(str, headers), ReportNode.class);
     }
 
     public void deleteReport(UUID reportUuid) {

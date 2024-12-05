@@ -116,6 +116,16 @@ class ComputationUtilTest {
     }
 
     @Test
+    void testNoViolationLocationIdBusBreaker() {
+        Network network = createBusBreakerNetwork();
+        LimitViolation limitViolation = mock(LimitViolation.class);
+
+        when(limitViolation.getViolationLocation()).thenReturn(Optional.empty());
+        when(limitViolation.getSubjectId()).thenReturn("subjectId");
+        assertEquals("subjectId", ComputationResultUtils.getViolationLocationId(limitViolation, network));
+    }
+
+    @Test
     void testViolationLocationIdNodeBreaker() {
         Network network = createNodeBreakerNetwork();
 

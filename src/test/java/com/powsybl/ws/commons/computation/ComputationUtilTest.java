@@ -101,6 +101,18 @@ class ComputationUtilTest {
         when(limitViolation.getViolationLocation()).thenReturn(Optional.of(new BusBreakerViolationLocation(List.of("NGEN2"))));
         when(limitViolation.getSubjectId()).thenReturn("VLGEN");
         assertEquals("VLGEN", ComputationResultUtils.getViolationLocationId(limitViolation, network));
+
+        VoltageLevel vl = network.getVoltageLevel("VLGEN");
+        vl.newLoad()
+                .setId("LD2")
+                .setBus("NGEN2")
+                .setConnectableBus("NGEN2")
+                .setP0(600.0)
+                .setQ0(200.0)
+                .add();
+        when(limitViolation.getViolationLocation()).thenReturn(Optional.of(new BusBreakerViolationLocation(List.of("NGEN", "NGEN2"))));
+        assertEquals("VLGEN (VLGEN_0, VLGEN_1)", ComputationResultUtils.getViolationLocationId(limitViolation, network));
+
     }
 
     @Test

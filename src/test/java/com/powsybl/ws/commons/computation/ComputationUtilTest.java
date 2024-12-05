@@ -36,7 +36,7 @@ class ComputationUtilTest {
                 .setId("NGEN")
                 .add();
 
-        vl.getBusBreakerView().newBus()
+        Bus ngen2 = vl.getBusBreakerView().newBus()
             .setId("NGEN2")
             .add();
 
@@ -44,6 +44,14 @@ class ComputationUtilTest {
             .setId("LD")
             .setBus(ngen.getId())
             .setConnectableBus(ngen.getId())
+            .setP0(600.0)
+            .setQ0(200.0)
+            .add();
+
+        vl.newLoad()
+            .setId("LD2")
+            .setBus(ngen2.getId())
+            .setConnectableBus(ngen2.getId())
             .setP0(600.0)
             .setQ0(200.0)
             .add();
@@ -99,20 +107,15 @@ class ComputationUtilTest {
         assertEquals("VLGEN_0", ComputationResultUtils.getViolationLocationId(limitViolation, network));
 
         when(limitViolation.getViolationLocation()).thenReturn(Optional.of(new BusBreakerViolationLocation(List.of("NGEN2"))));
-        when(limitViolation.getSubjectId()).thenReturn("VLGEN");
-        assertEquals("VLGEN", ComputationResultUtils.getViolationLocationId(limitViolation, network));
+        assertEquals("VLGEN_1", ComputationResultUtils.getViolationLocationId(limitViolation, network));
 
-        VoltageLevel vl = network.getVoltageLevel("VLGEN");
-        vl.newLoad()
-                .setId("LD2")
-                .setBus("NGEN2")
-                .setConnectableBus("NGEN2")
-                .setP0(600.0)
-                .setQ0(200.0)
-                .add();
         when(limitViolation.getViolationLocation()).thenReturn(Optional.of(new BusBreakerViolationLocation(List.of("NGEN", "NGEN2"))));
+        when(limitViolation.getSubjectId()).thenReturn("VLGEN");
         assertEquals("VLGEN (VLGEN_0, VLGEN_1)", ComputationResultUtils.getViolationLocationId(limitViolation, network));
 
+        when(limitViolation.getViolationLocation()).thenReturn(Optional.of(new BusBreakerViolationLocation(List.of())));
+        when(limitViolation.getSubjectId()).thenReturn("VLGEN");
+        assertEquals("VLGEN", ComputationResultUtils.getViolationLocationId(limitViolation, network));
     }
 
     @Test

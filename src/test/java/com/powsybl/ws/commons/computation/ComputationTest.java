@@ -6,17 +6,7 @@ import com.powsybl.iidm.network.VariantManager;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.client.PreloadingStrategy;
 import com.powsybl.ws.commons.computation.dto.ReportInfos;
-import com.powsybl.ws.commons.computation.service.AbstractComputationObserver;
-import com.powsybl.ws.commons.computation.service.AbstractComputationResultService;
-import com.powsybl.ws.commons.computation.service.AbstractComputationRunContext;
-import com.powsybl.ws.commons.computation.service.AbstractComputationService;
-import com.powsybl.ws.commons.computation.service.AbstractResultContext;
-import com.powsybl.ws.commons.computation.service.AbstractWorkerService;
-import com.powsybl.ws.commons.computation.service.CancelContext;
-import com.powsybl.ws.commons.computation.service.ExecutionService;
-import com.powsybl.ws.commons.computation.service.NotificationService;
-import com.powsybl.ws.commons.computation.service.ReportService;
-import com.powsybl.ws.commons.computation.service.UuidGeneratorService;
+import com.powsybl.ws.commons.computation.service.*;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.observation.ObservationRegistry;
@@ -39,17 +29,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_RECEIVER;
-import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_RESULT_UUID;
-import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_USER_ID;
+import static com.powsybl.ws.commons.computation.service.NotificationService.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isA;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith({ MockitoExtension.class })
 @Slf4j
@@ -61,7 +47,9 @@ class ComputationTest implements WithAssertions {
     private NetworkStoreService networkStoreService;
     @Mock
     private ReportService reportService;
+    @Mock
     private final ExecutionService executionService = new ExecutionService();
+    private final ExecutorService executorService = Executors.newCachedThreadPool();
     private final UuidGeneratorService uuidGeneratorService = new UuidGeneratorService();
     @Mock
     private StreamBridge publisher;
@@ -125,7 +113,7 @@ class ComputationTest implements WithAssertions {
 
         protected MockComputationRunContext(UUID networkUuid, String variantId, String receiver, ReportInfos reportInfos,
                                             String userId, String provider, Object parameters) {
-            super(networkUuid, variantId, receiver, reportInfos, userId, provider, parameters);
+            super(networkUuid, variantId, receiver, reportInfos, userId, provider, parameters, false);
         }
     }
 
@@ -235,6 +223,7 @@ class ComputationTest implements WithAssertions {
         when(networkStoreService.getNetwork(eq(networkUuid), any(PreloadingStrategy.class)))
                 .thenReturn(network);
         when(network.getVariantManager()).thenReturn(variantManager);
+        when(executionService.getExecutorService()).thenReturn(executorService);
     }
 
     @Test
@@ -261,6 +250,7 @@ class ComputationTest implements WithAssertions {
 
         // test the course
         verify(notificationService.getPublisher(), times(1)).send(eq("publishFailed-out-0"), isA(Message.class));
+        executionService.getExecutorService().shutdown();
     }
 
     @Test

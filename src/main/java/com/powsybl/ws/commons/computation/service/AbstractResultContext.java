@@ -17,9 +17,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
-import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_PROVIDER;
-import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_RECEIVER;
-import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_USER_ID;
+import static com.powsybl.ws.commons.computation.service.NotificationService.*;
 
 /**
  * @author Mathieu Deharbe <mathieu.deharbe at rte-france.com>
@@ -41,6 +39,8 @@ public abstract class AbstractResultContext<C extends AbstractComputationRunCont
     public static final String REPORT_TYPE_HEADER = "reportType";
 
     protected static final String MESSAGE_ROOT_NAME = "parameters";
+
+    protected static final String DEBUG_HEADER = "debug";
 
     private final UUID resultUuid;
     private final C runContext;
@@ -69,6 +69,7 @@ public abstract class AbstractResultContext<C extends AbstractComputationRunCont
                 .setHeader(REPORT_UUID_HEADER, runContext.getReportInfos().reportUuid() != null ? runContext.getReportInfos().reportUuid().toString() : null)
                 .setHeader(REPORTER_ID_HEADER, runContext.getReportInfos().reporterId())
                 .setHeader(REPORT_TYPE_HEADER, runContext.getReportInfos().computationType())
+                .setHeader(DEBUG_HEADER, runContext.isDebug())
                 .copyHeaders(getSpecificMsgHeaders(objectMapper))
                 .build();
     }

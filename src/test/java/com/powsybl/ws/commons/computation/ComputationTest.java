@@ -44,6 +44,7 @@ import static com.powsybl.ws.commons.computation.service.NotificationService.HEA
 import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_RESULT_UUID;
 import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_USER_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isA;
@@ -257,10 +258,7 @@ class ComputationTest implements WithAssertions {
         runContext.setComputationResWanted(ComputationResultWanted.FAIL);
 
         // execution / cleaning
-        workerService.consumeRun().accept(message);
-
-        // test the course
-        verify(notificationService.getPublisher(), times(1)).send(eq("publishFailed-out-0"), isA(Message.class));
+        assertThrows(ComputationException.class, () -> workerService.consumeRun().accept(message));
     }
 
     @Test

@@ -102,12 +102,10 @@ spring:
               create-source: metadata
 
   # for microservices with elasticsearch
-  data:
-    elasticsearch:
-      host: elasticsearch
-      port: 9200
-      client:
-        timeout: 60  # Seconds
+  elasticsearch:
+    uris:
+      - http://elasticsearch:9200
+    socket-timeout: 60s
   # disable reactive client autoconfiguration because we don't use it and it is
   # not configured so it tries to connect to localhost which fails. This means
   # we get an ugly error message at startup, and more importantly that the

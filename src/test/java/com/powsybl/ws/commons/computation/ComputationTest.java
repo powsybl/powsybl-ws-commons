@@ -12,7 +12,6 @@ import com.powsybl.ws.commons.computation.service.AbstractComputationRunContext;
 import com.powsybl.ws.commons.computation.service.AbstractComputationService;
 import com.powsybl.ws.commons.computation.service.AbstractResultContext;
 import com.powsybl.ws.commons.computation.service.AbstractWorkerService;
-import com.powsybl.ws.commons.computation.service.CancelContext;
 import com.powsybl.ws.commons.computation.service.ExecutionService;
 import com.powsybl.ws.commons.computation.service.NotificationService;
 import com.powsybl.ws.commons.computation.service.ReportService;
@@ -29,6 +28,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.messaging.Message;
@@ -43,8 +43,7 @@ import java.util.concurrent.CompletableFuture;
 import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_RECEIVER;
 import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_RESULT_UUID;
 import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_USER_ID;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isA;
@@ -190,6 +189,10 @@ class ComputationTest implements WithAssertions {
             }
             return completableFuture;
         }
+
+        public void addFuture(UUID id, CompletableFuture<Object> future) {
+            this.futures.put(id, future);
+        }
     }
 
     private MockComputationWorkerService workerService;
@@ -204,10 +207,11 @@ class ComputationTest implements WithAssertions {
     final String provider = "MockComputation_Provider";
     Message<String> message;
     MockComputationRunContext runContext;
+    MockComputationResultService resultService;
 
     @BeforeEach
     void init() {
-        MockComputationResultService resultService = new MockComputationResultService();
+        resultService = new MockComputationResultService();
         notificationService = new NotificationService(publisher);
         workerService = new MockComputationWorkerService(
                 networkStoreService,
@@ -267,42 +271,52 @@ class ComputationTest implements WithAssertions {
         computationService.setStatus(List.of(RESULT_UUID), baseStatus);
         assertEquals(baseStatus, computationService.getStatus(RESULT_UUID));
 
+        // Test message is sent on stop call
         computationService.stop(RESULT_UUID, receiver);
-
-        // test the course
         verify(notificationService.getPublisher(), times(1)).send(eq("publishCancel-out-0"), isA(Message.class));
 
-        Message<String> cancelMessage = MessageBuilder.withPayload("")
-                .setHeader(HEADER_RESULT_UUID, RESULT_UUID.toString())
-                .setHeader(HEADER_RECEIVER, receiver)
-                .build();
-        CancelContext cancelContext = CancelContext.fromMessage(cancelMessage);
-        assertEquals(RESULT_UUID, cancelContext.resultUuid());
-        assertEquals(receiver, cancelContext.receiver());
+        // Test data is cleaned and message is sent in stopped
+        CompletableFuture<Object> futureThatCouldNotBeCancelled = Mockito.mock(CompletableFuture.class);
+        when(futureThatCouldNotBeCancelled.cancel(true)).thenReturn(true);
+        workerService.addFuture(RESULT_UUID, futureThatCouldNotBeCancelled);
+        workerService.consumeCancel().accept(message);
+        assertNull(resultService.findStatus(RESULT_UUID));
+        verify(notificationService.getPublisher(), times(1)).send(eq("publishStopped-out-0"), isA(Message.class));
+    }
+
+    @Test
+    void testComputationCancelledIfNoMatchingFuture() {
+        MockComputationStatus baseStatus = MockComputationStatus.NOT_DONE;
+        computationService.setStatus(List.of(RESULT_UUID), baseStatus);
+        assertEquals(baseStatus, computationService.getStatus(RESULT_UUID));
+
+        // Test message is sent on stop call
+        computationService.stop(RESULT_UUID, receiver);
+        verify(notificationService.getPublisher(), times(1)).send(eq("publishCancel-out-0"), isA(Message.class));
+
+        // Test data is cleaned and message is sent in stopped
+        workerService.addFuture(UUID.randomUUID(), Mockito.mock(CompletableFuture.class));
+        workerService.consumeCancel().accept(message);
+        assertNull(resultService.findStatus(RESULT_UUID));
+        verify(notificationService.getPublisher(), times(1)).send(eq("publishStopped-out-0"), isA(Message.class));
     }
 
     @Test
     void testComputationCancelFailed() {
-        MockComputationStatus baseStatus = MockComputationStatus.COMPLETED;
+        MockComputationStatus baseStatus = MockComputationStatus.NOT_DONE;
         computationService.setStatus(List.of(RESULT_UUID), baseStatus);
         assertEquals(baseStatus, computationService.getStatus(RESULT_UUID));
 
-        computationService.stop(RESULT_UUID, receiver, userId);
-
-        // test the course
+        // Test message is sent on stop call
+        computationService.stop(RESULT_UUID, receiver);
         verify(notificationService.getPublisher(), times(1)).send(eq("publishCancel-out-0"), isA(Message.class));
 
-        Message<String> cancelMessage = MessageBuilder.withPayload("")
-                .setHeader(HEADER_RESULT_UUID, RESULT_UUID.toString())
-                .setHeader(HEADER_RECEIVER, receiver)
-                .setHeader(HEADER_USER_ID, userId)
-                .build();
-        CancelContext cancelContext = CancelContext.fromMessage(cancelMessage);
-        assertEquals(RESULT_UUID, cancelContext.resultUuid());
-        assertEquals(receiver, cancelContext.receiver());
-        assertEquals(userId, cancelContext.userId());
-
+        // Test data is not cleaned and message is sent in stopped
+        CompletableFuture<Object> futureThatCouldNotBeCancelled = Mockito.mock(CompletableFuture.class);
+        when(futureThatCouldNotBeCancelled.cancel(true)).thenReturn(false);
+        workerService.addFuture(RESULT_UUID, futureThatCouldNotBeCancelled);
         workerService.consumeCancel().accept(message);
+        assertNotNull(resultService.findStatus(RESULT_UUID));
         verify(notificationService.getPublisher(), times(1)).send(eq("publishCancelFailed-out-0"), isA(Message.class));
     }
 }

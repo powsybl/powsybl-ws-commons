@@ -92,24 +92,26 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
         }
     }
 
-    private boolean cancelAsync(CancelContext cancelContext) {
+    private void cancelAsync(CancelContext cancelContext) {
         lockRunAndCancel.lock();
-        boolean isCanceled = false;
         try {
             cancelComputationRequests.put(cancelContext.resultUuid(), cancelContext);
 
             // find the completableFuture associated with result uuid
             CompletableFuture<R> future = futures.get(cancelContext.resultUuid());
-            if (future != null) {
-                isCanceled = future.cancel(true);  // cancel computation in progress
-                if (isCanceled) {
+            if (future == null) {
+                cleanResultsAndPublishCancel(cancelContext.resultUuid(), cancelContext.receiver());
+            } else {
+                boolean isCanceled = future.cancel(true);  // cancel computation in progress
+                if (future.isDone() || isCanceled) {
                     cleanResultsAndPublishCancel(cancelContext.resultUuid(), cancelContext.receiver());
+                } else {
+                    notificationService.publishCancelFailed(cancelContext.resultUuid(), cancelContext.receiver(), getComputationType(), cancelContext.userId());
                 }
             }
         } finally {
             lockRunAndCancel.unlock();
         }
-        return isCanceled;
     }
 
     protected abstract AbstractResultContext<C> fromMessage(Message<String> message);
@@ -141,14 +143,12 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
                     sendResultMessage(resultContext, result);
                     LOGGER.info("{} complete (resultUuid='{}')", getComputationType(), resultContext.getResultUuid());
                 }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+            } catch (CancellationException e) {
+                LOGGER.info("Computation was interrupted");
             } catch (Exception e) {
-                if (!(e instanceof CancellationException)) {
-                    resultService.delete(resultContext.getResultUuid());
-                    this.handleNonCancellationException(resultContext, e, rootReporter);
-                    throw new ComputationException(NotificationService.getFailedMessage(getComputationType()), e);
-                }
+                resultService.delete(resultContext.getResultUuid());
+                this.handleNonCancellationException(resultContext, e, rootReporter);
+                throw new ComputationException(String.format("%s: %s", NotificationService.getFailedMessage(getComputationType()), e.getMessage()), e.getCause());
             } finally {
                 clean(resultContext);
             }
@@ -175,10 +175,7 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
     public Consumer<Message<String>> consumeCancel() {
         return message -> {
             CancelContext cancelContext = CancelContext.fromMessage(message);
-            boolean isCancelled = cancelAsync(cancelContext);
-            if (!isCancelled) {
-                notificationService.publishCancelFailed(cancelContext.resultUuid(), cancelContext.receiver(), getComputationType(), cancelContext.userId());
-            }
+            cancelAsync(cancelContext);
         };
     }
 
@@ -197,7 +194,7 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
         LOGGER.info("Run {} computation...", getComputationType());
     }
 
-    protected R run(C runContext, UUID resultUuid, AtomicReference<ReportNode> rootReporter) throws Exception {
+    protected R run(C runContext, UUID resultUuid, AtomicReference<ReportNode> rootReporter) {
         String provider = runContext.getProvider();
         ReportNode reportNode = ReportNode.NO_OP;
 
@@ -215,7 +212,7 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
 
         preRun(runContext);
         CompletableFuture<R> future = runAsync(runContext, provider, resultUuid);
-        R result = future == null ? null : observer.observeRun("run", runContext, future::get);
+        R result = future == null ? null : observer.observeRun("run", runContext, future::join);
         postRun(runContext, rootReporter, result);
         return result;
     }

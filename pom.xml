@@ -18,7 +18,7 @@
     </parent>
 
     <artifactId>powsybl-ws-commons</artifactId>
-    <version>1.17.0-SNAPSHOT</version>
+    <version>1.19.0-SNAPSHOT</version>
     <name>powsybl ws commons</name>
     <description>Powsybl WS commons</description>
 
@@ -122,6 +122,11 @@
             <version>${powsybl-network-store-client.version}</version>
             <optional>true</optional>
         </dependency>
+         <dependency>
+            <groupId>com.powsybl</groupId>
+            <artifactId>powsybl-security-analysis-api</artifactId>
+             <optional>true</optional>
+        </dependency>
 
         <!-- APT libraries -->
         <dependency>
@@ -146,6 +151,7 @@
             <artifactId>slf4j-simple</artifactId>
             <scope>test</scope>
         </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>

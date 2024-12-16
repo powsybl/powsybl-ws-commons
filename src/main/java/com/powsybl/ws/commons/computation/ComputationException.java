@@ -10,6 +10,10 @@ package com.powsybl.ws.commons.computation;
  * @author Joris Mancini <joris.mancini_externe at rte-france.com>
  */
 public class ComputationException extends RuntimeException {
+    public ComputationException(String message) {
+        super(message);
+    }
+
     public ComputationException(String message, Throwable cause) {
         super(message, cause);
     }

@@ -285,7 +285,7 @@ class ComputationTest implements WithAssertions {
     }
 
     @Test
-    void testComputationCancelledIfNoMatchingFuture() {
+    void testComputationNotCancelledIfNoMatchingFuture() {
         MockComputationStatus baseStatus = MockComputationStatus.NOT_DONE;
         computationService.setStatus(List.of(RESULT_UUID), baseStatus);
         assertEquals(baseStatus, computationService.getStatus(RESULT_UUID));
@@ -294,11 +294,11 @@ class ComputationTest implements WithAssertions {
         computationService.stop(RESULT_UUID, receiver);
         verify(notificationService.getPublisher(), times(1)).send(eq("publishCancel-out-0"), isA(Message.class));
 
-        // Test data is cleaned and message is sent in stopped
+        // Test data is not cleaned and message is sent in cancelfailed
         workerService.addFuture(UUID.randomUUID(), Mockito.mock(CompletableFuture.class));
         workerService.consumeCancel().accept(message);
-        assertNull(resultService.findStatus(RESULT_UUID));
-        verify(notificationService.getPublisher(), times(1)).send(eq("publishStopped-out-0"), isA(Message.class));
+        assertNotNull(resultService.findStatus(RESULT_UUID));
+        verify(notificationService.getPublisher(), times(1)).send(eq("publishCancelFailed-out-0"), isA(Message.class));
     }
 
     @Test
@@ -311,7 +311,7 @@ class ComputationTest implements WithAssertions {
         computationService.stop(RESULT_UUID, receiver);
         verify(notificationService.getPublisher(), times(1)).send(eq("publishCancel-out-0"), isA(Message.class));
 
-        // Test data is not cleaned and message is sent in stopped
+        // Test data is not cleaned and message is sent in cancelfailed
         CompletableFuture<Object> futureThatCouldNotBeCancelled = Mockito.mock(CompletableFuture.class);
         when(futureThatCouldNotBeCancelled.cancel(true)).thenReturn(false);
         workerService.addFuture(RESULT_UUID, futureThatCouldNotBeCancelled);

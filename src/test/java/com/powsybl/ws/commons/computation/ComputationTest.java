@@ -266,57 +266,54 @@ class ComputationTest implements WithAssertions {
     }
 
     @Test
+    void testStopComputationSendsCancelMessage() {
+        computationService.stop(RESULT_UUID, receiver);
+        verify(notificationService.getPublisher(), times(1)).send(eq("publishCancel-out-0"), isA(Message.class));
+    }
+
+    @Test
     void testComputationCancelled() {
-        MockComputationStatus baseStatus = MockComputationStatus.NOT_DONE;
+        MockComputationStatus baseStatus = MockComputationStatus.RUNNING;
         computationService.setStatus(List.of(RESULT_UUID), baseStatus);
         assertEquals(baseStatus, computationService.getStatus(RESULT_UUID));
 
-        // Test message is sent on stop call
-        computationService.stop(RESULT_UUID, receiver);
-        verify(notificationService.getPublisher(), times(1)).send(eq("publishCancel-out-0"), isA(Message.class));
+        CompletableFuture<Object> futureThatCouldBeCancelled = Mockito.mock(CompletableFuture.class);
+        when(futureThatCouldBeCancelled.cancel(true)).thenReturn(true);
+        workerService.addFuture(RESULT_UUID, futureThatCouldBeCancelled);
 
-        // Test data is cleaned and message is sent in stopped
-        CompletableFuture<Object> futureThatCouldNotBeCancelled = Mockito.mock(CompletableFuture.class);
-        when(futureThatCouldNotBeCancelled.cancel(true)).thenReturn(true);
-        workerService.addFuture(RESULT_UUID, futureThatCouldNotBeCancelled);
         workerService.consumeCancel().accept(message);
         assertNull(resultService.findStatus(RESULT_UUID));
         verify(notificationService.getPublisher(), times(1)).send(eq("publishStopped-out-0"), isA(Message.class));
     }
 
     @Test
-    void testComputationNotCancelledIfNoMatchingFuture() {
-        MockComputationStatus baseStatus = MockComputationStatus.NOT_DONE;
+    void testComputationCancelFailed() {
+        MockComputationStatus baseStatus = MockComputationStatus.RUNNING;
         computationService.setStatus(List.of(RESULT_UUID), baseStatus);
         assertEquals(baseStatus, computationService.getStatus(RESULT_UUID));
 
-        // Test message is sent on stop call
-        computationService.stop(RESULT_UUID, receiver);
-        verify(notificationService.getPublisher(), times(1)).send(eq("publishCancel-out-0"), isA(Message.class));
+        CompletableFuture<Object> futureThatCouldNotBeCancelled = Mockito.mock(CompletableFuture.class);
+        when(futureThatCouldNotBeCancelled.cancel(true)).thenReturn(false);
+        workerService.addFuture(RESULT_UUID, futureThatCouldNotBeCancelled);
 
-        // Test data is not cleaned and message is sent in cancelfailed
-        workerService.addFuture(UUID.randomUUID(), Mockito.mock(CompletableFuture.class));
         workerService.consumeCancel().accept(message);
         assertNotNull(resultService.findStatus(RESULT_UUID));
         verify(notificationService.getPublisher(), times(1)).send(eq("publishCancelFailed-out-0"), isA(Message.class));
     }
 
     @Test
-    void testComputationCancelFailed() {
-        MockComputationStatus baseStatus = MockComputationStatus.NOT_DONE;
-        computationService.setStatus(List.of(RESULT_UUID), baseStatus);
-        assertEquals(baseStatus, computationService.getStatus(RESULT_UUID));
-
-        // Test message is sent on stop call
-        computationService.stop(RESULT_UUID, receiver);
-        verify(notificationService.getPublisher(), times(1)).send(eq("publishCancel-out-0"), isA(Message.class));
-
-        // Test data is not cleaned and message is sent in cancelfailed
-        CompletableFuture<Object> futureThatCouldNotBeCancelled = Mockito.mock(CompletableFuture.class);
-        when(futureThatCouldNotBeCancelled.cancel(true)).thenReturn(false);
-        workerService.addFuture(RESULT_UUID, futureThatCouldNotBeCancelled);
+    void testComputationCancelFailsIfNoMatchingFuture() {
         workerService.consumeCancel().accept(message);
-        assertNotNull(resultService.findStatus(RESULT_UUID));
+        assertNull(resultService.findStatus(RESULT_UUID));
         verify(notificationService.getPublisher(), times(1)).send(eq("publishCancelFailed-out-0"), isA(Message.class));
+    }
+
+    @Test
+    void testComputationCancelledBeforeRunReturnsNoResult() {
+        workerService.consumeCancel().accept(message);
+
+        initComputationExecution();
+        workerService.consumeRun().accept(message);
+        verify(notificationService.getPublisher(), times(0)).send(eq("publishResult-out-0"), isA(Message.class));
     }
 }

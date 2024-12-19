@@ -142,7 +142,7 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
                     LOGGER.info("{} complete (resultUuid='{}')", getComputationType(), resultContext.getResultUuid());
                 }
             } catch (CancellationException e) {
-                LOGGER.info("Computation was interrupted");
+                // Do nothing
             } catch (Exception e) {
                 resultService.delete(resultContext.getResultUuid());
                 this.handleNonCancellationException(resultContext, e, rootReporter);

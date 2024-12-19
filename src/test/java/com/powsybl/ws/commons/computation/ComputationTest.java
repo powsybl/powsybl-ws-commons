@@ -38,6 +38,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 
 import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_RECEIVER;
@@ -154,6 +155,7 @@ class ComputationTest implements WithAssertions {
     private enum ComputationResultWanted {
         SUCCESS,
         FAIL,
+        CANCELLED,
         COMPLETED
     }
 
@@ -179,6 +181,9 @@ class ComputationTest implements WithAssertions {
         protected CompletableFuture<Object> getCompletableFuture(MockComputationRunContext runContext, String provider, UUID resultUuid) {
             final CompletableFuture<Object> completableFuture = new CompletableFuture<>();
             switch (runContext.getComputationResWanted()) {
+                case CANCELLED:
+                    completableFuture.completeExceptionally(new CancellationException("Computation cancelled"));
+                    break;
                 case FAIL:
                     completableFuture.completeExceptionally(new RuntimeException("Computation failed"));
                     break;
@@ -263,6 +268,7 @@ class ComputationTest implements WithAssertions {
 
         // execution / cleaning
         assertThrows(ComputationException.class, () -> workerService.consumeRun().accept(message));
+        assertNull(resultService.findStatus(RESULT_UUID));
     }
 
     @Test
@@ -272,7 +278,21 @@ class ComputationTest implements WithAssertions {
     }
 
     @Test
-    void testComputationCancelled() {
+    void testComputationCancelledInConsumeRun() {
+        // inits
+        initComputationExecution();
+        runContext.setComputationResWanted(ComputationResultWanted.CANCELLED);
+
+        // execution / cleaning
+        workerService.consumeRun().accept(message);
+
+        // test the course
+        assertNull(resultService.findStatus(RESULT_UUID));
+        verify(notificationService.getPublisher(), times(0)).send(eq("publishResult-out-0"), isA(Message.class));
+    }
+
+    @Test
+    void testComputationCancelledInConsumeCancel() {
         MockComputationStatus baseStatus = MockComputationStatus.RUNNING;
         computationService.setStatus(List.of(RESULT_UUID), baseStatus);
         assertEquals(baseStatus, computationService.getStatus(RESULT_UUID));

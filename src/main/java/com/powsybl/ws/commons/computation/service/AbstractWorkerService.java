@@ -13,6 +13,7 @@ import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.client.PreloadingStrategy;
+import com.powsybl.ws.commons.computation.ComputationException;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,10 +24,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -143,15 +141,12 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
                     sendResultMessage(resultContext, result);
                     LOGGER.info("{} complete (resultUuid='{}')", getComputationType(), resultContext.getResultUuid());
                 }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+            } catch (CancellationException e) {
+                // Do nothing
             } catch (Exception e) {
-                if (!(e instanceof CancellationException)) {
-                    LOGGER.error(NotificationService.getFailedMessage(getComputationType()), e);
-                    publishFail(resultContext, e.getMessage());
-                    resultService.delete(resultContext.getResultUuid());
-                    this.handleNonCancellationException(resultContext, e, rootReporter);
-                }
+                resultService.delete(resultContext.getResultUuid());
+                this.handleNonCancellationException(resultContext, e, rootReporter);
+                throw new ComputationException(String.format("%s: %s", NotificationService.getFailedMessage(getComputationType()), e.getMessage()), e.getCause());
             } finally {
                 clean(resultContext);
             }
@@ -192,11 +187,6 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
                 resultContext.getRunContext().getUserId(), null);
     }
 
-    protected void publishFail(AbstractResultContext<C> resultContext, String message) {
-        notificationService.publishFail(resultContext.getResultUuid(), resultContext.getRunContext().getReceiver(),
-                message, resultContext.getRunContext().getUserId(), getComputationType(), null);
-    }
-
     /**
      * Do some extra task before running the computation, e.g. print log or init extra data for the run context
      * @param ignoredRunContext This context may be used for further computation in overriding classes
@@ -205,7 +195,7 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
         LOGGER.info("Run {} computation...", getComputationType());
     }
 
-    protected R run(C runContext, UUID resultUuid, AtomicReference<ReportNode> rootReporter) throws Exception {
+    protected R run(C runContext, UUID resultUuid, AtomicReference<ReportNode> rootReporter) {
         String provider = runContext.getProvider();
         ReportNode reportNode = ReportNode.NO_OP;
 
@@ -223,7 +213,7 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
 
         preRun(runContext);
         CompletableFuture<R> future = runAsync(runContext, provider, resultUuid);
-        R result = future == null ? null : observer.observeRun("run", runContext, future::get);
+        R result = future == null ? null : observer.observeRun("run", runContext, future::join);
         postRun(runContext, rootReporter, result);
         return result;
     }

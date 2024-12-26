@@ -21,8 +21,6 @@ import org.springframework.stereotype.Service;
 import java.util.Map;
 import java.util.UUID;
 
-import static com.powsybl.ws.commons.computation.utils.MessageUtils.shortenMessage;
-
 /**
  * @author Etienne Homer <etienne.homer at rte-france.com
  */
@@ -92,21 +90,6 @@ public class NotificationService {
                 .build();
         STOP_MESSAGE_LOGGER.debug(SENDING_MESSAGE, message);
         publisher.send(publishPrefix + "Stopped-out-0", message);
-    }
-
-    @PostCompletion
-    public void publishFail(UUID resultUuid, String receiver, String causeMessage, String userId, String computationLabel, Map<String, Object> additionalHeaders) {
-        MessageBuilder<String> builder = MessageBuilder
-                .withPayload("")
-                .setHeader(HEADER_RESULT_UUID, resultUuid.toString())
-                .setHeader(HEADER_RECEIVER, receiver)
-                .setHeader(HEADER_MESSAGE, shortenMessage(
-                        getFailedMessage(computationLabel) + " : " + causeMessage))
-                .setHeader(HEADER_USER_ID, userId)
-                .copyHeaders(additionalHeaders);
-        Message<String> message = builder.build();
-        FAILED_MESSAGE_LOGGER.debug(SENDING_MESSAGE, message);
-        publisher.send(publishPrefix + "Failed-out-0", message);
     }
 
     @PostCompletion

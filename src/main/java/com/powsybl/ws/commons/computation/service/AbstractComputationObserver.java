@@ -57,6 +57,10 @@ public abstract class AbstractComputationObserver<R, P> {
         createObservation(name, runContext).observeChecked(callable);
     }
 
+    public <T, E extends Throwable> T observe(String name, AbstractComputationRunContext<P> runContext, Observation.CheckedCallable<T, E> callable) throws E {
+        return createObservation(name, runContext).observeChecked(callable);
+    }
+
     public <T extends R, E extends Throwable> T observeRun(
             String name, AbstractComputationRunContext<P> runContext, Observation.CheckedCallable<T, E> callable) throws E {
         T result;

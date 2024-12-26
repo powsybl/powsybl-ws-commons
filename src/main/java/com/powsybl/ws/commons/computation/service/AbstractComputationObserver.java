@@ -7,12 +7,16 @@
 package com.powsybl.ws.commons.computation.service;
 
 import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.ObservationRegistry;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author Mathieu Deharbe <mathieu.deharbe at rte-france.com>
@@ -25,10 +29,13 @@ public abstract class AbstractComputationObserver<R, P> {
     protected static final String PROVIDER_TAG_NAME = "provider";
     protected static final String TYPE_TAG_NAME = "type";
     protected static final String STATUS_TAG_NAME = "status";
-    protected static final String COMPUTATION_COUNTER_NAME = OBSERVATION_PREFIX + "count";
+    protected static final String COMPUTATION_TOTAL_COUNTER_NAME = OBSERVATION_PREFIX + "count";
+    protected static final String COMPUTATION_CURRENT_COUNTER_NAME = OBSERVATION_PREFIX + "current.count";
 
     private final ObservationRegistry observationRegistry;
     private final MeterRegistry meterRegistry;
+
+    private final Map<String, Integer> currentComputationsCount = new ConcurrentHashMap<>();
 
     protected AbstractComputationObserver(@NonNull ObservationRegistry observationRegistry, @NonNull MeterRegistry meterRegistry) {
         this.observationRegistry = observationRegistry;
@@ -50,20 +57,39 @@ public abstract class AbstractComputationObserver<R, P> {
         createObservation(name, runContext).observeChecked(callable);
     }
 
-    public <T, E extends Throwable> T observe(String name, AbstractComputationRunContext<P> runContext, Observation.CheckedCallable<T, E> callable) throws E {
-        return createObservation(name, runContext).observeChecked(callable);
-    }
-
     public <T extends R, E extends Throwable> T observeRun(
             String name, AbstractComputationRunContext<P> runContext, Observation.CheckedCallable<T, E> callable) throws E {
-        T result = createObservation(name, runContext).observeChecked(callable);
-        incrementCount(runContext, result);
+        T result;
+        try {
+            incrementCurrentCount(runContext.getProvider());
+            result = createObservation(name, runContext).observeChecked(callable);
+        } finally {
+            decrementCurrentCount(runContext.getProvider());
+        }
+        incrementTotalCount(runContext, result);
         return result;
     }
 
-    private void incrementCount(AbstractComputationRunContext<P> runContext, R result) {
+    private void incrementCurrentCount(String provider) {
+        currentComputationsCount.compute(provider, (k, v) -> (v == null) ? 1 : v + 1);
+        updateCurrentCountMetric(provider);
+    }
+
+    private void decrementCurrentCount(String provider) {
+        currentComputationsCount.compute(provider, (k, v) -> v > 1 ? v - 1 : 0);
+        updateCurrentCountMetric(provider);
+    }
+
+    private void updateCurrentCountMetric(String provider) {
+        Gauge.builder(COMPUTATION_CURRENT_COUNTER_NAME, () -> currentComputationsCount.get(provider))
+            .tag(TYPE_TAG_NAME, getComputationType())
+            .tag(PROVIDER_TAG_NAME, provider)
+            .register(meterRegistry);
+    }
+
+    private void incrementTotalCount(AbstractComputationRunContext<P> runContext, R result) {
         Counter.Builder builder =
-                Counter.builder(COMPUTATION_COUNTER_NAME);
+                Counter.builder(COMPUTATION_TOTAL_COUNTER_NAME);
         if (runContext.getProvider() != null) {
             builder.tag(PROVIDER_TAG_NAME, runContext.getProvider());
         }

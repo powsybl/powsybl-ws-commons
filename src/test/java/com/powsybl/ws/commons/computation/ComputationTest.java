@@ -6,7 +6,16 @@ import com.powsybl.iidm.network.VariantManager;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.client.PreloadingStrategy;
 import com.powsybl.ws.commons.computation.dto.ReportInfos;
-import com.powsybl.ws.commons.computation.service.*;
+import com.powsybl.ws.commons.computation.service.AbstractComputationObserver;
+import com.powsybl.ws.commons.computation.service.AbstractComputationResultService;
+import com.powsybl.ws.commons.computation.service.AbstractComputationRunContext;
+import com.powsybl.ws.commons.computation.service.AbstractComputationService;
+import com.powsybl.ws.commons.computation.service.AbstractResultContext;
+import com.powsybl.ws.commons.computation.service.AbstractWorkerService;
+import com.powsybl.ws.commons.computation.service.ExecutionService;
+import com.powsybl.ws.commons.computation.service.NotificationService;
+import com.powsybl.ws.commons.computation.service.ReportService;
+import com.powsybl.ws.commons.computation.service.UuidGeneratorService;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.observation.ObservationRegistry;
@@ -19,6 +28,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.messaging.Message;
@@ -28,14 +38,21 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import static com.powsybl.ws.commons.computation.service.NotificationService.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_RECEIVER;
+import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_RESULT_UUID;
+import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_USER_ID;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isA;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith({ MockitoExtension.class })
 @Slf4j
@@ -142,6 +159,7 @@ class ComputationTest implements WithAssertions {
     private enum ComputationResultWanted {
         SUCCESS,
         FAIL,
+        CANCELLED,
         COMPLETED
     }
 
@@ -167,6 +185,9 @@ class ComputationTest implements WithAssertions {
         protected CompletableFuture<Object> getCompletableFuture(MockComputationRunContext runContext, String provider, UUID resultUuid) {
             final CompletableFuture<Object> completableFuture = new CompletableFuture<>();
             switch (runContext.getComputationResWanted()) {
+                case CANCELLED:
+                    completableFuture.completeExceptionally(new CancellationException("Computation cancelled"));
+                    break;
                 case FAIL:
                     completableFuture.completeExceptionally(new RuntimeException("Computation failed"));
                     break;
@@ -176,6 +197,10 @@ class ComputationTest implements WithAssertions {
                     return CompletableFuture.completedFuture(null);
             }
             return completableFuture;
+        }
+
+        public void addFuture(UUID id, CompletableFuture<Object> future) {
+            this.futures.put(id, future);
         }
     }
 
@@ -191,10 +216,11 @@ class ComputationTest implements WithAssertions {
     final String provider = "MockComputation_Provider";
     Message<String> message;
     MockComputationRunContext runContext;
+    MockComputationResultService resultService;
 
     @BeforeEach
     void init() {
-        MockComputationResultService resultService = new MockComputationResultService();
+        resultService = new MockComputationResultService();
         notificationService = new NotificationService(publisher);
         workerService = new MockComputationWorkerService(
                 networkStoreService,
@@ -246,55 +272,74 @@ class ComputationTest implements WithAssertions {
         runContext.setComputationResWanted(ComputationResultWanted.FAIL);
 
         // execution / cleaning
+        assertThrows(ComputationException.class, () -> workerService.consumeRun().accept(message));
+        assertNull(resultService.findStatus(RESULT_UUID));
+    }
+
+    @Test
+    void testStopComputationSendsCancelMessage() {
+        computationService.stop(RESULT_UUID, receiver);
+        verify(notificationService.getPublisher(), times(1)).send(eq("publishCancel-out-0"), isA(Message.class));
+    }
+
+    @Test
+    void testComputationCancelledInConsumeRun() {
+        // inits
+        initComputationExecution();
+        runContext.setComputationResWanted(ComputationResultWanted.CANCELLED);
+
+        // execution / cleaning
         workerService.consumeRun().accept(message);
 
         // test the course
-        verify(notificationService.getPublisher(), times(1)).send(eq("publishFailed-out-0"), isA(Message.class));
+        assertNull(resultService.findStatus(RESULT_UUID));
+        verify(notificationService.getPublisher(), times(0)).send(eq("publishResult-out-0"), isA(Message.class));
         executionService.getExecutorService().shutdown();
     }
 
     @Test
-    void testComputationCancelled() {
-        MockComputationStatus baseStatus = MockComputationStatus.NOT_DONE;
+    void testComputationCancelledInConsumeCancel() {
+        MockComputationStatus baseStatus = MockComputationStatus.RUNNING;
         computationService.setStatus(List.of(RESULT_UUID), baseStatus);
         assertEquals(baseStatus, computationService.getStatus(RESULT_UUID));
 
-        computationService.stop(RESULT_UUID, receiver);
+        CompletableFuture<Object> futureThatCouldBeCancelled = Mockito.mock(CompletableFuture.class);
+        when(futureThatCouldBeCancelled.cancel(true)).thenReturn(true);
+        workerService.addFuture(RESULT_UUID, futureThatCouldBeCancelled);
 
-        // test the course
-        verify(notificationService.getPublisher(), times(1)).send(eq("publishCancel-out-0"), isA(Message.class));
-
-        Message<String> cancelMessage = MessageBuilder.withPayload("")
-                .setHeader(HEADER_RESULT_UUID, RESULT_UUID.toString())
-                .setHeader(HEADER_RECEIVER, receiver)
-                .build();
-        CancelContext cancelContext = CancelContext.fromMessage(cancelMessage);
-        assertEquals(RESULT_UUID, cancelContext.resultUuid());
-        assertEquals(receiver, cancelContext.receiver());
+        workerService.consumeCancel().accept(message);
+        assertNull(resultService.findStatus(RESULT_UUID));
+        verify(notificationService.getPublisher(), times(1)).send(eq("publishStopped-out-0"), isA(Message.class));
     }
 
     @Test
     void testComputationCancelFailed() {
-        MockComputationStatus baseStatus = MockComputationStatus.COMPLETED;
+        MockComputationStatus baseStatus = MockComputationStatus.RUNNING;
         computationService.setStatus(List.of(RESULT_UUID), baseStatus);
         assertEquals(baseStatus, computationService.getStatus(RESULT_UUID));
 
-        computationService.stop(RESULT_UUID, receiver, userId);
-
-        // test the course
-        verify(notificationService.getPublisher(), times(1)).send(eq("publishCancel-out-0"), isA(Message.class));
-
-        Message<String> cancelMessage = MessageBuilder.withPayload("")
-                .setHeader(HEADER_RESULT_UUID, RESULT_UUID.toString())
-                .setHeader(HEADER_RECEIVER, receiver)
-                .setHeader(HEADER_USER_ID, userId)
-                .build();
-        CancelContext cancelContext = CancelContext.fromMessage(cancelMessage);
-        assertEquals(RESULT_UUID, cancelContext.resultUuid());
-        assertEquals(receiver, cancelContext.receiver());
-        assertEquals(userId, cancelContext.userId());
+        CompletableFuture<Object> futureThatCouldNotBeCancelled = Mockito.mock(CompletableFuture.class);
+        when(futureThatCouldNotBeCancelled.cancel(true)).thenReturn(false);
+        workerService.addFuture(RESULT_UUID, futureThatCouldNotBeCancelled);
 
         workerService.consumeCancel().accept(message);
+        assertNotNull(resultService.findStatus(RESULT_UUID));
         verify(notificationService.getPublisher(), times(1)).send(eq("publishCancelFailed-out-0"), isA(Message.class));
+    }
+
+    @Test
+    void testComputationCancelFailsIfNoMatchingFuture() {
+        workerService.consumeCancel().accept(message);
+        assertNull(resultService.findStatus(RESULT_UUID));
+        verify(notificationService.getPublisher(), times(1)).send(eq("publishCancelFailed-out-0"), isA(Message.class));
+    }
+
+    @Test
+    void testComputationCancelledBeforeRunReturnsNoResult() {
+        workerService.consumeCancel().accept(message);
+
+        initComputationExecution();
+        workerService.consumeRun().accept(message);
+        verify(notificationService.getPublisher(), times(0)).send(eq("publishResult-out-0"), isA(Message.class));
     }
 }

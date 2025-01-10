@@ -40,6 +40,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_RECEIVER;
 import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_RESULT_UUID;
@@ -62,7 +64,9 @@ class ComputationTest implements WithAssertions {
     private NetworkStoreService networkStoreService;
     @Mock
     private ReportService reportService;
+    @Mock
     private final ExecutionService executionService = new ExecutionService();
+    private final ExecutorService executorService = Executors.newCachedThreadPool();
     private final UuidGeneratorService uuidGeneratorService = new UuidGeneratorService();
     @Mock
     private StreamBridge publisher;
@@ -126,7 +130,7 @@ class ComputationTest implements WithAssertions {
 
         protected MockComputationRunContext(UUID networkUuid, String variantId, String receiver, ReportInfos reportInfos,
                                             String userId, String provider, Object parameters) {
-            super(networkUuid, variantId, receiver, reportInfos, userId, provider, parameters);
+            super(networkUuid, variantId, receiver, reportInfos, userId, provider, parameters, false);
         }
     }
 
@@ -245,6 +249,7 @@ class ComputationTest implements WithAssertions {
         when(networkStoreService.getNetwork(eq(networkUuid), any(PreloadingStrategy.class)))
                 .thenReturn(network);
         when(network.getVariantManager()).thenReturn(variantManager);
+        when(executionService.getExecutorService()).thenReturn(executorService);
     }
 
     @Test
@@ -289,6 +294,7 @@ class ComputationTest implements WithAssertions {
         // test the course
         assertNull(resultService.findStatus(RESULT_UUID));
         verify(notificationService.getPublisher(), times(0)).send(eq("publishResult-out-0"), isA(Message.class));
+        executionService.getExecutorService().shutdown();
     }
 
     @Test

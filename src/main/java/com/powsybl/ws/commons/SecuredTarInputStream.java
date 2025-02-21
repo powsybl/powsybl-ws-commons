@@ -16,38 +16,23 @@ import java.io.InputStream;
  * @author Etienne Lesot <etienne.lesot at rte-france.com>
  */
 public class SecuredTarInputStream extends TarArchiveInputStream {
-    private final int maxZipEntries;
-    private final long maxSize;
-    private int entryCount = 0;
-    private int totalReadBytes = 0;
+    private final SecuredInputStream securedStream;
 
-    public SecuredTarInputStream(InputStream in, int maxZipEntries, long maxSize) {
+    public SecuredTarInputStream(InputStream in, int maxTarEntries, long maxSize) {
         super(in);
-        this.maxZipEntries = maxZipEntries;
-        this.maxSize = maxSize;
+        this.securedStream = new SecuredInputStream(maxTarEntries, maxSize);
     }
 
     @Override
     public TarArchiveEntry getNextEntry() throws IOException {
-        if (++entryCount > maxZipEntries) {
-            throw new IllegalStateException("Tar has too many entries.");
-        }
+        securedStream.validateEntryLimit();
         return super.getNextEntry();
     }
 
     @Override
     public int read(byte[] b, int off, int len) throws IOException {
-        if (len + totalReadBytes > maxSize) {
-            throw new IllegalStateException("Tar size is too big.");
-        }
-
+        securedStream.validateMaxSize(len);
         int readBytes = super.read(b, off, len);
-
-        totalReadBytes += readBytes;
-        if (totalReadBytes > maxSize) {
-            throw new IllegalStateException("Tar size is too big.");
-        }
-
-        return readBytes;
+        return securedStream.read(readBytes);
     }
 }

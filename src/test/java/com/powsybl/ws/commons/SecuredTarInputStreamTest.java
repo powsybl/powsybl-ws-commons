@@ -26,14 +26,14 @@ class SecuredTarInputStreamTest {
         BufferedInputStream tarStream = new BufferedInputStream(Objects.requireNonNull(getClass().getResourceAsStream("/MicroGridTestConfiguration_T4_BE_BB_Complete_v2.tar")));
         try (SecuredTarInputStream tooManyEntriesSecuredZis = new SecuredTarInputStream(tarStream, 3, 1000000000)) {
             assertTrue(assertThrows(IllegalStateException.class, () -> readTar(tooManyEntriesSecuredZis))
-                .getMessage().contains("Tar has too many entries."));
+                .getMessage().contains("Archive has too many entries."));
         }
 
         // must reload or the inpustream is closing
         tarStream = new BufferedInputStream(Objects.requireNonNull(getClass().getResourceAsStream("/MicroGridTestConfiguration_T4_BE_BB_Complete_v2.tar")));
         try (SecuredTarInputStream tooBigSecuredZis = new SecuredTarInputStream(tarStream, 1000, 15000)) {
             assertTrue(assertThrows(IllegalStateException.class, () -> readTar(tooBigSecuredZis))
-                .getMessage().contains("Tar size is too big."));
+                .getMessage().contains("Archive size is too big."));
         }
 
         tarStream = new BufferedInputStream(Objects.requireNonNull(getClass().getResourceAsStream("/MicroGridTestConfiguration_T4_BE_BB_Complete_v2.tar")));

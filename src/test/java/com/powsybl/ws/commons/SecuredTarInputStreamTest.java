@@ -24,23 +24,23 @@ class SecuredTarInputStreamTest {
     @Test
     void test() throws IOException {
         BufferedInputStream tarStream = new BufferedInputStream(Objects.requireNonNull(getClass().getResourceAsStream("/MicroGridTestConfiguration_T4_BE_BB_Complete_v2.tar")));
-        try (SecuredTarInputStream tooManyEntriesSecuredZis = new SecuredTarInputStream(tarStream, 3, 1000000000)) {
-            assertTrue(assertThrows(IllegalStateException.class, () -> readTar(tooManyEntriesSecuredZis))
+        try (SecuredTarInputStream tooManyEntriesSecuredTis = new SecuredTarInputStream(tarStream, 3, 1000000000)) {
+            assertTrue(assertThrows(IllegalStateException.class, () -> readTar(tooManyEntriesSecuredTis))
                 .getMessage().contains("Archive has too many entries."));
         }
 
         // must reload or the inpustream is closing
         tarStream = new BufferedInputStream(Objects.requireNonNull(getClass().getResourceAsStream("/MicroGridTestConfiguration_T4_BE_BB_Complete_v2.tar")));
-        try (SecuredTarInputStream tooBigSecuredZis = new SecuredTarInputStream(tarStream, 1000, 15000)) {
-            assertTrue(assertThrows(IllegalStateException.class, () -> readTar(tooBigSecuredZis))
+        try (SecuredTarInputStream tooBigSecuredTis = new SecuredTarInputStream(tarStream, 1000, 15000)) {
+            assertTrue(assertThrows(IllegalStateException.class, () -> readTar(tooBigSecuredTis))
                 .getMessage().contains("Archive size is too big."));
         }
 
         tarStream = new BufferedInputStream(Objects.requireNonNull(getClass().getResourceAsStream("/MicroGridTestConfiguration_T4_BE_BB_Complete_v2.tar")));
-        try (SecuredTarInputStream okSecuredZis = new SecuredTarInputStream(tarStream, 1000, 1000000000)) {
-            TarArchiveInputStream zis = new TarArchiveInputStream(tarStream);
-            readTar(zis);
-            assertEquals(readTar(zis), readTar(okSecuredZis));
+        try (SecuredTarInputStream okSecuredTis = new SecuredTarInputStream(tarStream, 1000, 1000000000)) {
+            TarArchiveInputStream tis = new TarArchiveInputStream(tarStream);
+            readTar(tis);
+            assertEquals(readTar(tis), readTar(okSecuredTis));
         }
     }
 

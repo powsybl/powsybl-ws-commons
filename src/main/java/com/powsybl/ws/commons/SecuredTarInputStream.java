@@ -31,7 +31,7 @@ public class SecuredTarInputStream extends TarArchiveInputStream {
 
     @Override
     public int read(byte[] b, int off, int len) throws IOException {
-        securedStream.incrementAndValidate(len);
+        securedStream.incrementAndValidateMaxSize(len);
         return super.read(b, off, len);
     }
 }

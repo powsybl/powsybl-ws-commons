@@ -27,7 +27,7 @@ public class SecuredInputStream {
         }
     }
 
-    public void incrementAndValidate(int len) {
+    public void incrementAndValidateMaxSize(int len) {
         if (len > 0) {
             totalReadBytes += len;
         }

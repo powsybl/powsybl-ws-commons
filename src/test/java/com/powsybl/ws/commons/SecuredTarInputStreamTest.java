@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -23,20 +24,26 @@ class SecuredTarInputStreamTest {
 
     @Test
     void test() throws IOException {
-        BufferedInputStream tarStream = new BufferedInputStream(Objects.requireNonNull(getClass().getResourceAsStream("/MicroGridTestConfiguration_T4_BE_BB_Complete_v2.tar")));
+        InputStream inputStream = getClass().getResourceAsStream("/MicroGridTestConfiguration_T4_BE_BB_Complete_v2.tar");
+        Objects.requireNonNull(inputStream);
+        BufferedInputStream tarStream = new BufferedInputStream(inputStream);
         try (SecuredTarInputStream tooManyEntriesSecuredTis = new SecuredTarInputStream(tarStream, 3, 1000000000)) {
             assertTrue(assertThrows(IllegalStateException.class, () -> readTar(tooManyEntriesSecuredTis))
                 .getMessage().contains("Archive has too many entries."));
         }
 
         // must reload or the inpustream is closing
-        tarStream = new BufferedInputStream(Objects.requireNonNull(getClass().getResourceAsStream("/MicroGridTestConfiguration_T4_BE_BB_Complete_v2.tar")));
+        inputStream = getClass().getResourceAsStream("/MicroGridTestConfiguration_T4_BE_BB_Complete_v2.tar");
+        Objects.requireNonNull(inputStream);
+        tarStream = new BufferedInputStream(inputStream);
         try (SecuredTarInputStream tooBigSecuredTis = new SecuredTarInputStream(tarStream, 1000, 15000)) {
             assertTrue(assertThrows(IllegalStateException.class, () -> readTar(tooBigSecuredTis))
                 .getMessage().contains("Archive size is too big."));
         }
 
-        tarStream = new BufferedInputStream(Objects.requireNonNull(getClass().getResourceAsStream("/MicroGridTestConfiguration_T4_BE_BB_Complete_v2.tar")));
+        inputStream = getClass().getResourceAsStream("/MicroGridTestConfiguration_T4_BE_BB_Complete_v2.tar");
+        Objects.requireNonNull(inputStream);
+        tarStream = new BufferedInputStream(inputStream);
         try (SecuredTarInputStream okSecuredTis = new SecuredTarInputStream(tarStream, 1000, 1000000000)) {
             TarArchiveInputStream tis = new TarArchiveInputStream(tarStream);
             readTar(tis);

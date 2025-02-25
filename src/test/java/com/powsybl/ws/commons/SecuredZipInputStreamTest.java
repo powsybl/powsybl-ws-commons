@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Objects;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -23,7 +24,9 @@ import static org.junit.jupiter.api.Assertions.*;
 class SecuredZipInputStreamTest {
     @Test
     void test() throws IOException {
-        byte[] fileContent = ByteStreams.toByteArray(Objects.requireNonNull(getClass().getResourceAsStream("/MicroGridTestConfiguration_T4_BE_BB_Complete_v2.zip")));
+        InputStream inputStream = getClass().getResourceAsStream("/MicroGridTestConfiguration_T4_BE_BB_Complete_v2.zip");
+        Objects.requireNonNull(inputStream);
+        byte[] fileContent = ByteStreams.toByteArray(inputStream);
         try (SecuredZipInputStream tooManyEntriesSecuredZis = new SecuredZipInputStream(new ByteArrayInputStream(fileContent), 3, 1000000000)) {
             assertTrue(assertThrows(IllegalStateException.class, () -> readZip(tooManyEntriesSecuredZis))
                     .getMessage().contains("Archive has too many entries."));

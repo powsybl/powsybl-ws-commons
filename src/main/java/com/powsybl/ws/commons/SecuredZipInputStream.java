@@ -31,7 +31,7 @@ public class SecuredZipInputStream extends ZipInputStream {
 
     @Override
     public ZipEntry getNextEntry() throws IOException {
-        securedStream.validateEntryLimit();
+        securedStream.incrementAndValidateEntryLimit();
         return super.getNextEntry();
     }
 

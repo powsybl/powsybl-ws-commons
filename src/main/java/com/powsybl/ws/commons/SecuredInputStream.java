@@ -21,7 +21,7 @@ public class SecuredInputStream {
         this.maxSize = maxSize;
     }
 
-    public void validateEntryLimit() {
+    public void incrementAndValidateEntryLimit() {
         if (++entryCount > maxEntries) {
             throw new IllegalStateException("Archive has too many entries.");
         }

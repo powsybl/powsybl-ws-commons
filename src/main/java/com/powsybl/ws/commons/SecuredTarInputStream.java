@@ -25,7 +25,7 @@ public class SecuredTarInputStream extends TarArchiveInputStream {
 
     @Override
     public TarArchiveEntry getNextEntry() throws IOException {
-        securedStream.validateEntryLimit();
+        securedStream.incrementAndValidateEntryLimit();
         return super.getNextEntry();
     }
 

@@ -21,27 +21,18 @@ public class SecuredInputStream {
         this.maxSize = maxSize;
     }
 
-    protected void validateEntryLimit() {
+    public void validateEntryLimit() {
         if (++entryCount > maxEntries) {
             throw new IllegalStateException("Archive has too many entries.");
         }
     }
 
-    public void validateMaxSize(int len) {
-        if (len + totalReadBytes > maxSize) {
-            throw new IllegalStateException("Archive size is too big.");
+    public void incrementAndValidate(int len) {
+        if (len > 0) {
+            totalReadBytes += len;
         }
-    }
-
-    public int read(int readBytes) {
-        if (readBytes > 0) {
-            totalReadBytes += readBytes;
-        }
-
         if (totalReadBytes > maxSize) {
             throw new IllegalStateException("Archive size is too big.");
         }
-
-        return readBytes;
     }
 }

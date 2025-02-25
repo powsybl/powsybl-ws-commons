@@ -37,8 +37,7 @@ public class SecuredZipInputStream extends ZipInputStream {
 
     @Override
     public int read(byte[] b, int off, int len) throws IOException {
-        securedStream.validateMaxSize(len);
-        int readBytes = super.read(b, off, len);
-        return securedStream.read(readBytes);
+        securedStream.incrementAndValidate(len);
+        return super.read(b, off, len);
     }
 }

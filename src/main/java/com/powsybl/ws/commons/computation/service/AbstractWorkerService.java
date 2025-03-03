@@ -9,6 +9,9 @@ package com.powsybl.ws.commons.computation.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.PowsyblException;
 import com.powsybl.commons.report.ReportNode;
+import com.powsybl.computation.ComputationManager;
+import com.powsybl.computation.local.LocalComputationConfig;
+import com.powsybl.computation.local.LocalComputationManager;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.network.store.client.NetworkStoreService;
@@ -21,14 +24,21 @@ import org.springframework.http.HttpStatus;
 import org.springframework.messaging.Message;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
-import java.util.concurrent.*;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.*;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
+
+import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_DEBUG_DIR;
 
 /**
  * @author Mathieu Deharbe <mathieu.deharbe at rte-france.com>
@@ -160,6 +170,8 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
     protected void clean(AbstractResultContext<C> resultContext) {
         futures.remove(resultContext.getResultUuid());
         cancelComputationRequests.remove(resultContext.getResultUuid());
+
+        Optional.ofNullable(resultContext.getRunContext().getComputationManager()).ifPresent(ComputationManager::close);
     }
 
     /**
@@ -182,17 +194,31 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
 
     protected abstract void saveResult(Network network, AbstractResultContext<C> resultContext, R result);
 
-    protected void sendResultMessage(AbstractResultContext<C> resultContext, R ignoredResult) {
+    private Map<String, Object> getAdditionalHeaders(AbstractResultContext<C> resultContext, R ignoredResult) {
+        Map<String, Object> additionalHeaders = new HashMap<>();
+        if (resultContext.getRunContext().isDebug() && resultContext.getRunContext().getComputationManager() != null) {
+            additionalHeaders.put(HEADER_DEBUG_DIR, resultContext.getRunContext().getComputationManager().getLocalDir().toAbsolutePath().toString());
+        }
+        return additionalHeaders;
+    }
+
+    public Map<String, Object> getResultHeaders(AbstractResultContext<C> resultContext, R result) {
+        return getAdditionalHeaders(resultContext, result);
+    }
+
+    private void sendResultMessage(AbstractResultContext<C> resultContext, R result) {
+        Map<String, Object> additionalHeaders = getResultHeaders(resultContext, result);
         notificationService.sendResultMessage(resultContext.getResultUuid(), resultContext.getRunContext().getReceiver(),
-                resultContext.getRunContext().getUserId(), null);
+                resultContext.getRunContext().getUserId(), additionalHeaders);
     }
 
     /**
      * Do some extra task before running the computation, e.g. print log or init extra data for the run context
-     * @param ignoredRunContext This context may be used for further computation in overriding classes
+     * @param runContext This context may be used for further computation in overriding classes
      */
-    protected void preRun(C ignoredRunContext) {
+    protected void preRun(C runContext) {
         LOGGER.info("Run {} computation...", getComputationType());
+        runContext.setComputationManager(createComputationManager());
     }
 
     protected R run(C runContext, UUID resultUuid, AtomicReference<ReportNode> rootReporter) {
@@ -252,4 +278,21 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
     protected abstract String getComputationType();
 
     protected abstract CompletableFuture<R> getCompletableFuture(C runContext, String provider, UUID resultUuid);
+
+    /**
+     * set method as public to mock DockerLocalComputationManager when testing with test container
+     * @return a computation manager
+     */
+    public ComputationManager createComputationManager() {
+        LocalComputationConfig localComputationConfig = LocalComputationConfig.load();
+        Path localDir = localComputationConfig.getLocalDir();
+        try {
+            String workDirPrefix = getComputationType().replaceAll("\\s+", "_").toLowerCase() + "_";
+            Path workDir = Files.createTempDirectory(localDir, workDirPrefix);
+            return new LocalComputationManager(new LocalComputationConfig(workDir, localComputationConfig.getAvailableCore()), executionService.getExecutorService());
+        } catch (IOException e) {
+            throw new UncheckedIOException(String.format("Error occurred while creating a working directory inside the local directory %s",
+                    localDir.toAbsolutePath()), e);
+        }
+    }
 }

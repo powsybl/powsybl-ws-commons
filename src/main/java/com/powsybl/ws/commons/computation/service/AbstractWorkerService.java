@@ -203,8 +203,9 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
             final String reportType = runContext.getReportInfos().computationType();
             String rootReporterId = runContext.getReportInfos().reporterId();
             rootReporter.set(ReportNode.newRootReportNode().withMessageTemplate(rootReporterId, rootReporterId).build());
-            reportNode = rootReporter.get().newReportNode().withMessageTemplate(reportType, reportType + (provider != null ? " (" + provider + ")" : ""))
-                    .withUntypedValue("providerToUse", Objects.requireNonNullElse(provider, "")).add();
+            reportNode = rootReporter.get().newReportNode().withMessageTemplate(reportType, "${reportType} (${provider})")
+                    .withUntypedValue("reportType", reportType)
+                    .withUntypedValue("provider", Objects.requireNonNullElse(provider, "")).add();
             // Delete any previous computation logs
             observer.observe("report.delete",
                     runContext, () -> reportService.deleteReport(runContext.getReportInfos().reportUuid()));

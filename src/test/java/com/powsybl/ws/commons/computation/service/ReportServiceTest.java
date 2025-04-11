@@ -36,6 +36,7 @@ class ReportServiceTest {
     private static final UUID REPORT_UUID = UUID.fromString("7928181c-7977-4592-ba19-88027e4254e4");
     private static final UUID REPORT_ERROR_UUID = UUID.fromString("9928181c-7977-4592-ba19-88027e4254e4");
     private static final String REPORT_JSON = "{\"version\":\"3.0\",\"dictionaries\":{\"default\":{\"core.dynasim.groovyDynamicModels\":\"Groovy Dynamic Models Supplier\"}},\"reportRoot\":{\"messageKey\":\"core.dynasim.groovyDynamicModels\"}}";
+    private static final String REPORT_JSON1 = "{\"version\":\"3.0\",\"dictionaries\":{\"default\":{\"tototutu\":\"toto 1234\"}},\"reportRoot\":{\"messageKey\":\"tototutu\"}}";
 
     @Autowired
     private ReportService reportService;
@@ -58,6 +59,20 @@ class ReportServiceTest {
                 .andExpect(MockRestRequestMatchers.requestTo("http://report-server/v1/reports/" + REPORT_UUID))
                 .andExpect(MockRestRequestMatchers.content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(MockRestRequestMatchers.content().json(REPORT_JSON))
+                .andRespond(MockRestResponseCreators.withSuccess());
+        assertThatNoException().isThrownBy(() -> reportService.sendReport(REPORT_UUID, reportNode));
+    }
+
+    @Test
+    void testSendReport1() {
+        final ReportNode reportNode = ReportNode.newRootReportNode()
+                .withResourceBundles("i18n.reports")
+                .withMessageTemplate("tototutu")
+                .build();
+        server.expect(MockRestRequestMatchers.method(HttpMethod.PUT))
+                .andExpect(MockRestRequestMatchers.requestTo("http://report-server/v1/reports/" + REPORT_UUID))
+                .andExpect(MockRestRequestMatchers.content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(MockRestRequestMatchers.content().json(REPORT_JSON1))
                 .andRespond(MockRestResponseCreators.withSuccess());
         assertThatNoException().isThrownBy(() -> reportService.sendReport(REPORT_UUID, reportNode));
     }

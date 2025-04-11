@@ -64,7 +64,10 @@ class ReportServiceTest {
 
     @Test
     void testSendReportFailed() {
-        final ReportNode reportNode = ReportNode.newRootReportNode().withMessageTemplate("test", "a test").build();
+        final ReportNode reportNode = ReportNode.newRootReportNode()
+                                .withResourceBundles("i18n.reports")
+                                .withMessageTemplate("test")
+                                .build();
         server.expect(MockRestRequestMatchers.method(HttpMethod.PUT))
               .andExpect(MockRestRequestMatchers.requestTo("http://report-server/v1/reports/" + REPORT_ERROR_UUID))
               .andRespond(MockRestResponseCreators.withServerError());

@@ -35,7 +35,7 @@ import static org.assertj.core.api.Assertions.*;
 class ReportServiceTest {
     private static final UUID REPORT_UUID = UUID.fromString("7928181c-7977-4592-ba19-88027e4254e4");
     private static final UUID REPORT_ERROR_UUID = UUID.fromString("9928181c-7977-4592-ba19-88027e4254e4");
-    private static final String REPORT_JSON = "{\"version\":\"2.1\",\"dictionaries\":{\"default\":{\"test\":\"a test\"}},\"reportRoot\":{\"messageKey\":\"test\"}}";
+    private static final String REPORT_JSON = "{\"version\":\"3.0\",\"dictionaries\":{\"default\":{\"test\":\"a test\"}},\"reportRoot\":{\"messageKey\":\"test\"}}";
 
     @Autowired
     private ReportService reportService;

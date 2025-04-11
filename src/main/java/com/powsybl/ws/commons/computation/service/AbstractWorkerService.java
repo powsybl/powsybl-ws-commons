@@ -204,10 +204,10 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
             String rootReporterId = runContext.getReportInfos().reporterId();
             ReportNode rootReporterNode = ReportNode.newRootReportNode()
                     .withAllResourceBundlesFromClasspath()
-                    .withMessageTemplate("wscommons.rootReporterId")
+                    .withMessageTemplate("ws.commons.rootReporterId")
                     .withUntypedValue("rootReporterId", rootReporterId).build();
             rootReporter.set(rootReporterNode);
-            reportNode = rootReporter.get().newReportNode().withMessageTemplate("wscommons.reportType")
+            reportNode = rootReporter.get().newReportNode().withMessageTemplate("ws.commons.reportType")
                     .withUntypedValue("reportType", reportType)
                     .withUntypedValue("provider", Objects.requireNonNullElse(provider, "")).add();
             // Delete any previous computation logs

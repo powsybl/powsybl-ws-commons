@@ -31,16 +31,20 @@ public record ResourceFilterDTO(DataType dataType, Type type, Object value, Stri
     }
 
     public enum Type {
+        @JsonProperty("contains")
         CONTAINS,
         @JsonProperty("startsWith")
         STARTS_WITH,
+        @JsonProperty("equals")
         EQUALS,
         @JsonProperty("notEqual")
         NOT_EQUAL,
         @JsonProperty("lessThanOrEqual")
         LESS_THAN_OR_EQUAL,
         @JsonProperty("greaterThanOrEqual")
-        GREATER_THAN_OR_EQUAL
+        GREATER_THAN_OR_EQUAL,
+        @JsonProperty("in")
+        IN
     }
 }
 

@@ -29,17 +29,23 @@ public abstract class AbstractCommonSpecificationBuilder<T> {
         return (root, cq, cb) -> root.get(getIdFieldName()).in(uuids);
     }
 
-    public Specification<T> buildSpecification(UUID resultUuid, List<ResourceFilterDTO> resourceFilters) {
-        List<ResourceFilterDTO> childrenResourceFilter = resourceFilters.stream().filter(this::isNotParentFilter).toList();
+    public Specification<T> buildSpecification(UUID resultUuid, List<ResourceFilterDTO> resourceFilters, boolean withJoin) {
+        List<ResourceFilterDTO> childrenResourceFilters = resourceFilters.stream().filter(this::isNotParentFilter).toList();
         // since sql joins generates duplicate results, we need to use distinct here
         Specification<T> specification = SpecificationUtils.distinct();
         // filter by resultUuid
         specification = specification.and(Specification.where(resultUuidEquals(resultUuid)));
-        if (childrenResourceFilter.isEmpty()) {
+        if (childrenResourceFilters.isEmpty()) {
             specification = specification.and(addSpecificFilterWhenNoChildrenFilter());
         } else {
-            // needed here to filter main entities that would have empty collection when filters are applied
-            specification = specification.and(childrenNotEmpty());
+            if (withJoin) { // TODO : n'était pas présent pour les analyse de sécu
+                SpecificationUtils.appendFiltersToSpecification(specification, childrenResourceFilters);
+                /*childrenFilters
+                            .forEach(filter -> SpecificationUtils.addPredicate(criteriaBuilder, root.get(SLACK_BUS_RESULTS), predicates, filter));*/ // TODO : SLACK_BUS_RESULTS ??
+            } else {
+                // needed here to filter main entities that would have empty collection when filters are applied
+                specification = specification.and(addSpecificFilterWhenChildrenFilters()); // TODO => super bizarre que rien n'est fait avec les children, cf dans la version loadflow
+            }
         }
 
         return SpecificationUtils.appendFiltersToSpecification(specification, resourceFilters);
@@ -52,7 +58,7 @@ public abstract class AbstractCommonSpecificationBuilder<T> {
         return SpecificationUtils.appendFiltersToSpecification(specification, childrenResourceFilter);
     }
 
-    public abstract Specification<T> childrenNotEmpty();
+    public abstract Specification<T> addSpecificFilterWhenChildrenFilters();
 
     public abstract boolean isNotParentFilter(ResourceFilterDTO filter);
 

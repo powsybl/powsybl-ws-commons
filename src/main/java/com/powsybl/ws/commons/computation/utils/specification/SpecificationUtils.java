@@ -119,24 +119,32 @@ public final class SpecificationUtils {
 
     @NotNull
     private static <X> Specification<X> appendTextFilterToSpecification(Specification<X> specification, ResourceFilterDTO resourceFilter) {
+        String escapedFilterValue = null;
+        if (!(resourceFilter.value() instanceof Collection<?>)) {
+//            escapedFilterValue = EscapeCharacter.DEFAULT.escape(resourceFilter.value().toString()); // TODO : à priori nécessaire pour les loadflow
+            escapedFilterValue = resourceFilter.value().toString();
+        }
         Specification<X> completedSpecification = specification;
 
         switch (resourceFilter.type()) {
-            case EQUALS -> {
+            case EQUALS, IN -> { // TODO : check IN pour les résultats de loadflow
                 // this type can manage one value or a list of values (with OR)
                 if (resourceFilter.value() instanceof Collection<?> valueList) {
-                    completedSpecification = completedSpecification.and(anyOf(valueList.stream().map(value -> SpecificationUtils.<X>equals(resourceFilter.column(), value.toString())).toList()));
+                    completedSpecification = completedSpecification.and(anyOf(
+                            valueList.stream()
+                                    .map(value -> SpecificationUtils.<X>equals(resourceFilter.column(), value.toString()))
+                                    .toList()));
                 } else if (resourceFilter.value() == null) {
                     // if the value is null, we build an impossible specification (trick to remove later on ?)
                     completedSpecification = completedSpecification.and(not(completedSpecification));
                 } else {
-                    completedSpecification = completedSpecification.and(equals(resourceFilter.column(), resourceFilter.value().toString()));
+                    completedSpecification = completedSpecification.and(equals(resourceFilter.column(), escapedFilterValue));
                 }
             }
             case CONTAINS ->
-                    completedSpecification = completedSpecification.and(contains(resourceFilter.column(), resourceFilter.value().toString()));
+                    completedSpecification = completedSpecification.and(contains(resourceFilter.column(), escapedFilterValue));
             case STARTS_WITH ->
-                    completedSpecification = completedSpecification.and(startsWith(resourceFilter.column(), resourceFilter.value().toString()));
+                    completedSpecification = completedSpecification.and(startsWith(resourceFilter.column(), escapedFilterValue));
             default -> throw new IllegalArgumentException("The filter type " + resourceFilter.type() + " is not supported with the data type " + resourceFilter.dataType());
         }
 
@@ -145,11 +153,7 @@ public final class SpecificationUtils {
 
     @NotNull
     private static <X> Specification<X> appendNumberFilterToSpecification(Specification<X> specification, ResourceFilterDTO resourceFilter) {
-        String value = resourceFilter.value().toString();
-        return createNumberPredicate(specification, resourceFilter, value);
-    }
-
-    private static <X> Specification<X> createNumberPredicate(Specification<X> specification, ResourceFilterDTO resourceFilter, String filterValue) {
+        String filterValue = resourceFilter.value().toString();
         double tolerance;
         if (resourceFilter.tolerance() != null) {
             tolerance = resourceFilter.tolerance();

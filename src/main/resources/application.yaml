@@ -10,10 +10,8 @@ server:
     include-message: always
   # increase max url length
   max-http-request-header-size: 64000
+  # enable monitoring of tomcat threads and thread pool
   tomcat:
-    threads:
-      max: 20
-    # enable monitoring of tomcat threads and thread pool
     mbeanregistry:
       enabled: true
 

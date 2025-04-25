@@ -29,22 +29,22 @@ public abstract class AbstractCommonSpecificationBuilder<T> {
         return (root, cq, cb) -> root.get(getIdFieldName()).in(uuids);
     }
 
-    public Specification<T> buildSpecification(UUID resultUuid, List<ResourceFilterDTO> resourceFilters, boolean withJoin) {
-        List<ResourceFilterDTO> childrenResourceFilters = resourceFilters.stream().filter(this::isNotParentFilter).toList();
+    public Specification<T> buildSpecification(UUID resultUuid, List<ResourceFilterDTO> resourceFilters) {
+        List<ResourceFilterDTO> childrenFilters = resourceFilters.stream().filter(this::isNotParentFilter).toList();
         // since sql joins generates duplicate results, we need to use distinct here
         Specification<T> specification = SpecificationUtils.distinct();
         // filter by resultUuid
         specification = specification.and(Specification.where(resultUuidEquals(resultUuid)));
-        if (childrenResourceFilters.isEmpty()) {
-            specification = specification.and(addSpecificFilterWhenNoChildrenFilter());
+        if (childrenFilters.isEmpty()) {
+            Specification<T> spec = addSpecificFilterWhenNoChildrenFilter();
+            if (spec != null) {
+                specification = specification.and(spec);
+            }
         } else {
-            if (withJoin) { // TODO : n'était pas présent pour les analyse de sécu
-                SpecificationUtils.appendFiltersToSpecification(specification, childrenResourceFilters);
-                /*childrenFilters
-                            .forEach(filter -> SpecificationUtils.addPredicate(criteriaBuilder, root.get(SLACK_BUS_RESULTS), predicates, filter));*/ // TODO : SLACK_BUS_RESULTS ??
-            } else {
-                // needed here to filter main entities that would have empty collection when filters are applied
-                specification = specification.and(addSpecificFilterWhenChildrenFilters()); // TODO => super bizarre que rien n'est fait avec les children, cf dans la version loadflow
+            // needed here to filter main entities that would have empty collection when filters are applied
+            Specification<T> spec = addSpecificFilterWhenChildrenFilters();
+            if (spec != null) {
+                specification = specification.and(spec);
             }
         }
 
@@ -52,10 +52,10 @@ public abstract class AbstractCommonSpecificationBuilder<T> {
     }
 
     public Specification<T> buildLimitViolationsSpecification(List<UUID> uuids, List<ResourceFilterDTO> resourceFilters) {
-        List<ResourceFilterDTO> childrenResourceFilter = resourceFilters.stream().filter(this::isNotParentFilter).toList();
+        List<ResourceFilterDTO> childrenFilters = resourceFilters.stream().filter(this::isNotParentFilter).toList();
         Specification<T> specification = Specification.where(uuidIn(uuids));
 
-        return SpecificationUtils.appendFiltersToSpecification(specification, childrenResourceFilter);
+        return SpecificationUtils.appendFiltersToSpecification(specification, childrenFilters);
     }
 
     public abstract Specification<T> addSpecificFilterWhenChildrenFilters();
@@ -68,4 +68,3 @@ public abstract class AbstractCommonSpecificationBuilder<T> {
 
     public abstract Specification<T> addSpecificFilterWhenNoChildrenFilter();
 }
-

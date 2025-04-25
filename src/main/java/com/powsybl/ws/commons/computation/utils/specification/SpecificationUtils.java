@@ -8,9 +8,7 @@
 package com.powsybl.ws.commons.computation.utils.specification;
 
 import com.powsybl.ws.commons.computation.dto.ResourceFilterDTO;
-import jakarta.persistence.criteria.Expression;
-import jakarta.persistence.criteria.Path;
-import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.*;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.query.EscapeCharacter;
@@ -37,7 +35,7 @@ public final class SpecificationUtils {
 
     // we use .as(String.class) to be able to works on enum fields
     public static <X> Specification<X> equals(String field, String value) {
-        return (root, cq, cb) -> cb.equal(cb.upper(getColumnPath(root, field)).as(String.class), value.toUpperCase());
+        return (root, cq, cb) -> cb.equal(cb.upper(getColumnPath(root, field).as(String.class)).as(String.class), value.toUpperCase());
     }
 
     public static <X> Specification<X> notEqual(String field, String value) {
@@ -45,11 +43,11 @@ public final class SpecificationUtils {
     }
 
     public static <X> Specification<X> contains(String field, String value) {
-        return (root, cq, cb) -> cb.like(cb.upper(getColumnPath(root, field)), "%" + EscapeCharacter.DEFAULT.escape(value).toUpperCase() + "%", EscapeCharacter.DEFAULT.getEscapeCharacter());
+        return (root, cq, cb) -> cb.like(cb.upper(getColumnPath(root, field).as(String.class)), "%" + EscapeCharacter.DEFAULT.escape(value).toUpperCase() + "%", EscapeCharacter.DEFAULT.getEscapeCharacter());
     }
 
     public static <X> Specification<X> startsWith(String field, String value) {
-        return (root, cq, cb) -> cb.like(cb.upper(getColumnPath(root, field)), EscapeCharacter.DEFAULT.escape(value).toUpperCase() + "%", EscapeCharacter.DEFAULT.getEscapeCharacter());
+        return (root, cq, cb) -> cb.like(cb.upper(getColumnPath(root, field).as(String.class)), EscapeCharacter.DEFAULT.escape(value).toUpperCase() + "%", EscapeCharacter.DEFAULT.getEscapeCharacter());
     }
 
     /**
@@ -119,32 +117,41 @@ public final class SpecificationUtils {
 
     @NotNull
     private static <X> Specification<X> appendTextFilterToSpecification(Specification<X> specification, ResourceFilterDTO resourceFilter) {
-        String escapedFilterValue = null;
-        if (!(resourceFilter.value() instanceof Collection<?>)) {
-//            escapedFilterValue = EscapeCharacter.DEFAULT.escape(resourceFilter.value().toString()); // TODO : à priori nécessaire pour les loadflow
-            escapedFilterValue = resourceFilter.value().toString();
-        }
         Specification<X> completedSpecification = specification;
 
         switch (resourceFilter.type()) {
-            case EQUALS, IN -> { // TODO : check IN pour les résultats de loadflow
+            case EQUALS, IN -> {
                 // this type can manage one value or a list of values (with OR)
                 if (resourceFilter.value() instanceof Collection<?> valueList) {
-                    completedSpecification = completedSpecification.and(anyOf(
-                            valueList.stream()
-                                    .map(value -> SpecificationUtils.<X>equals(resourceFilter.column(), value.toString()))
-                                    .toList()));
+                    completedSpecification = completedSpecification.and(
+                            anyOf(
+                                    valueList
+                                            .stream()
+                                            .map(value -> SpecificationUtils.<X>equals(resourceFilter.column(), value.toString()))
+                                            .toList()
+                            ));
                 } else if (resourceFilter.value() == null) {
                     // if the value is null, we build an impossible specification (trick to remove later on ?)
                     completedSpecification = completedSpecification.and(not(completedSpecification));
                 } else {
-                    completedSpecification = completedSpecification.and(equals(resourceFilter.column(), escapedFilterValue));
+                    completedSpecification = completedSpecification.and(equals(resourceFilter.column(), resourceFilter.value().toString()));
                 }
             }
-            case CONTAINS ->
-                    completedSpecification = completedSpecification.and(contains(resourceFilter.column(), escapedFilterValue));
+            case CONTAINS -> {
+                if (resourceFilter.value() instanceof Collection<?> valueList) {
+                    completedSpecification = completedSpecification.and(
+                            anyOf(
+                                    valueList
+                                            .stream()
+                                            .map(value -> SpecificationUtils.<X>contains(resourceFilter.column(), value.toString()))
+                                            .toList()
+                            ));
+                } else {
+                    completedSpecification = completedSpecification.and(contains(resourceFilter.column(), resourceFilter.value().toString()));
+                }
+            }
             case STARTS_WITH ->
-                    completedSpecification = completedSpecification.and(startsWith(resourceFilter.column(), escapedFilterValue));
+                    completedSpecification = completedSpecification.and(startsWith(resourceFilter.column(), resourceFilter.value().toString()));
             default -> throw new IllegalArgumentException("The filter type " + resourceFilter.type() + " is not supported with the data type " + resourceFilter.dataType());
         }
 

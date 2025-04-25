@@ -7,12 +7,16 @@
 package com.powsybl.ws.commons.computation.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.powsybl.ws.commons.StreamUtils;
 import lombok.Getter;
+import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.util.CollectionUtils;
 
+import java.io.*;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 /**
  * @author Mathieu Deharbe <mathieu.deharbe at rte-france.com>
@@ -76,4 +80,16 @@ public abstract class AbstractComputationService<C extends AbstractComputationRu
     public S getStatus(UUID resultUuid) {
         return resultService.findStatus(resultUuid);
     }
+
+    public Pair<Consumer<OutputStream>, String> getDebugFileStreamer(UUID resultUuid) throws IOException {
+        String debugFileLocation = resultService.findDebugFileLocation(resultUuid);
+        File file = new File(debugFileLocation);
+        if (!file.exists()) {
+            return null;
+        }
+        InputStream inputStream = new FileInputStream(file);
+        Consumer<OutputStream> streamer = StreamUtils.getStreamer(inputStream, 8192);
+        return Pair.of(streamer, file.getName());
+    }
+
 }

@@ -22,4 +22,13 @@ public abstract class AbstractComputationResultService<S> {
     public abstract void deleteAll();
 
     public abstract S findStatus(UUID resultUuid);
+
+    public void updateDebugFileLocation(UUID resultUuid, String debugFilePath) {
+        // to override by subclasses
+    }
+
+    public String findDebugFileLocation(UUID resultUuid) {
+        // to override by subclasses
+        return null;
+    }
 }

@@ -8,6 +8,7 @@ package com.powsybl.ws.commons.computation.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.PowsyblException;
+import com.powsybl.commons.io.FileUtil;
 import com.powsybl.commons.report.ReportNode;
 import com.powsybl.computation.ComputationManager;
 import com.powsybl.computation.local.LocalComputationConfig;
@@ -16,6 +17,7 @@ import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.client.PreloadingStrategy;
+import com.powsybl.ws.commons.ZipUtils;
 import com.powsybl.ws.commons.computation.ComputationException;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -38,7 +40,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
-import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_DEBUG_DIR;
+import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_DEBUG;
 
 /**
  * @author Mathieu Deharbe <mathieu.deharbe at rte-france.com>
@@ -172,6 +174,11 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
         cancelComputationRequests.remove(resultContext.getResultUuid());
 
         Optional.ofNullable(resultContext.getRunContext().getComputationManager()).ifPresent(ComputationManager::close);
+
+        // clean the working directory
+        C runContext = resultContext.getRunContext();
+        Path workDir = runContext.getComputationManager().getLocalDir();
+        removeDirectory(workDir);
     }
 
     /**
@@ -192,24 +199,36 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
         };
     }
 
-    protected abstract void saveResult(Network network, AbstractResultContext<C> resultContext, R result);
+    protected void saveResult(Network network, AbstractResultContext<C> resultContext, R result) {
+        // --- process debug at saving result momment --- //
+        C runContext = resultContext.getRunContext();
+        Path workDir = runContext.getComputationManager().getLocalDir();
+        if (runContext.isDebug()) {
+            // zip the working directory
+            Path parentDir = workDir.getParent();
+            Path debugFilePath = parentDir.resolve(workDir.getFileName().toString() + ".zip");
+            ZipUtils.zip(workDir, debugFilePath);
 
-    private Map<String, Object> getAdditionalHeaders(AbstractResultContext<C> resultContext, R ignoredResult) {
-        Map<String, Object> additionalHeaders = new HashMap<>();
-        if (resultContext.getRunContext().isDebug() && resultContext.getRunContext().getComputationManager() != null) {
-            additionalHeaders.put(HEADER_DEBUG_DIR, resultContext.getRunContext().getComputationManager().getLocalDir().toAbsolutePath().toString());
+            // TODO transfer zip file to S3
+
+            // insert debug file path into db
+            resultService.updateDebugFileLocation(resultContext.getResultUuid(), debugFilePath.toAbsolutePath().toString());
         }
-        return additionalHeaders;
     }
 
     public Map<String, Object> getResultHeaders(AbstractResultContext<C> resultContext, R result) {
-        return getAdditionalHeaders(resultContext, result);
+        Map<String, Object> resultHeaders = new HashMap<>();
+
+        // --- attach debug info to result headers --- //
+        resultHeaders.put(HEADER_DEBUG, resultContext.getRunContext().isDebug());
+
+        return resultHeaders;
     }
 
     private void sendResultMessage(AbstractResultContext<C> resultContext, R result) {
-        Map<String, Object> additionalHeaders = getResultHeaders(resultContext, result);
+        Map<String, Object> resultHeaders = getResultHeaders(resultContext, result);
         notificationService.sendResultMessage(resultContext.getResultUuid(), resultContext.getRunContext().getReceiver(),
-                resultContext.getRunContext().getUserId(), additionalHeaders);
+                resultContext.getRunContext().getUserId(), resultHeaders);
     }
 
     /**
@@ -293,6 +312,18 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
         } catch (IOException e) {
             throw new UncheckedIOException(String.format("Error occurred while creating a working directory inside the local directory %s",
                     localDir.toAbsolutePath()), e);
+        }
+    }
+
+    private void removeDirectory(Path dir) {
+        if (dir != null) {
+            try {
+                FileUtil.removeDir(dir);
+            } catch (IOException e) {
+                LOGGER.error(String.format("%s: Error occurred while cleaning directory at %s", getComputationType(), dir.toAbsolutePath()), e);
+            }
+        } else {
+            LOGGER.info("{}: No directory to clean", getComputationType());
         }
     }
 }

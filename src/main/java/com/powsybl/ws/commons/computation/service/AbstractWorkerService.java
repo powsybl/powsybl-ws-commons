@@ -123,24 +123,25 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
             AbstractResultContext<C> resultContext = fromMessage(message);
             AtomicReference<ReportNode> rootReporter = new AtomicReference<>(ReportNode.NO_OP);
             try {
-                long startTime = System.nanoTime();
-
                 Network network = getNetwork(resultContext.getRunContext().getNetworkUuid(),
                         resultContext.getRunContext().getVariantId());
                 resultContext.getRunContext().setNetwork(network);
-                R result = run(resultContext.getRunContext(), resultContext.getResultUuid(), rootReporter);
+                observer.observe("global.run", resultContext.getRunContext(), () -> {
+                    long startTime = System.nanoTime();
+                    R result = run(resultContext.getRunContext(), resultContext.getResultUuid(), rootReporter);
 
-                LOGGER.info("Just run in {}s", TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime));
+                    LOGGER.info("Just run in {}s", TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime));
 
-                if (resultCanBeSaved(result)) {
-                    startTime = System.nanoTime();
-                    observer.observe("results.save", resultContext.getRunContext(), () -> saveResult(network, resultContext, result));
+                    if (resultCanBeSaved(result)) {
+                        startTime = System.nanoTime();
+                        observer.observe("results.save", resultContext.getRunContext(), () -> saveResult(network, resultContext, result));
 
-                    LOGGER.info("Stored in {}s", TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime));
+                        LOGGER.info("Stored in {}s", TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime));
 
-                    sendResultMessage(resultContext, result);
-                    LOGGER.info("{} complete (resultUuid='{}')", getComputationType(), resultContext.getResultUuid());
-                }
+                        sendResultMessage(resultContext, result);
+                        LOGGER.info("{} complete (resultUuid='{}')", getComputationType(), resultContext.getResultUuid());
+                    }
+                });
             } catch (CancellationException e) {
                 // Do nothing
             } catch (Exception e) {

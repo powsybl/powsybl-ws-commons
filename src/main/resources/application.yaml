@@ -82,6 +82,8 @@ spring:
     database: POSTGRESQL
     hibernate:
       ddl-auto: validate
+    # No session by http request but one session by initial transaction (need to deal with the lazy associations)
+    open-in-view: false
     properties:
       dialect: org.hibernate.dialect.PostgreSQLDialect
       hibernate:

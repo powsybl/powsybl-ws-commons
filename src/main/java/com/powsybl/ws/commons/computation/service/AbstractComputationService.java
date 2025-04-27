@@ -18,6 +18,8 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Consumer;
 
+import static com.powsybl.ws.commons.StreamUtils.DEFAULT_BUFFER_SIZE;
+
 /**
  * @author Mathieu Deharbe <mathieu.deharbe at rte-france.com>
  * @param <C> run context specific to a computation, including parameters
@@ -88,7 +90,7 @@ public abstract class AbstractComputationService<C extends AbstractComputationRu
             return null;
         }
         InputStream inputStream = new FileInputStream(file);
-        Consumer<OutputStream> streamer = StreamUtils.getStreamer(inputStream, 8192);
+        Consumer<OutputStream> streamer = StreamUtils.getStreamer(inputStream, DEFAULT_BUFFER_SIZE);
         return Pair.of(streamer, file.getName());
     }
 

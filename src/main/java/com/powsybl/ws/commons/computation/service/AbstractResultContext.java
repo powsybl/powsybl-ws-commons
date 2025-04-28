@@ -42,6 +42,8 @@ public abstract class AbstractResultContext<C extends AbstractComputationRunCont
 
     protected static final String DEBUG_HEADER = "debug";
 
+    protected static final String BROWSER_TAB_UUID_HEADER = "browserTabUuid";
+
     private final UUID resultUuid;
     private final C runContext;
 
@@ -69,7 +71,8 @@ public abstract class AbstractResultContext<C extends AbstractComputationRunCont
                 .setHeader(REPORT_UUID_HEADER, runContext.getReportInfos().reportUuid() != null ? runContext.getReportInfos().reportUuid().toString() : null)
                 .setHeader(REPORTER_ID_HEADER, runContext.getReportInfos().reporterId())
                 .setHeader(REPORT_TYPE_HEADER, runContext.getReportInfos().computationType())
-                .setHeader(DEBUG_HEADER, runContext.isDebug())
+                .setHeader(DEBUG_HEADER, runContext.getDebugInfos() != null ? runContext.getDebugInfos().debug() : null)
+                .setHeader(BROWSER_TAB_UUID_HEADER, runContext.getDebugInfos() != null ? runContext.getDebugInfos().browserTabUuid().toString() : null)
                 .copyHeaders(getSpecificMsgHeaders(objectMapper))
                 .build();
     }

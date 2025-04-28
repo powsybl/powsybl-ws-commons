@@ -19,6 +19,7 @@ import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.client.PreloadingStrategy;
 import com.powsybl.ws.commons.ZipUtils;
 import com.powsybl.ws.commons.computation.ComputationException;
+import com.powsybl.ws.commons.computation.dto.DebugInfos;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +41,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
+import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_BROWSER_TAB_UUID;
 import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_DEBUG;
 
 /**
@@ -204,7 +206,7 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
         // --- process debug at saving result momment --- //
         C runContext = resultContext.getRunContext();
         Path workDir = runContext.getComputationManager().getLocalDir();
-        if (runContext.isDebug()) {
+        if (runContext.getDebugInfos() != null && runContext.getDebugInfos().debug()) {
             // zip the working directory
             Path parentDir = workDir.getParent();
             Path debugFilePath = parentDir.resolve(workDir.getFileName().toString() + ".zip");
@@ -220,8 +222,12 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
     public Map<String, Object> getResultHeaders(AbstractResultContext<C> resultContext, R result) {
         Map<String, Object> resultHeaders = new HashMap<>();
 
-        // --- attach debug info to result headers --- //
-        resultHeaders.put(HEADER_DEBUG, resultContext.getRunContext().isDebug());
+        // --- attach debug infos to result headers --- //
+        DebugInfos debugInfos = resultContext.getRunContext().getDebugInfos();
+        if (debugInfos != null) {
+            resultHeaders.put(HEADER_DEBUG, resultContext.getRunContext().getDebugInfos().debug());
+            resultHeaders.put(HEADER_BROWSER_TAB_UUID, resultContext.getRunContext().getDebugInfos().browserTabUuid().toString());
+        }
 
         return resultHeaders;
     }

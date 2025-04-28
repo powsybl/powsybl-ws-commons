@@ -130,7 +130,7 @@ class ComputationTest implements WithAssertions {
 
         protected MockComputationRunContext(UUID networkUuid, String variantId, String receiver, ReportInfos reportInfos,
                                             String userId, String provider, Object parameters) {
-            super(networkUuid, variantId, receiver, reportInfos, userId, provider, parameters, false);
+            super(networkUuid, variantId, receiver, reportInfos, userId, provider, parameters, null);
         }
     }
 

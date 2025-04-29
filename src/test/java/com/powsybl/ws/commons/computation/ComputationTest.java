@@ -6,16 +6,7 @@ import com.powsybl.iidm.network.VariantManager;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.client.PreloadingStrategy;
 import com.powsybl.ws.commons.computation.dto.ReportInfos;
-import com.powsybl.ws.commons.computation.service.AbstractComputationObserver;
-import com.powsybl.ws.commons.computation.service.AbstractComputationResultService;
-import com.powsybl.ws.commons.computation.service.AbstractComputationRunContext;
-import com.powsybl.ws.commons.computation.service.AbstractComputationService;
-import com.powsybl.ws.commons.computation.service.AbstractResultContext;
-import com.powsybl.ws.commons.computation.service.AbstractWorkerService;
-import com.powsybl.ws.commons.computation.service.ExecutionService;
-import com.powsybl.ws.commons.computation.service.NotificationService;
-import com.powsybl.ws.commons.computation.service.ReportService;
-import com.powsybl.ws.commons.computation.service.UuidGeneratorService;
+import com.powsybl.ws.commons.computation.service.*;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.observation.ObservationRegistry;
@@ -43,16 +34,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_RECEIVER;
-import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_RESULT_UUID;
-import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_USER_ID;
+import static com.powsybl.ws.commons.computation.service.NotificationService.*;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isA;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith({ MockitoExtension.class })
 @Slf4j
@@ -141,8 +126,8 @@ class ComputationTest implements WithAssertions {
     }
 
     private static class MockComputationService extends AbstractComputationService<MockComputationRunContext, MockComputationResultService, MockComputationStatus> {
-        protected MockComputationService(NotificationService notificationService, MockComputationResultService resultService, ObjectMapper objectMapper, UuidGeneratorService uuidGeneratorService, String defaultProvider) {
-            super(notificationService, resultService, objectMapper, uuidGeneratorService, defaultProvider);
+        protected MockComputationService(NotificationService notificationService, MockComputationResultService resultService, S3Service s3Service, ObjectMapper objectMapper, UuidGeneratorService uuidGeneratorService, String defaultProvider) {
+            super(notificationService, resultService, s3Service, objectMapper, uuidGeneratorService, defaultProvider);
         }
 
         @Override
@@ -164,8 +149,8 @@ class ComputationTest implements WithAssertions {
     }
 
     private static class MockComputationWorkerService extends AbstractWorkerService<Object, MockComputationRunContext, Object, MockComputationResultService> {
-        protected MockComputationWorkerService(NetworkStoreService networkStoreService, NotificationService notificationService, ReportService reportService, MockComputationResultService resultService, ExecutionService executionService, AbstractComputationObserver<Object, Object> observer, ObjectMapper objectMapper) {
-            super(networkStoreService, notificationService, reportService, resultService, executionService, observer, objectMapper);
+        protected MockComputationWorkerService(NetworkStoreService networkStoreService, NotificationService notificationService, ReportService reportService, MockComputationResultService resultService, S3Service s3Service, ExecutionService executionService, AbstractComputationObserver<Object, Object> observer, ObjectMapper objectMapper) {
+            super(networkStoreService, notificationService, reportService, resultService, s3Service, executionService, observer, objectMapper);
         }
 
         @Override
@@ -227,11 +212,12 @@ class ComputationTest implements WithAssertions {
                 notificationService,
                 reportService,
                 resultService,
+                null,
                 executionService,
                 new MockComputationObserver(ObservationRegistry.create(), new SimpleMeterRegistry()),
                 objectMapper
         );
-        computationService = new MockComputationService(notificationService, resultService, objectMapper, uuidGeneratorService, provider);
+        computationService = new MockComputationService(notificationService, resultService, null, objectMapper, uuidGeneratorService, provider);
 
         MessageBuilder<String> builder = MessageBuilder
                 .withPayload("")

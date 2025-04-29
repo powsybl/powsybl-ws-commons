@@ -27,6 +27,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.messaging.Message;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
@@ -64,11 +65,13 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
     protected final Map<UUID, CompletableFuture<R>> futures = new ConcurrentHashMap<>();
     protected final Map<UUID, CancelContext> cancelComputationRequests = new ConcurrentHashMap<>();
     protected final S resultService;
+    protected final S3Service s3Service;
 
     protected AbstractWorkerService(NetworkStoreService networkStoreService,
                                     NotificationService notificationService,
                                     ReportService reportService,
                                     S resultService,
+                                    S3Service s3Service,
                                     ExecutionService executionService,
                                     AbstractComputationObserver<R, P> observer,
                                     ObjectMapper objectMapper) {
@@ -76,6 +79,7 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
         this.notificationService = notificationService;
         this.reportService = reportService;
         this.resultService = resultService;
+        this.s3Service = s3Service;
         this.executionService = executionService;
         this.observer = observer;
         this.objectMapper = objectMapper;
@@ -211,11 +215,17 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
             Path parentDir = workDir.getParent();
             Path debugFilePath = parentDir.resolve(workDir.getFileName().toString() + ".zip");
             ZipUtils.zip(workDir, debugFilePath);
-
-            // TODO transfer zip file to S3
+            String debugFileLocation = debugFilePath.toAbsolutePath().toString();
+            if (s3Service != null) {
+                try {
+                    debugFileLocation = s3Service.uploadFile(new File(debugFilePath.toAbsolutePath().toString()), 30);
+                } catch (IOException e) {
+                    throw new UncheckedIOException("Failed to upload debug file", e);
+                }
+            }
 
             // insert debug file path into db
-            resultService.updateDebugFileLocation(resultContext.getResultUuid(), debugFilePath.toAbsolutePath().toString());
+            resultService.updateDebugFileLocation(resultContext.getResultUuid(), debugFileLocation);
         }
     }
 

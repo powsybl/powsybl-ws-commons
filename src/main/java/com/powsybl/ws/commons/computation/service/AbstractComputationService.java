@@ -32,11 +32,13 @@ public abstract class AbstractComputationService<C extends AbstractComputationRu
     protected NotificationService notificationService;
     protected UuidGeneratorService uuidGeneratorService;
     protected T resultService;
+    protected S3Service s3Service;
     @Getter
     private final String defaultProvider;
 
     protected AbstractComputationService(NotificationService notificationService,
                                          T resultService,
+                                         S3Service s3Service,
                                          ObjectMapper objectMapper,
                                          UuidGeneratorService uuidGeneratorService,
                                          String defaultProvider) {
@@ -45,6 +47,7 @@ public abstract class AbstractComputationService<C extends AbstractComputationRu
         this.uuidGeneratorService = Objects.requireNonNull(uuidGeneratorService);
         this.defaultProvider = defaultProvider;
         this.resultService = Objects.requireNonNull(resultService);
+        this.s3Service = s3Service;
     }
 
     public void stop(UUID resultUuid, String receiver) {
@@ -85,13 +88,23 @@ public abstract class AbstractComputationService<C extends AbstractComputationRu
 
     public Pair<Consumer<OutputStream>, String> getDebugFileStreamer(UUID resultUuid) throws IOException {
         String debugFileLocation = resultService.findDebugFileLocation(resultUuid);
-        File file = new File(debugFileLocation);
-        if (!file.exists()) {
-            return null;
+        InputStream inputStream;
+        String fileName;
+
+        if (s3Service != null) {
+            fileName = s3Service.getS3FileName(debugFileLocation);
+            inputStream = s3Service.downloadFile(debugFileLocation);
+        } else {
+            File file = new File(debugFileLocation);
+            if (!file.exists()) {
+                return null;
+            }
+            inputStream = new FileInputStream(file);
+            fileName = file.getName();
         }
-        InputStream inputStream = new FileInputStream(file);
+
         Consumer<OutputStream> streamer = StreamUtils.getStreamer(inputStream, DEFAULT_BUFFER_SIZE);
-        return Pair.of(streamer, file.getName());
+        return Pair.of(streamer, fileName);
     }
 
 }

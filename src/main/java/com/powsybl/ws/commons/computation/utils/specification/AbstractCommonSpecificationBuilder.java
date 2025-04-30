@@ -29,12 +29,19 @@ public abstract class AbstractCommonSpecificationBuilder<T> {
         return (root, cq, cb) -> root.get(getIdFieldName()).in(uuids);
     }
 
-    public Specification<T> buildSpecification(UUID resultUuid, List<ResourceFilterDTO> resourceFilters) {
+    /**
+     * @param distinct : true if you want to force the results to be distinct.
+     *                 Since sql joins generates duplicate results, we may need to use distinct here
+     *                 But can't use both distinct and sort on nested field (sql limitation)
+     * @return
+     */
+    public Specification<T> buildSpecification(UUID resultUuid, List<ResourceFilterDTO> resourceFilters, boolean distinct) {
         List<ResourceFilterDTO> childrenFilters = resourceFilters.stream().filter(this::isNotParentFilter).toList();
-        // since sql joins generates duplicate results, we need to use distinct here
-        Specification<T> specification = SpecificationUtils.distinct();
         // filter by resultUuid
-        specification = specification.and(Specification.where(resultUuidEquals(resultUuid)));
+        Specification<T> specification = Specification.where(resultUuidEquals(resultUuid));
+        if (distinct) {
+            specification = specification.and(SpecificationUtils.distinct());
+        }
         if (childrenFilters.isEmpty()) {
             Specification<T> spec = addSpecificFilterWhenNoChildrenFilter();
             if (spec != null) {

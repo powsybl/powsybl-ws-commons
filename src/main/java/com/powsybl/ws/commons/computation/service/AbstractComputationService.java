@@ -15,6 +15,7 @@ import org.springframework.util.CollectionUtils;
 import java.io.*;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
 
@@ -32,13 +33,13 @@ public abstract class AbstractComputationService<C extends AbstractComputationRu
     protected NotificationService notificationService;
     protected UuidGeneratorService uuidGeneratorService;
     protected T resultService;
-    protected S3Service s3Service;
+    protected Optional<S3Service> s3Service;
     @Getter
     private final String defaultProvider;
 
     protected AbstractComputationService(NotificationService notificationService,
                                          T resultService,
-                                         S3Service s3Service,
+                                         Optional<S3Service> s3Service,
                                          ObjectMapper objectMapper,
                                          UuidGeneratorService uuidGeneratorService,
                                          String defaultProvider) {
@@ -91,9 +92,9 @@ public abstract class AbstractComputationService<C extends AbstractComputationRu
         InputStream inputStream;
         String fileName;
 
-        if (s3Service != null) {
-            fileName = s3Service.getS3FileName(debugFileLocation);
-            inputStream = s3Service.downloadFile(debugFileLocation);
+        if (s3Service.isPresent()) {
+            fileName = s3Service.get().getS3FileName(debugFileLocation);
+            inputStream = s3Service.get().downloadFile(debugFileLocation);
         } else {
             File file = new File(debugFileLocation);
             if (!file.exists()) {

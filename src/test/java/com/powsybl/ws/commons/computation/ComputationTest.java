@@ -25,10 +25,7 @@ import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -127,7 +124,7 @@ class ComputationTest implements WithAssertions {
 
     private static class MockComputationService extends AbstractComputationService<MockComputationRunContext, MockComputationResultService, MockComputationStatus> {
         protected MockComputationService(NotificationService notificationService, MockComputationResultService resultService, S3Service s3Service, ObjectMapper objectMapper, UuidGeneratorService uuidGeneratorService, String defaultProvider) {
-            super(notificationService, resultService, s3Service, objectMapper, uuidGeneratorService, defaultProvider);
+            super(notificationService, resultService, Optional.ofNullable(s3Service), objectMapper, uuidGeneratorService, defaultProvider);
         }
 
         @Override
@@ -150,7 +147,7 @@ class ComputationTest implements WithAssertions {
 
     private static class MockComputationWorkerService extends AbstractWorkerService<Object, MockComputationRunContext, Object, MockComputationResultService> {
         protected MockComputationWorkerService(NetworkStoreService networkStoreService, NotificationService notificationService, ReportService reportService, MockComputationResultService resultService, S3Service s3Service, ExecutionService executionService, AbstractComputationObserver<Object, Object> observer, ObjectMapper objectMapper) {
-            super(networkStoreService, notificationService, reportService, resultService, s3Service, executionService, observer, objectMapper);
+            super(networkStoreService, notificationService, reportService, resultService, Optional.ofNullable(s3Service), executionService, observer, objectMapper);
         }
 
         @Override

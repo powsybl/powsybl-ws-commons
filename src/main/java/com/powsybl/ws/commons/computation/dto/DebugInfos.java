@@ -10,13 +10,11 @@ package com.powsybl.ws.commons.computation.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 
-import java.util.UUID;
-
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
 @Builder
 @Schema(description = "Debug infos")
-public record DebugInfos(Boolean debug, UUID browserTabUuid) {
+public record DebugInfos(Boolean debug) {
 
 }

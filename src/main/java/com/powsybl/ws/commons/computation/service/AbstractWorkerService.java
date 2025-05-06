@@ -42,7 +42,6 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
-import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_BROWSER_TAB_UUID;
 import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_DEBUG;
 
 /**
@@ -65,13 +64,13 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
     protected final Map<UUID, CompletableFuture<R>> futures = new ConcurrentHashMap<>();
     protected final Map<UUID, CancelContext> cancelComputationRequests = new ConcurrentHashMap<>();
     protected final S resultService;
-    protected final S3Service s3Service;
+    protected final Optional<S3Service> s3Service;
 
     protected AbstractWorkerService(NetworkStoreService networkStoreService,
                                     NotificationService notificationService,
                                     ReportService reportService,
                                     S resultService,
-                                    S3Service s3Service,
+                                    Optional<S3Service> s3Service,
                                     ExecutionService executionService,
                                     AbstractComputationObserver<R, P> observer,
                                     ObjectMapper objectMapper) {
@@ -167,6 +166,7 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
                 this.handleNonCancellationException(resultContext, e, rootReporter);
                 throw new ComputationException(String.format("%s: %s", NotificationService.getFailedMessage(getComputationType()), e.getMessage()), e.getCause());
             } finally {
+                processDebug(resultContext);
                 clean(resultContext);
             }
         };
@@ -189,6 +189,33 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
     }
 
     /**
+     * Process debug option
+     * @param resultContext The context of the computation
+     */
+    protected void processDebug(AbstractResultContext<C> resultContext) {
+        C runContext = resultContext.getRunContext();
+        Path workDir = runContext.getComputationManager().getLocalDir();
+        if (runContext.getDebugInfos() != null && runContext.getDebugInfos().debug() && s3Service.isPresent()) {
+            // zip the working directory
+            Path parentDir = workDir.getParent();
+            Path debugFilePath = parentDir.resolve(workDir.getFileName().toString() + ".zip");
+            ZipUtils.zip(workDir, debugFilePath);
+
+            // move zip file to s3 storage
+            try {
+                String debugFileLocation = s3Service.get().uploadFile(new File(debugFilePath.toAbsolutePath().toString()), 30);
+                // insert debug file path into db
+                resultService.updateDebugFileLocation(resultContext.getResultUuid(), debugFileLocation);
+                // notified to study-server via result channel
+                // TODO whether need a new debug channel
+                sendDebugMessage(resultContext);
+            } catch (IOException e) {
+                throw new UncheckedIOException("Failed to upload debug file", e);
+            }
+        }
+    }
+
+    /**
      * Handle exception in consumeRun that is not a CancellationException
      * @param resultContext The context of the computation
      * @param exception The exception to handle
@@ -206,44 +233,28 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
         };
     }
 
-    protected void saveResult(Network network, AbstractResultContext<C> resultContext, R result) {
-        // --- process debug at saving result momment --- //
-        C runContext = resultContext.getRunContext();
-        Path workDir = runContext.getComputationManager().getLocalDir();
-        if (runContext.getDebugInfos() != null && runContext.getDebugInfos().debug()) {
-            // zip the working directory
-            Path parentDir = workDir.getParent();
-            Path debugFilePath = parentDir.resolve(workDir.getFileName().toString() + ".zip");
-            ZipUtils.zip(workDir, debugFilePath);
-            String debugFileLocation = debugFilePath.toAbsolutePath().toString();
-            if (s3Service != null) {
-                try {
-                    debugFileLocation = s3Service.uploadFile(new File(debugFilePath.toAbsolutePath().toString()), 30);
-                } catch (IOException e) {
-                    throw new UncheckedIOException("Failed to upload debug file", e);
-                }
-            }
-
-            // insert debug file path into db
-            resultService.updateDebugFileLocation(resultContext.getResultUuid(), debugFileLocation);
-        }
-    }
+    protected abstract void saveResult(Network network, AbstractResultContext<C> resultContext, R result);
 
     public Map<String, Object> getResultHeaders(AbstractResultContext<C> resultContext, R result) {
+        Map<String, Object> resultHeaders = new HashMap<>();
+        return resultHeaders;
+    }
+
+    private void sendResultMessage(AbstractResultContext<C> resultContext, R result) {
+        Map<String, Object> resultHeaders = getResultHeaders(resultContext, result);
+        notificationService.sendResultMessage(resultContext.getResultUuid(), resultContext.getRunContext().getReceiver(),
+                resultContext.getRunContext().getUserId(), resultHeaders);
+    }
+
+    private void sendDebugMessage(AbstractResultContext<C> resultContext) {
         Map<String, Object> resultHeaders = new HashMap<>();
 
         // --- attach debug infos to result headers --- //
         DebugInfos debugInfos = resultContext.getRunContext().getDebugInfos();
         if (debugInfos != null) {
             resultHeaders.put(HEADER_DEBUG, resultContext.getRunContext().getDebugInfos().debug());
-            resultHeaders.put(HEADER_BROWSER_TAB_UUID, resultContext.getRunContext().getDebugInfos().browserTabUuid().toString());
         }
-
-        return resultHeaders;
-    }
-
-    private void sendResultMessage(AbstractResultContext<C> resultContext, R result) {
-        Map<String, Object> resultHeaders = getResultHeaders(resultContext, result);
+        // actually shared with result channel and discriminate by debug = true
         notificationService.sendResultMessage(resultContext.getResultUuid(), resultContext.getRunContext().getReceiver(),
                 resultContext.getRunContext().getUserId(), resultHeaders);
     }

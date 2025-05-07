@@ -19,7 +19,6 @@ import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.client.PreloadingStrategy;
 import com.powsybl.ws.commons.ZipUtils;
 import com.powsybl.ws.commons.computation.ComputationException;
-import com.powsybl.ws.commons.computation.dto.DebugInfos;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +52,8 @@ import static com.powsybl.ws.commons.computation.service.NotificationService.HEA
  */
 public abstract class AbstractWorkerService<R, C extends AbstractComputationRunContext<P>, P, S extends AbstractComputationResultService<?>> {
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractWorkerService.class);
+    private static final String S3_DEBUG_DIR = "debug";
+    private static final String S3_DELIMITER = "/";
 
     protected final Lock lockRunAndCancel = new ReentrantLock();
     protected final ObjectMapper objectMapper;
@@ -195,7 +196,7 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
     protected void processDebug(AbstractResultContext<C> resultContext) {
         C runContext = resultContext.getRunContext();
         Path workDir = runContext.getComputationManager().getLocalDir();
-        if (runContext.getDebugInfos() != null && runContext.getDebugInfos().debug() && s3Service.isPresent()) {
+        if (runContext.getDebug() != null && runContext.getDebug() && s3Service.isPresent()) {
             // zip the working directory
             Path parentDir = workDir.getParent();
             Path debugFilePath = parentDir.resolve(workDir.getFileName().toString() + ".zip");
@@ -203,9 +204,12 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
 
             // move zip file to s3 storage
             try {
-                String debugFileLocation = s3Service.get().uploadFile(new File(debugFilePath.toAbsolutePath().toString()), 30);
+                File debugFile = new File(debugFilePath.toAbsolutePath().toString());
+                String debugFileLocation = S3_DEBUG_DIR + S3_DELIMITER + debugFile.getName();
                 // insert debug file path into db
                 resultService.updateDebugFileLocation(resultContext.getResultUuid(), debugFileLocation);
+                // upload file
+                s3Service.get().uploadFile(debugFile, debugFileLocation, 30);
                 // notified to study-server via result channel
                 // TODO whether need a new debug channel
                 sendDebugMessage(resultContext);
@@ -236,8 +240,7 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
     protected abstract void saveResult(Network network, AbstractResultContext<C> resultContext, R result);
 
     public Map<String, Object> getResultHeaders(AbstractResultContext<C> resultContext, R result) {
-        Map<String, Object> resultHeaders = new HashMap<>();
-        return resultHeaders;
+        return new HashMap<>();
     }
 
     private void sendResultMessage(AbstractResultContext<C> resultContext, R result) {
@@ -250,9 +253,9 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
         Map<String, Object> resultHeaders = new HashMap<>();
 
         // --- attach debug infos to result headers --- //
-        DebugInfos debugInfos = resultContext.getRunContext().getDebugInfos();
-        if (debugInfos != null) {
-            resultHeaders.put(HEADER_DEBUG, resultContext.getRunContext().getDebugInfos().debug());
+        Boolean debug = resultContext.getRunContext().getDebug();
+        if (debug != null && debug) {
+            resultHeaders.put(HEADER_DEBUG, resultContext.getRunContext().getDebug());
         }
         // actually shared with result channel and discriminate by debug = true
         notificationService.sendResultMessage(resultContext.getResultUuid(), resultContext.getRunContext().getReceiver(),

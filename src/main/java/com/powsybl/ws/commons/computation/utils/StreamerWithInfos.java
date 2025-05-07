@@ -5,16 +5,21 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package com.powsybl.ws.commons.computation.dto;
+package com.powsybl.ws.commons.computation.utils;
 
-import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
+import lombok.Getter;
+
+import java.io.OutputStream;
+import java.util.function.Consumer;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
 @Builder
-@Schema(description = "Debug infos")
-public record DebugInfos(Boolean debug) {
-
+@Getter
+public class StreamerWithInfos {
+    Consumer<OutputStream> streamer;
+    String fileName;
+    Long fileLength;
 }

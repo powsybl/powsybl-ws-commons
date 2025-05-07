@@ -8,11 +8,14 @@ package com.powsybl.ws.commons.computation.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.ws.commons.StreamUtils;
+import com.powsybl.ws.commons.computation.utils.StreamerWithInfos;
 import lombok.Getter;
-import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.util.CollectionUtils;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -20,6 +23,7 @@ import java.util.UUID;
 import java.util.function.Consumer;
 
 import static com.powsybl.ws.commons.StreamUtils.DEFAULT_BUFFER_SIZE;
+import static com.powsybl.ws.commons.computation.service.S3Service.METADATA_ORIGINAL_FILENAME;
 
 /**
  * @author Mathieu Deharbe <mathieu.deharbe at rte-france.com>
@@ -87,25 +91,21 @@ public abstract class AbstractComputationService<C extends AbstractComputationRu
         return resultService.findStatus(resultUuid);
     }
 
-    public Pair<Consumer<OutputStream>, String> getDebugFileStreamer(UUID resultUuid) throws IOException {
-        String debugFileLocation = resultService.findDebugFileLocation(resultUuid);
-        InputStream inputStream;
-        String fileName;
-
+    public StreamerWithInfos getDebugFileStreamer(UUID resultUuid) throws IOException {
         if (s3Service.isPresent()) {
-            fileName = s3Service.get().getS3FileName(debugFileLocation);
+            String debugFileLocation = resultService.findDebugFileLocation(resultUuid);
+            ResponseInputStream<GetObjectResponse> inputStream;
             inputStream = s3Service.get().downloadFile(debugFileLocation);
-        } else {
-            File file = new File(debugFileLocation);
-            if (!file.exists()) {
-                return null;
-            }
-            inputStream = new FileInputStream(file);
-            fileName = file.getName();
+            String fileName = inputStream.response().metadata().get(METADATA_ORIGINAL_FILENAME);
+            Long fileLength = inputStream.response().contentLength();
+            Consumer<OutputStream> streamer = StreamUtils.getStreamer(inputStream, DEFAULT_BUFFER_SIZE);
+            return StreamerWithInfos.builder()
+                    .streamer(streamer)
+                    .fileName(fileName)
+                    .fileLength(fileLength)
+                    .build();
         }
-
-        Consumer<OutputStream> streamer = StreamUtils.getStreamer(inputStream, DEFAULT_BUFFER_SIZE);
-        return Pair.of(streamer, fileName);
+        throw new IOException("No s3 supported");
     }
 
 }

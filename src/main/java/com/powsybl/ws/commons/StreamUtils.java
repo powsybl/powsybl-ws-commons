@@ -20,8 +20,8 @@ public final class StreamUtils {
                 int len;
                 while ((len = inputStream.read(buffer)) != -1) {
                     outputStream.write(buffer, 0, len);
+                    outputStream.flush();
                 }
-                outputStream.flush();
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }

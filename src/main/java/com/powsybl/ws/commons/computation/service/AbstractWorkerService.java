@@ -22,7 +22,6 @@ import org.springframework.messaging.Message;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
@@ -203,9 +202,14 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
         if (runContext.getReportInfos() != null && runContext.getReportInfos().reportUuid() != null) {
             final String reportType = runContext.getReportInfos().computationType();
             String rootReporterId = runContext.getReportInfos().reporterId();
-            rootReporter.set(ReportNode.newRootReportNode().withMessageTemplate(rootReporterId, rootReporterId).build());
-            reportNode = rootReporter.get().newReportNode().withMessageTemplate(reportType, reportType + (provider != null ? " (" + provider + ")" : ""))
-                    .withUntypedValue("providerToUse", Objects.requireNonNullElse(provider, "")).add();
+            ReportNode rootReporterNode = ReportNode.newRootReportNode()
+                    .withAllResourceBundlesFromClasspath()
+                    .withMessageTemplate("ws.commons.rootReporterId")
+                    .withUntypedValue("rootReporterId", rootReporterId).build();
+            rootReporter.set(rootReporterNode);
+            reportNode = rootReporter.get().newReportNode().withMessageTemplate("ws.commons.reportType")
+                    .withUntypedValue("reportType", reportType)
+                    .withUntypedValue("optionalProvider", provider != null ? " (" + provider + ")" : "").add();
             // Delete any previous computation logs
             observer.observe("report.delete",
                     runContext, () -> reportService.deleteReport(runContext.getReportInfos().reportUuid()));

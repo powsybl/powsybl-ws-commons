@@ -8,37 +8,29 @@
 package com.powsybl.ws.commons.computation.service;
 
 import com.powsybl.computation.ComputationManager;
-import com.powsybl.computation.local.LocalComputationManager;
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
+import com.powsybl.ws.commons.computation.config.ComputationConfig;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.SneakyThrows;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.core.task.TaskExecutor;
+import org.springframework.core.task.support.ExecutorServiceAdapter;
 import org.springframework.stereotype.Service;
 
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 
 /**
- * @author David Braquart <david.braquart at rte-france.com>
+ * @deprecated Use directly Spring beans {@code "computationTaskExecutor"} and {@link ComputationManager}.
  */
+@Deprecated(since = "1.24.0", forRemoval = true)
 @Service
+@AllArgsConstructor
 @Getter
 public class ExecutionService {
+    private final ExecutorService executorService;
+    private final ComputationManager computationManager;
 
-    private ExecutorService executorService;
-
-    private ComputationManager computationManager;
-
-    @SneakyThrows
-    @PostConstruct
-    private void postConstruct() {
-        executorService = Executors.newCachedThreadPool();
-        computationManager = new LocalComputationManager(getExecutorService());
-    }
-
-    @PreDestroy
-    private void preDestroy() {
-        executorService.shutdown();
+    public ExecutionService(@Qualifier(ComputationConfig.COMPUTATION_TASK_EXECUTOR_BEAN) final TaskExecutor executorService, final ComputationManager computationManager) {
+        this(new ExecutorServiceAdapter(executorService), computationManager);
     }
 }

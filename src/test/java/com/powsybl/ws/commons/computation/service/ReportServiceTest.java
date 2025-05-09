@@ -8,7 +8,7 @@
 package com.powsybl.ws.commons.computation.service;
 
 import com.powsybl.commons.report.ReportNode;
-import com.powsybl.ws.commons.computation.ComputationConfig;
+import com.powsybl.ws.commons.computation.config.ComputationConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

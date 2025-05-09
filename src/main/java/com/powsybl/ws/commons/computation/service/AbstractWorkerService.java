@@ -8,12 +8,18 @@ package com.powsybl.ws.commons.computation.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.PowsyblException;
+import com.powsybl.commons.io.FileUtil;
 import com.powsybl.commons.report.ReportNode;
+import com.powsybl.computation.ComputationManager;
+import com.powsybl.computation.local.LocalComputationConfig;
+import com.powsybl.computation.local.LocalComputationManager;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.client.PreloadingStrategy;
+import com.powsybl.ws.commons.ZipUtils;
 import com.powsybl.ws.commons.computation.ComputationException;
+import com.powsybl.ws.commons.computation.s3.S3Service;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,14 +27,21 @@ import org.springframework.http.HttpStatus;
 import org.springframework.messaging.Message;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
-import java.util.concurrent.*;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.*;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
+
+import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_DEBUG;
 
 /**
  * @author Mathieu Deharbe <mathieu.deharbe at rte-france.com>
@@ -39,6 +52,8 @@ import java.util.function.Consumer;
  */
 public abstract class AbstractWorkerService<R, C extends AbstractComputationRunContext<P>, P, S extends AbstractComputationResultService<?>> {
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractWorkerService.class);
+    private static final String S3_DEBUG_DIR = "debug";
+    private static final String S3_DELIMITER = "/";
 
     protected final Lock lockRunAndCancel = new ReentrantLock();
     protected final ObjectMapper objectMapper;
@@ -50,11 +65,13 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
     protected final Map<UUID, CompletableFuture<R>> futures = new ConcurrentHashMap<>();
     protected final Map<UUID, CancelContext> cancelComputationRequests = new ConcurrentHashMap<>();
     protected final S resultService;
+    protected final Optional<S3Service> s3Service;
 
     protected AbstractWorkerService(NetworkStoreService networkStoreService,
                                     NotificationService notificationService,
                                     ReportService reportService,
                                     S resultService,
+                                    Optional<S3Service> s3Service,
                                     ExecutionService executionService,
                                     AbstractComputationObserver<R, P> observer,
                                     ObjectMapper objectMapper) {
@@ -62,6 +79,7 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
         this.notificationService = notificationService;
         this.reportService = reportService;
         this.resultService = resultService;
+        this.s3Service = s3Service;
         this.executionService = executionService;
         this.observer = observer;
         this.objectMapper = objectMapper;
@@ -149,6 +167,7 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
                 this.handleNonCancellationException(resultContext, e, rootReporter);
                 throw new ComputationException(String.format("%s: %s", NotificationService.getFailedMessage(getComputationType()), e.getMessage()), e.getCause());
             } finally {
+                processDebug(resultContext);
                 clean(resultContext);
             }
         };
@@ -161,6 +180,41 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
     protected void clean(AbstractResultContext<C> resultContext) {
         futures.remove(resultContext.getResultUuid());
         cancelComputationRequests.remove(resultContext.getResultUuid());
+
+        Optional.ofNullable(resultContext.getRunContext().getComputationManager()).ifPresent(ComputationManager::close);
+
+        // clean the working directory
+        C runContext = resultContext.getRunContext();
+        Path workDir = runContext.getComputationManager().getLocalDir();
+        removeDirectory(workDir);
+    }
+
+    /**
+     * Process debug option
+     * @param resultContext The context of the computation
+     */
+    protected void processDebug(AbstractResultContext<C> resultContext) {
+        C runContext = resultContext.getRunContext();
+        Path workDir = runContext.getComputationManager().getLocalDir();
+        if (runContext.getDebug() != null && runContext.getDebug() && s3Service.isPresent()) {
+            // zip the working directory
+            Path parentDir = workDir.getParent();
+            Path debugFilePath = parentDir.resolve(workDir.getFileName().toString() + ".zip");
+            ZipUtils.zip(workDir, debugFilePath);
+            String fileName = debugFilePath.getFileName().toString();
+            String s3Key = S3_DEBUG_DIR + S3_DELIMITER + fileName;
+            // move zip file to s3 storage
+            try {
+                // insert debug file path into db
+                resultService.updateDebugFileLocation(resultContext.getResultUuid(), s3Key);
+                // upload file
+                s3Service.get().uploadFile(debugFilePath, s3Key, fileName, 30);
+                // notify to study-server
+                sendDebugMessage(resultContext);
+            } catch (IOException e) {
+                LOGGER.info("Error occurred while uploading debug file {}: {}", fileName, e.getMessage());
+            }
+        }
     }
 
     /**
@@ -188,12 +242,27 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
                 resultContext.getRunContext().getUserId(), null);
     }
 
+    private void sendDebugMessage(AbstractResultContext<C> resultContext) {
+        Map<String, Object> resultHeaders = new HashMap<>();
+
+        // --- attach debug to result headers --- //
+        Boolean debug = resultContext.getRunContext().getDebug();
+        if (Boolean.TRUE.equals(debug)) {
+            resultHeaders.put(HEADER_DEBUG, resultContext.getRunContext().getDebug());
+        }
+        // actually shared with result channel and discriminate by debug = true
+        // TODO whether need a new debug channel
+        notificationService.sendResultMessage(resultContext.getResultUuid(), resultContext.getRunContext().getReceiver(),
+                resultContext.getRunContext().getUserId(), resultHeaders);
+    }
+
     /**
      * Do some extra task before running the computation, e.g. print log or init extra data for the run context
-     * @param ignoredRunContext This context may be used for further computation in overriding classes
+     * @param runContext This context may be used for further computation in overriding classes
      */
-    protected void preRun(C ignoredRunContext) {
+    protected void preRun(C runContext) {
         LOGGER.info("Run {} computation...", getComputationType());
+        runContext.setComputationManager(createComputationManager());
     }
 
     protected R run(C runContext, UUID resultUuid, AtomicReference<ReportNode> rootReporter) {
@@ -253,4 +322,33 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
     protected abstract String getComputationType();
 
     protected abstract CompletableFuture<R> getCompletableFuture(C runContext, String provider, UUID resultUuid);
+
+    /**
+     * set method as public to mock DockerLocalComputationManager when testing with test container
+     * @return a computation manager
+     */
+    public ComputationManager createComputationManager() {
+        LocalComputationConfig localComputationConfig = LocalComputationConfig.load();
+        Path localDir = localComputationConfig.getLocalDir();
+        try {
+            String workDirPrefix = getComputationType().replaceAll("\\s+", "_").toLowerCase() + "_";
+            Path workDir = Files.createTempDirectory(localDir, workDirPrefix);
+            return new LocalComputationManager(new LocalComputationConfig(workDir, localComputationConfig.getAvailableCore()), executionService.getExecutorService());
+        } catch (IOException e) {
+            throw new UncheckedIOException(String.format("Error occurred while creating a working directory inside the local directory %s",
+                    localDir.toAbsolutePath()), e);
+        }
+    }
+
+    private void removeDirectory(Path dir) {
+        if (dir != null) {
+            try {
+                FileUtil.removeDir(dir);
+            } catch (IOException e) {
+                LOGGER.error(String.format("%s: Error occurred while cleaning directory at %s", getComputationType(), dir.toAbsolutePath()), e);
+            }
+        } else {
+            LOGGER.info("{}: No directory to clean", getComputationType());
+        }
+    }
 }

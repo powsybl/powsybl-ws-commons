@@ -5,21 +5,20 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package com.powsybl.ws.commons.computation.utils;
+package com.powsybl.ws.commons.computation.s3;
 
 import lombok.Builder;
 import lombok.Getter;
 
-import java.io.OutputStream;
-import java.util.function.Consumer;
+import java.io.InputStream;
 
 /**
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
 @Builder
 @Getter
-public class StreamerWithInfos {
-    Consumer<OutputStream> streamer;
+public class S3InputStreamInfos {
+    InputStream inputStream;
     String fileName;
     Long fileLength;
 }

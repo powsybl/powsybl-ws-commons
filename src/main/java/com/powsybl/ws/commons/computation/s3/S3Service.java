@@ -5,7 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package com.powsybl.ws.commons.computation.service;
+package com.powsybl.ws.commons.computation.s3;
 
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -15,8 +15,8 @@ import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Map;
 
 /**
@@ -24,7 +24,7 @@ import java.util.Map;
  */
 public class S3Service {
 
-    public static final String METADATA_ORIGINAL_FILENAME = "original-filename";
+    public static final String METADATA_FILE_NAME = "file-name";
 
     private final S3Client s3Client;
 
@@ -35,30 +35,34 @@ public class S3Service {
         this.bucketName = bucketName;
     }
 
-    public void uploadFile(File debugFile, String s3Key, Integer expireAfterHours) throws IOException {
+    public void uploadFile(Path filePath, String s3Key, String fileName, Integer expireAfterMinutes) throws IOException {
         try {
-            String fileName = debugFile.getName();
             PutObjectRequest putRequest = PutObjectRequest.builder()
                     .bucket(bucketName)
                     .key(s3Key)
-                    .metadata(Map.of(METADATA_ORIGINAL_FILENAME, fileName))
-                    .tagging(expireAfterHours != null ? "expire-after-minutes=" + expireAfterHours : null)
+                    .metadata(Map.of(METADATA_FILE_NAME, fileName))
+                    .tagging(expireAfterMinutes != null ? "expire-after-minutes=" + expireAfterMinutes : null)
                     .build();
-            s3Client.putObject(putRequest, RequestBody.fromFile(debugFile));
+            s3Client.putObject(putRequest, RequestBody.fromFile(filePath));
         } catch (S3Exception e) {
-            throw new IOException("Failed to upload file to S3: " + e.awsErrorDetails().errorMessage());
+            throw new IOException("Error occurred while uploading file to S3: " + e.awsErrorDetails().errorMessage());
         }
     }
 
-    public ResponseInputStream<GetObjectResponse> downloadFile(String s3Key) throws IOException {
+    public S3InputStreamInfos downloadFile(String s3Key) throws IOException {
         try {
             GetObjectRequest getRequest = GetObjectRequest.builder()
                     .bucket(bucketName)
                     .key(s3Key)
                     .build();
-            return s3Client.getObject(getRequest);
+            ResponseInputStream<GetObjectResponse> inputStream = s3Client.getObject(getRequest);
+            return S3InputStreamInfos.builder()
+                    .inputStream(inputStream)
+                    .fileName(inputStream.response().metadata().get(METADATA_FILE_NAME))
+                    .fileLength(inputStream.response().contentLength())
+                    .build();
         } catch (S3Exception e) {
-            throw new IOException("Failed to download file from S3: " + e.awsErrorDetails().errorMessage());
+            throw new IOException("Error occurred while downloading file from S3: " + e.awsErrorDetails().errorMessage());
         }
     }
 }

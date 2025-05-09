@@ -7,23 +7,22 @@
 package com.powsybl.ws.commons.computation.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.ws.commons.StreamUtils;
-import com.powsybl.ws.commons.computation.utils.StreamerWithInfos;
+import com.powsybl.ws.commons.computation.s3.S3InputStreamInfos;
+import com.powsybl.ws.commons.computation.s3.S3Service;
 import lombok.Getter;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.util.CollectionUtils;
-import software.amazon.awssdk.core.ResponseInputStream;
-import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
 import java.io.IOException;
-import java.io.OutputStream;
+import java.io.InputStream;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.function.Consumer;
-
-import static com.powsybl.ws.commons.StreamUtils.DEFAULT_BUFFER_SIZE;
-import static com.powsybl.ws.commons.computation.service.S3Service.METADATA_ORIGINAL_FILENAME;
 
 /**
  * @author Mathieu Deharbe <mathieu.deharbe at rte-france.com>
@@ -91,21 +90,28 @@ public abstract class AbstractComputationService<C extends AbstractComputationRu
         return resultService.findStatus(resultUuid);
     }
 
-    public StreamerWithInfos getDebugFileStreamer(UUID resultUuid) throws IOException {
+    public ResponseEntity downloadDebugFile(UUID resultUuid) throws IOException {
         if (s3Service.isPresent()) {
-            String debugFileLocation = resultService.findDebugFileLocation(resultUuid);
-            ResponseInputStream<GetObjectResponse> inputStream;
-            inputStream = s3Service.get().downloadFile(debugFileLocation);
-            String fileName = inputStream.response().metadata().get(METADATA_ORIGINAL_FILENAME);
-            Long fileLength = inputStream.response().contentLength();
-            Consumer<OutputStream> streamer = StreamUtils.getStreamer(inputStream, DEFAULT_BUFFER_SIZE);
-            return StreamerWithInfos.builder()
-                    .streamer(streamer)
-                    .fileName(fileName)
-                    .fileLength(fileLength)
-                    .build();
+            String s3Key = resultService.findDebugFileLocation(resultUuid);
+
+            S3InputStreamInfos s3InputStreamInfos = s3Service.get().downloadFile(s3Key);
+            InputStream inputStream = s3InputStreamInfos.getInputStream();
+            String fileName = s3InputStreamInfos.getFileName();
+            Long fileLength = s3InputStreamInfos.getFileLength();
+
+            // build header
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentDisposition(ContentDisposition.builder("attachment").filename(fileName).build());
+            headers.setContentLength(fileLength);
+
+            // wrap s3 input stream
+            InputStreamResource resource = new InputStreamResource(inputStream);
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .body(resource);
         }
-        throw new IOException("No s3 supported");
+        throw new IOException("S3 is not supported");
     }
 
 }

@@ -6,6 +6,7 @@
  */
 package com.powsybl.ws.commons.computation.service;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
@@ -23,12 +24,14 @@ public abstract class AbstractComputationResultService<S> {
 
     public abstract S findStatus(UUID resultUuid);
 
-    public void updateDebugFileLocation(UUID resultUuid, String debugFilePath) {
+    // --- Must implement these following methods if a computation server supports s3 --- //
+    public void updateDebugFileLocation(UUID resultUuid, String debugFilePath) throws IOException {
         // to override by subclasses
+        throw new IOException("S3 is not supported");
     }
 
-    public String findDebugFileLocation(UUID resultUuid) {
+    public String findDebugFileLocation(UUID resultUuid) throws IOException {
         // to override by subclasses
-        return null;
+        throw new IOException("S3 is not supported");
     }
 }

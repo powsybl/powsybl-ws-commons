@@ -47,7 +47,6 @@ public class NotificationService {
     public static final String HEADER_MESSAGE = "message";
     public static final String HEADER_USER_ID = "userId";
     public static final String HEADER_DEBUG = "debug";
-    public static final String HEADER_BROWSER_TAB_UUID = "browserTabUuid";
 
     public static final String SENDING_MESSAGE = "Sending message : {}";
 

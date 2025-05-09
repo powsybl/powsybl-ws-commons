@@ -19,6 +19,7 @@ import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.client.PreloadingStrategy;
 import com.powsybl.ws.commons.ZipUtils;
 import com.powsybl.ws.commons.computation.ComputationException;
+import com.powsybl.ws.commons.computation.s3.S3Service;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +27,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.messaging.Message;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
@@ -201,20 +201,18 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
             Path parentDir = workDir.getParent();
             Path debugFilePath = parentDir.resolve(workDir.getFileName().toString() + ".zip");
             ZipUtils.zip(workDir, debugFilePath);
-
+            String fileName = debugFilePath.getFileName().toString();
+            String s3Key = S3_DEBUG_DIR + S3_DELIMITER + fileName;
             // move zip file to s3 storage
             try {
-                File debugFile = new File(debugFilePath.toAbsolutePath().toString());
-                String debugFileLocation = S3_DEBUG_DIR + S3_DELIMITER + debugFile.getName();
                 // insert debug file path into db
-                resultService.updateDebugFileLocation(resultContext.getResultUuid(), debugFileLocation);
+                resultService.updateDebugFileLocation(resultContext.getResultUuid(), s3Key);
                 // upload file
-                s3Service.get().uploadFile(debugFile, debugFileLocation, 30);
-                // notified to study-server via result channel
-                // TODO whether need a new debug channel
+                s3Service.get().uploadFile(debugFilePath, s3Key, fileName, 30);
+                // notify to study-server
                 sendDebugMessage(resultContext);
             } catch (IOException e) {
-                throw new UncheckedIOException("Failed to upload debug file", e);
+                LOGGER.info("Error occurred while uploading debug file {}: {}", fileName, e.getMessage());
             }
         }
     }
@@ -239,25 +237,21 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
 
     protected abstract void saveResult(Network network, AbstractResultContext<C> resultContext, R result);
 
-    public Map<String, Object> getResultHeaders(AbstractResultContext<C> resultContext, R result) {
-        return new HashMap<>();
-    }
-
-    private void sendResultMessage(AbstractResultContext<C> resultContext, R result) {
-        Map<String, Object> resultHeaders = getResultHeaders(resultContext, result);
+    protected void sendResultMessage(AbstractResultContext<C> resultContext, R ignoredResult) {
         notificationService.sendResultMessage(resultContext.getResultUuid(), resultContext.getRunContext().getReceiver(),
-                resultContext.getRunContext().getUserId(), resultHeaders);
+                resultContext.getRunContext().getUserId(), null);
     }
 
     private void sendDebugMessage(AbstractResultContext<C> resultContext) {
         Map<String, Object> resultHeaders = new HashMap<>();
 
-        // --- attach debug infos to result headers --- //
+        // --- attach debug to result headers --- //
         Boolean debug = resultContext.getRunContext().getDebug();
-        if (debug != null && debug) {
+        if (Boolean.TRUE.equals(debug)) {
             resultHeaders.put(HEADER_DEBUG, resultContext.getRunContext().getDebug());
         }
         // actually shared with result channel and discriminate by debug = true
+        // TODO whether need a new debug channel
         notificationService.sendResultMessage(resultContext.getResultUuid(), resultContext.getRunContext().getReceiver(),
                 resultContext.getRunContext().getUserId(), resultHeaders);
     }

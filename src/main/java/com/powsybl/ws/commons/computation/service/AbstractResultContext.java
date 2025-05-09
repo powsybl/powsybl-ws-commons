@@ -42,8 +42,6 @@ public abstract class AbstractResultContext<C extends AbstractComputationRunCont
 
     protected static final String DEBUG_HEADER = "debug";
 
-    protected static final String BROWSER_TAB_UUID_HEADER = "browserTabUuid";
-
     private final UUID resultUuid;
     private final C runContext;
 

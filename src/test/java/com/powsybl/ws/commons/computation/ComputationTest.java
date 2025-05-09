@@ -1,21 +1,13 @@
 package com.powsybl.ws.commons.computation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.powsybl.computation.local.LocalComputationManager;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManager;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.client.PreloadingStrategy;
 import com.powsybl.ws.commons.computation.dto.ReportInfos;
-import com.powsybl.ws.commons.computation.service.AbstractComputationObserver;
-import com.powsybl.ws.commons.computation.service.AbstractComputationResultService;
-import com.powsybl.ws.commons.computation.service.AbstractComputationRunContext;
-import com.powsybl.ws.commons.computation.service.AbstractComputationService;
-import com.powsybl.ws.commons.computation.service.AbstractResultContext;
-import com.powsybl.ws.commons.computation.service.AbstractWorkerService;
-import com.powsybl.ws.commons.computation.service.ExecutionService;
-import com.powsybl.ws.commons.computation.service.NotificationService;
-import com.powsybl.ws.commons.computation.service.ReportService;
-import com.powsybl.ws.commons.computation.service.UuidGeneratorService;
+import com.powsybl.ws.commons.computation.service.*;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.observation.ObservationRegistry;
@@ -24,6 +16,7 @@ import lombok.NonNull;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.assertj.core.api.WithAssertions;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,23 +27,20 @@ import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_RECEIVER;
-import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_RESULT_UUID;
-import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_USER_ID;
+import static com.powsybl.ws.commons.computation.service.NotificationService.*;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isA;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith({ MockitoExtension.class })
 @Slf4j
@@ -62,7 +52,7 @@ class ComputationTest implements WithAssertions {
     private NetworkStoreService networkStoreService;
     @Mock
     private ReportService reportService;
-    private final ExecutionService executionService = new ExecutionService();
+    private ExecutionService executionService;
     private final UuidGeneratorService uuidGeneratorService = new UuidGeneratorService();
     @Mock
     private StreamBridge publisher;
@@ -215,9 +205,11 @@ class ComputationTest implements WithAssertions {
     MockComputationResultService resultService;
 
     @BeforeEach
-    void init() {
+    void init() throws IOException {
         resultService = new MockComputationResultService();
         notificationService = new NotificationService(publisher);
+        final ExecutorService executor = Executors.newCachedThreadPool();
+        this.executionService = new ExecutionService(executor, new LocalComputationManager(executor));
         workerService = new MockComputationWorkerService(
                 networkStoreService,
                 notificationService,
@@ -239,6 +231,11 @@ class ComputationTest implements WithAssertions {
         runContext = new MockComputationRunContext(networkUuid, null, receiver,
                 new ReportInfos(reportUuid, reporterId, COMPUTATION_TYPE), userId, provider, new Object());
         resultContext = new MockComputationResultContext(RESULT_UUID, runContext);
+    }
+
+    @AfterEach
+    void cleanup() {
+        this.executionService.getExecutorService().shutdown();
     }
 
     private void initComputationExecution() {

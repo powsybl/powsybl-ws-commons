@@ -7,10 +7,13 @@
 package com.powsybl.ws.commons.computation.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powsybl.ws.commons.computation.s3.S3InputStreamInfos;
-import com.powsybl.ws.commons.computation.s3.S3Service;
+import com.powsybl.commons.PowsyblException;
+import com.powsybl.ws.commons.s3.S3InputStreamInfos;
+import com.powsybl.ws.commons.s3.S3Service;
 import lombok.Getter;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -21,7 +24,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -36,13 +38,16 @@ public abstract class AbstractComputationService<C extends AbstractComputationRu
     protected NotificationService notificationService;
     protected UuidGeneratorService uuidGeneratorService;
     protected T resultService;
-    protected Optional<S3Service> s3Service;
+    /**
+     * The S3Service is injected optionally because not all computation servers support S3 integration.
+     */
+    @Autowired(required = false)
+    protected S3Service s3Service;
     @Getter
     private final String defaultProvider;
 
     protected AbstractComputationService(NotificationService notificationService,
                                          T resultService,
-                                         Optional<S3Service> s3Service,
                                          ObjectMapper objectMapper,
                                          UuidGeneratorService uuidGeneratorService,
                                          String defaultProvider) {
@@ -51,7 +56,6 @@ public abstract class AbstractComputationService<C extends AbstractComputationRu
         this.uuidGeneratorService = Objects.requireNonNull(uuidGeneratorService);
         this.defaultProvider = defaultProvider;
         this.resultService = Objects.requireNonNull(resultService);
-        this.s3Service = s3Service;
     }
 
     public void stop(UUID resultUuid, String receiver) {
@@ -90,11 +94,18 @@ public abstract class AbstractComputationService<C extends AbstractComputationRu
         return resultService.findStatus(resultUuid);
     }
 
-    public ResponseEntity downloadDebugFile(UUID resultUuid) throws IOException {
-        if (s3Service.isPresent()) {
-            String s3Key = resultService.findDebugFileLocation(resultUuid);
+    public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
+        if (s3Service == null) {
+            throw new PowsyblException("S3 service not available");
+        }
 
-            S3InputStreamInfos s3InputStreamInfos = s3Service.get().downloadFile(s3Key);
+        String s3Key = resultService.findDebugFileLocation(resultUuid);
+        if (s3Key == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        try {
+            S3InputStreamInfos s3InputStreamInfos = s3Service.downloadFile(s3Key);
             InputStream inputStream = s3InputStreamInfos.getInputStream();
             String fileName = s3InputStreamInfos.getFileName();
             Long fileLength = s3InputStreamInfos.getFileLength();
@@ -110,8 +121,9 @@ public abstract class AbstractComputationService<C extends AbstractComputationRu
                     .headers(headers)
                     .contentType(MediaType.APPLICATION_OCTET_STREAM)
                     .body(resource);
+        } catch (IOException e) {
+            return ResponseEntity.notFound().build();
         }
-        throw new IOException("S3 is not supported");
     }
 
 }

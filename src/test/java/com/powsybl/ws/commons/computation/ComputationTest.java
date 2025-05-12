@@ -6,7 +6,6 @@ import com.powsybl.iidm.network.VariantManager;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.client.PreloadingStrategy;
 import com.powsybl.ws.commons.computation.dto.ReportInfos;
-import com.powsybl.ws.commons.computation.s3.S3Service;
 import com.powsybl.ws.commons.computation.service.*;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -26,7 +25,10 @@ import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -124,8 +126,8 @@ class ComputationTest implements WithAssertions {
     }
 
     private static class MockComputationService extends AbstractComputationService<MockComputationRunContext, MockComputationResultService, MockComputationStatus> {
-        protected MockComputationService(NotificationService notificationService, MockComputationResultService resultService, S3Service s3Service, ObjectMapper objectMapper, UuidGeneratorService uuidGeneratorService, String defaultProvider) {
-            super(notificationService, resultService, Optional.ofNullable(s3Service), objectMapper, uuidGeneratorService, defaultProvider);
+        protected MockComputationService(NotificationService notificationService, MockComputationResultService resultService, ObjectMapper objectMapper, UuidGeneratorService uuidGeneratorService, String defaultProvider) {
+            super(notificationService, resultService, objectMapper, uuidGeneratorService, defaultProvider);
         }
 
         @Override
@@ -147,8 +149,8 @@ class ComputationTest implements WithAssertions {
     }
 
     private static class MockComputationWorkerService extends AbstractWorkerService<Object, MockComputationRunContext, Object, MockComputationResultService> {
-        protected MockComputationWorkerService(NetworkStoreService networkStoreService, NotificationService notificationService, ReportService reportService, MockComputationResultService resultService, S3Service s3Service, ExecutionService executionService, AbstractComputationObserver<Object, Object> observer, ObjectMapper objectMapper) {
-            super(networkStoreService, notificationService, reportService, resultService, Optional.ofNullable(s3Service), executionService, observer, objectMapper);
+        protected MockComputationWorkerService(NetworkStoreService networkStoreService, NotificationService notificationService, ReportService reportService, MockComputationResultService resultService, ExecutionService executionService, AbstractComputationObserver<Object, Object> observer, ObjectMapper objectMapper) {
+            super(networkStoreService, notificationService, reportService, resultService, executionService, observer, objectMapper);
         }
 
         @Override
@@ -210,12 +212,11 @@ class ComputationTest implements WithAssertions {
                 notificationService,
                 reportService,
                 resultService,
-                null,
                 executionService,
                 new MockComputationObserver(ObservationRegistry.create(), new SimpleMeterRegistry()),
                 objectMapper
         );
-        computationService = new MockComputationService(notificationService, resultService, null, objectMapper, uuidGeneratorService, provider);
+        computationService = new MockComputationService(notificationService, resultService, objectMapper, uuidGeneratorService, provider);
 
         MessageBuilder<String> builder = MessageBuilder
                 .withPayload("")

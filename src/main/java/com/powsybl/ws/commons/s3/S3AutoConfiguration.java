@@ -5,7 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package com.powsybl.ws.commons.computation.s3;
+package com.powsybl.ws.commons.s3;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

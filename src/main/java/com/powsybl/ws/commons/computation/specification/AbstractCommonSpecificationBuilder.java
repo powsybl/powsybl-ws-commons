@@ -4,9 +4,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package com.powsybl.ws.commons.computation.utils.specification;
+package com.powsybl.ws.commons.computation.specification;
 
 import com.powsybl.ws.commons.computation.dto.ResourceFilterDTO;
+import com.powsybl.ws.commons.computation.utils.SpecificationUtils;
 import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Root;
 import lombok.NoArgsConstructor;
@@ -33,7 +34,6 @@ public abstract class AbstractCommonSpecificationBuilder<T> {
      * @param distinct : true if you want to force the results to be distinct.
      *                 Since sql joins generates duplicate results, we may need to use distinct here
      *                 But can't use both distinct and sort on nested field (sql limitation)
-     * @return
      */
     public Specification<T> buildSpecification(UUID resultUuid, List<ResourceFilterDTO> resourceFilters, boolean distinct) {
         List<ResourceFilterDTO> childrenFilters = resourceFilters.stream().filter(this::isNotParentFilter).toList();

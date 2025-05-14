@@ -5,7 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package com.powsybl.ws.commons.computation.utils.specification;
+package com.powsybl.ws.commons.computation.utils;
 
 import com.powsybl.ws.commons.computation.dto.ResourceFilterDTO;
 import jakarta.persistence.criteria.*;
@@ -35,7 +35,12 @@ public final class SpecificationUtils {
 
     // we use .as(String.class) to be able to works on enum fields
     public static <X> Specification<X> equals(String field, String value) {
-        return (root, cq, cb) -> cb.equal(cb.upper(getColumnPath(root, field).as(String.class)).as(String.class), value.toUpperCase());
+        return (root, cq, cb) -> cb.equal(
+                cb
+                    .upper(getColumnPath(root, field).as(String.class))
+                    .as(String.class),
+                value.toUpperCase()
+        );
     }
 
     public static <X> Specification<X> notEqual(String field, String value) {
@@ -56,7 +61,7 @@ public final class SpecificationUtils {
     public static <X> Specification<X> notEqual(String field, Double value, Double tolerance) {
         return (root, cq, cb) -> {
             Expression<Double> doubleExpression = getColumnPath(root, field).as(Double.class);
-            /**
+            /*
              * in order to be equal to doubleExpression, value has to fit :
              * value - tolerance <= doubleExpression <= value + tolerance
              * therefore in order to be different at least one of the opposite comparison needs to be true :
@@ -199,7 +204,7 @@ public final class SpecificationUtils {
      * @param <Y>                the type referenced by the path
      * @return path for the query
      */
-    private static <X, Y> Path<Y> getColumnPath(Root<X> root, String dotSeparatedFields) {
+    public static <X, Y> Path<Y> getColumnPath(Root<X> root, String dotSeparatedFields) {
         if (dotSeparatedFields.contains(SpecificationUtils.FIELD_SEPARATOR)) {
             String[] fields = dotSeparatedFields.split("\\.");
             Path<Y> path = root.get(fields[0]);

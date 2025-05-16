@@ -19,7 +19,7 @@ import java.util.List;
 /**
  * @author maissa Souissi <maissa.souissi at rte-france.com>
  */
-public final class FilterUtils { // TODO à déplacer vers ws-commons ??
+public final class FilterUtils {
 
     // Utility class, so no constructor
     private FilterUtils() {

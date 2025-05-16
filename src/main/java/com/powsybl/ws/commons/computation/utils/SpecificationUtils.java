@@ -203,7 +203,7 @@ public final class SpecificationUtils {
      * @param <Y>                the type referenced by the path
      * @return path for the query
      */
-    public static <X, Y> Path<Y> getColumnPath(Root<X> root, String dotSeparatedFields) {
+    private static <X, Y> Path<Y> getColumnPath(Root<X> root, String dotSeparatedFields) {
         if (dotSeparatedFields.contains(SpecificationUtils.FIELD_SEPARATOR)) {
             String[] fields = dotSeparatedFields.split("\\.");
             Path<Y> path = root.get(fields[0]);

@@ -20,7 +20,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
-public class CommonSpecificationBuilderTest {
+class CommonSpecificationBuilderTest {
 
     UUID resUuid = UUID.randomUUID();
     CommonSpecificationBuilderTestImpl builder;
@@ -49,9 +49,7 @@ public class CommonSpecificationBuilderTest {
     }
 
     @Test
-    public void testResultUuidEquals() {
-        CriteriaBuilder cb = Mockito.mock(CriteriaBuilder.class);
-
+    void testResultUuidEquals() {
         when(root.get("resultId")).thenReturn(path);
         when(cb.equal(path, resUuid)).thenReturn(Mockito.mock(Predicate.class));
 
@@ -60,7 +58,7 @@ public class CommonSpecificationBuilderTest {
     }
 
     @Test
-    public void testBuildSpecification() {
+    void testBuildSpecification() {
         CriteriaQuery<?> cq = Mockito.mock(CriteriaQuery.class);
 
         // test data
@@ -96,7 +94,7 @@ public class CommonSpecificationBuilderTest {
     }
 
     @Test
-    public void testBuildLimitViolationsSpecification() {
+    void testBuildLimitViolationsSpecification() {
         List<ResourceFilterDTO> resourceFilters = List.of(
                 new ResourceFilterDTO(NUMBER, NOT_EQUAL, 10, "dummyNumberColumn")
         );
@@ -106,7 +104,7 @@ public class CommonSpecificationBuilderTest {
     }
 
     @Test
-    public void testInvalidResourceFilters() {
+    void testInvalidResourceFilters() {
         UUID resultUuid = UUID.randomUUID();
         List<ResourceFilterDTO> textResourceFilters = List.of(
                 new ResourceFilterDTO(TEXT, GREATER_THAN_OR_EQUAL, "dummyValue", "dummyColumn")

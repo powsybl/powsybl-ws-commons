@@ -10,7 +10,6 @@ import com.powsybl.ws.commons.computation.dto.ResourceFilterDTO;
 import com.powsybl.ws.commons.computation.utils.SpecificationUtils;
 import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Root;
-import jakarta.validation.constraints.NotNull;
 import lombok.NoArgsConstructor;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -36,8 +35,8 @@ public abstract class AbstractCommonSpecificationBuilder<T> {
      *                 Since sql joins generates duplicate results, we may need to use distinct here
      *                 But can't use both distinct and sort on nested field (sql limitation)
      */
-    public Specification<T> buildSpecification(UUID resultUuid, @NotNull List<ResourceFilterDTO> resourceFilters, boolean distinct) {
-        List<ResourceFilterDTO> childrenFilters = resourceFilters.stream().filter(this::isNotParentFilter).toList();
+    public Specification<T> buildSpecification(UUID resultUuid, List<ResourceFilterDTO> resourceFilters, boolean distinct) {
+        List<ResourceFilterDTO> childrenFilters = resourceFilters != null ? resourceFilters.stream().filter(this::isNotParentFilter).toList() : List.of();
         // filter by resultUuid
         Specification<T> specification = Specification.where(resultUuidEquals(resultUuid));
         if (distinct) {

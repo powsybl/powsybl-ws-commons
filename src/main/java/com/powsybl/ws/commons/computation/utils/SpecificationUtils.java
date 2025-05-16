@@ -99,10 +99,10 @@ public final class SpecificationUtils {
         };
     }
 
-    public static <X> Specification<X> appendFiltersToSpecification(Specification<X> specification, @NotNull List<ResourceFilterDTO> resourceFilters) {
+    public static <X> Specification<X> appendFiltersToSpecification(Specification<X> specification, List<ResourceFilterDTO> resourceFilters) {
         Objects.requireNonNull(specification);
 
-        if (resourceFilters.isEmpty()) {
+        if (resourceFilters == null || resourceFilters.isEmpty()) {
             return specification;
         }
 

@@ -23,7 +23,6 @@ import com.powsybl.ws.commons.s3.S3Service;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.lang.Nullable;
 import org.springframework.messaging.Message;
@@ -33,7 +32,10 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -72,13 +74,13 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
     /**
      * The S3Service is injected optionally because not all computation servers support S3 integration.
      */
-    @Autowired(required = false)
-    protected S3Service s3Service;
+    protected final S3Service s3Service;
 
     protected AbstractWorkerService(NetworkStoreService networkStoreService,
                                     NotificationService notificationService,
                                     ReportService reportService,
                                     S resultService,
+                                    S3Service s3Service,
                                     ExecutionService executionService,
                                     AbstractComputationObserver<R, P> observer,
                                     ObjectMapper objectMapper) {
@@ -86,6 +88,7 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
         this.notificationService = notificationService;
         this.reportService = reportService;
         this.resultService = resultService;
+        this.s3Service = s3Service;
         this.executionService = executionService;
         this.observer = observer;
         this.objectMapper = objectMapper;
@@ -187,12 +190,14 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
         futures.remove(resultContext.getResultUuid());
         cancelComputationRequests.remove(resultContext.getResultUuid());
 
-        Optional.ofNullable(resultContext.getRunContext().getComputationManager()).ifPresent(ComputationManager::close);
+        C runContext = resultContext.getRunContext();
+        Optional.ofNullable(runContext.getComputationManager()).ifPresent(ComputationManager::close);
 
         // clean the working directory
-        C runContext = resultContext.getRunContext();
-        Path workDir = runContext.getComputationManager().getLocalDir();
-        removeDirectory(workDir);
+        if (Boolean.TRUE.equals(runContext.getDebug())) {
+            Path workDir = runContext.getComputationManager().getLocalDir();
+            removeDirectory(workDir);
+        }
     }
 
     /**
@@ -201,27 +206,32 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
      */
     protected void processDebug(AbstractResultContext<C> resultContext) {
         C runContext = resultContext.getRunContext();
-        Path workDir = runContext.getComputationManager().getLocalDir();
+
         if (Boolean.TRUE.equals(runContext.getDebug())) {
             if (s3Service == null) {
                 sendDebugMessage(resultContext, "S3 service not available");
+                return;
             }
 
-            // zip the working directory
+            Path workDir = runContext.getComputationManager().getLocalDir();
             Path parentDir = workDir.getParent();
             Path debugFilePath = parentDir.resolve(workDir.getFileName().toString() + ".zip");
-            ZipUtils.zip(workDir, debugFilePath);
             String fileName = debugFilePath.getFileName().toString();
-            String s3Key = S3_DEBUG_DIR + S3_DELIMITER + fileName;
-            // move zip file to s3 storage
+
             try {
+                // zip the working directory
+                ZipUtils.zip(workDir, debugFilePath);
+                String s3Key = S3_DEBUG_DIR + S3_DELIMITER + fileName;
+
                 // insert debug file path into db
                 resultService.updateDebugFileLocation(resultContext.getResultUuid(), s3Key);
-                // upload file
+
+                // upload  zip file to s3 storage
                 s3Service.uploadFile(debugFilePath, s3Key, fileName, 30);
+
                 // notify to study-server
                 sendDebugMessage(resultContext, null);
-            } catch (IOException e) {
+            } catch (IOException | UncheckedIOException e) {
                 LOGGER.info("Error occurred while uploading debug file {}: {}", fileName, e.getMessage());
                 sendDebugMessage(resultContext, e.getMessage());
             }
@@ -282,9 +292,14 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
         if (runContext.getReportInfos() != null && runContext.getReportInfos().reportUuid() != null) {
             final String reportType = runContext.getReportInfos().computationType();
             String rootReporterId = runContext.getReportInfos().reporterId();
-            rootReporter.set(ReportNode.newRootReportNode().withMessageTemplate(rootReporterId, rootReporterId).build());
-            reportNode = rootReporter.get().newReportNode().withMessageTemplate(reportType, reportType + (provider != null ? " (" + provider + ")" : ""))
-                    .withUntypedValue("providerToUse", Objects.requireNonNullElse(provider, "")).add();
+            ReportNode rootReporterNode = ReportNode.newRootReportNode()
+                    .withAllResourceBundlesFromClasspath()
+                    .withMessageTemplate("ws.commons.rootReporterId")
+                    .withUntypedValue("rootReporterId", rootReporterId).build();
+            rootReporter.set(rootReporterNode);
+            reportNode = rootReporter.get().newReportNode().withMessageTemplate("ws.commons.reportType")
+                    .withUntypedValue("reportType", reportType)
+                    .withUntypedValue("optionalProvider", provider != null ? " (" + provider + ")" : "").add();
             // Delete any previous computation logs
             observer.observe("report.delete",
                     runContext, () -> reportService.deleteReport(runContext.getReportInfos().reportUuid()));

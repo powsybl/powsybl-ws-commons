@@ -11,7 +11,6 @@ import com.powsybl.commons.PowsyblException;
 import com.powsybl.ws.commons.s3.S3InputStreamInfos;
 import com.powsybl.ws.commons.s3.S3Service;
 import lombok.Getter;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ContentDisposition;
@@ -38,16 +37,13 @@ public abstract class AbstractComputationService<C extends AbstractComputationRu
     protected NotificationService notificationService;
     protected UuidGeneratorService uuidGeneratorService;
     protected T resultService;
-    /**
-     * The S3Service is injected optionally because not all computation servers support S3 integration.
-     */
-    @Autowired(required = false)
     protected S3Service s3Service;
     @Getter
     private final String defaultProvider;
 
     protected AbstractComputationService(NotificationService notificationService,
                                          T resultService,
+                                         S3Service s3Service,
                                          ObjectMapper objectMapper,
                                          UuidGeneratorService uuidGeneratorService,
                                          String defaultProvider) {
@@ -56,6 +52,7 @@ public abstract class AbstractComputationService<C extends AbstractComputationRu
         this.uuidGeneratorService = Objects.requireNonNull(uuidGeneratorService);
         this.defaultProvider = defaultProvider;
         this.resultService = Objects.requireNonNull(resultService);
+        this.s3Service = s3Service;
     }
 
     public void stop(UUID resultUuid, String receiver) {

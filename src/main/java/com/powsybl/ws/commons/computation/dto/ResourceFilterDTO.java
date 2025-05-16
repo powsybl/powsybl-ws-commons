@@ -7,6 +7,8 @@
 package com.powsybl.ws.commons.computation.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotNull;
+
 /**
  * An object that can be used to filter data with the JPA Criteria API (via Spring Specification)
  * @param dataType the type of data we want to filter (text, number)
@@ -16,10 +18,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * @param tolerance precision/tolerance used for the comparisons (simulates the rounding of the database values) Only useful for numbers.
  * @author Kevin Le Saulnier <kevin.lesaulnier at rte-france.com>
  */
+public record ResourceFilterDTO(@NotNull DataType dataType, @NotNull Type type, Object value, @NotNull String column, Double tolerance) {
 
-public record ResourceFilterDTO(DataType dataType, Type type, Object value, String column, Double tolerance) {
-
-    public ResourceFilterDTO(DataType dataType, Type type, Object value, String column) {
+    public ResourceFilterDTO(@NotNull DataType dataType, @NotNull Type type, Object value, @NotNull String column) {
         this(dataType, type, value, column, null);
     }
 

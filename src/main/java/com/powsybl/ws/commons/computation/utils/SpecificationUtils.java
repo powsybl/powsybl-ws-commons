@@ -30,8 +30,7 @@ public final class SpecificationUtils {
     public static final String FIELD_SEPARATOR = ".";
 
     // Utility class, so no constructor
-    private SpecificationUtils() {
-    }
+    private SpecificationUtils() { }
 
     // we use .as(String.class) to be able to works on enum fields
     public static <X> Specification<X> equals(String field, String value) {
@@ -100,10 +99,10 @@ public final class SpecificationUtils {
         };
     }
 
-    public static <X> Specification<X> appendFiltersToSpecification(Specification<X> specification, List<ResourceFilterDTO> resourceFilters) {
+    public static <X> Specification<X> appendFiltersToSpecification(Specification<X> specification, @NotNull List<ResourceFilterDTO> resourceFilters) {
         Objects.requireNonNull(specification);
 
-        if (resourceFilters == null || resourceFilters.isEmpty()) {
+        if (resourceFilters.isEmpty()) {
             return specification;
         }
 
@@ -125,7 +124,7 @@ public final class SpecificationUtils {
         Specification<X> completedSpecification = specification;
 
         switch (resourceFilter.type()) {
-            case EQUALS, IN -> {
+            case NOT_EQUAL, EQUALS, IN -> {
                 // this type can manage one value or a list of values (with OR)
                 if (resourceFilter.value() instanceof Collection<?> valueList) {
                     completedSpecification = completedSpecification.and(

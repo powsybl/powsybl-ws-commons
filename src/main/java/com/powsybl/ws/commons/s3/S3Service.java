@@ -45,7 +45,7 @@ public class S3Service {
                     .build();
             s3Client.putObject(putRequest, RequestBody.fromFile(filePath));
         } catch (S3Exception e) {
-            throw new IOException("Error occurred while uploading file to S3: " + e.awsErrorDetails().errorMessage());
+            throw new IOException("Error occurred while uploading file to S3: " + e.getMessage());
         }
     }
 
@@ -62,7 +62,7 @@ public class S3Service {
                     .fileLength(inputStream.response().contentLength())
                     .build();
         } catch (S3Exception e) {
-            throw new IOException("Error occurred while downloading file from S3: " + e.awsErrorDetails().errorMessage());
+            throw new IOException("Error occurred while downloading file from S3: " + e.getMessage());
         }
     }
 }

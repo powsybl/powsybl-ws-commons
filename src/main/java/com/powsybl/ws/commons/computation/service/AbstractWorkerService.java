@@ -71,10 +71,18 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
     protected final Map<UUID, CompletableFuture<R>> futures = new ConcurrentHashMap<>();
     protected final Map<UUID, CancelContext> cancelComputationRequests = new ConcurrentHashMap<>();
     protected final S resultService;
-    /**
-     * The S3Service is injected optionally because not all computation servers support S3 integration.
-     */
+
     protected final S3Service s3Service;
+
+    protected AbstractWorkerService(NetworkStoreService networkStoreService,
+                                    NotificationService notificationService,
+                                    ReportService reportService,
+                                    S resultService,
+                                    ExecutionService executionService,
+                                    AbstractComputationObserver<R, P> observer,
+                                    ObjectMapper objectMapper) {
+        this(networkStoreService, notificationService, reportService, resultService, null, executionService, observer, objectMapper);
+    }
 
     protected AbstractWorkerService(NetworkStoreService networkStoreService,
                                     NotificationService notificationService,

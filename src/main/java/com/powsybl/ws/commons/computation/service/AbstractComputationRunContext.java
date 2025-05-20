@@ -35,6 +35,11 @@ public abstract class AbstractComputationRunContext<P> {
     private ComputationManager computationManager;
 
     protected AbstractComputationRunContext(UUID networkUuid, String variantId, String receiver, ReportInfos reportInfos,
+                                            String userId, String provider, P parameters) {
+        this(networkUuid, variantId, receiver, reportInfos, userId, provider, parameters, null);
+    }
+
+    protected AbstractComputationRunContext(UUID networkUuid, String variantId, String receiver, ReportInfos reportInfos,
                                             String userId, String provider, P parameters, Boolean debug) {
         this.networkUuid = networkUuid;
         this.variantId = variantId;

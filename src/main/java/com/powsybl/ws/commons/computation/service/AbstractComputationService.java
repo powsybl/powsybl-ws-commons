@@ -43,6 +43,14 @@ public abstract class AbstractComputationService<C extends AbstractComputationRu
 
     protected AbstractComputationService(NotificationService notificationService,
                                          T resultService,
+                                         ObjectMapper objectMapper,
+                                         UuidGeneratorService uuidGeneratorService,
+                                         String defaultProvider) {
+        this(notificationService, resultService, null, objectMapper, uuidGeneratorService, defaultProvider);
+    }
+
+    protected AbstractComputationService(NotificationService notificationService,
+                                         T resultService,
                                          S3Service s3Service,
                                          ObjectMapper objectMapper,
                                          UuidGeneratorService uuidGeneratorService,

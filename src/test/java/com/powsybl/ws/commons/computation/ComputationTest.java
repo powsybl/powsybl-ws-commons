@@ -1,6 +1,7 @@
 package com.powsybl.ws.commons.computation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.powsybl.commons.PowsyblException;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManager;
 import com.powsybl.network.store.client.NetworkStoreService;
@@ -8,6 +9,7 @@ import com.powsybl.network.store.client.PreloadingStrategy;
 import com.powsybl.ws.commons.ZipUtils;
 import com.powsybl.ws.commons.computation.dto.ReportInfos;
 import com.powsybl.ws.commons.computation.service.*;
+import com.powsybl.ws.commons.s3.S3InputStreamInfos;
 import com.powsybl.ws.commons.s3.S3Service;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -22,11 +24,18 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.cloud.stream.function.StreamBridge;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
@@ -40,6 +49,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import static com.powsybl.ws.commons.computation.service.NotificationService.*;
+import static com.powsybl.ws.commons.s3.S3Service.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -48,6 +58,11 @@ import static org.mockito.Mockito.*;
 @Slf4j
 class ComputationTest implements WithAssertions {
     private static final String COMPUTATION_TYPE = "mockComputation";
+
+    public static final String WORKING_DIR = "test";
+    public static final String S3_DEBUG_FILE_ZIP = WORKING_DIR + ".zip";
+    public static final String S3_KEY = S3_DEBUG_DIR + S3_DELIMITER + S3_DEBUG_FILE_ZIP;
+
     @Mock
     private VariantManager variantManager;
     @Mock
@@ -133,8 +148,8 @@ class ComputationTest implements WithAssertions {
     }
 
     private static class MockComputationService extends AbstractComputationService<MockComputationRunContext, MockComputationResultService, MockComputationStatus> {
-        protected MockComputationService(NotificationService notificationService, MockComputationResultService resultService, ObjectMapper objectMapper, UuidGeneratorService uuidGeneratorService, String defaultProvider) {
-            super(notificationService, resultService, null, objectMapper, uuidGeneratorService, defaultProvider);
+        protected MockComputationService(NotificationService notificationService, MockComputationResultService resultService, S3Service s3Service, ObjectMapper objectMapper, UuidGeneratorService uuidGeneratorService, String defaultProvider) {
+            super(notificationService, resultService, s3Service, objectMapper, uuidGeneratorService, defaultProvider);
         }
 
         @Override
@@ -208,11 +223,11 @@ class ComputationTest implements WithAssertions {
     final String provider = "MockComputation_Provider";
     Message<String> message;
     MockComputationRunContext runContext;
+    @Spy
     MockComputationResultService resultService;
 
     @BeforeEach
     void init() {
-        resultService = new MockComputationResultService();
         notificationService = new NotificationService(publisher);
         workerService = new MockComputationWorkerService(
                 networkStoreService,
@@ -224,7 +239,7 @@ class ComputationTest implements WithAssertions {
                 new MockComputationObserver(ObservationRegistry.create(), new SimpleMeterRegistry()),
                 objectMapper
         );
-        computationService = new MockComputationService(notificationService, resultService, objectMapper, uuidGeneratorService, provider);
+        computationService = new MockComputationService(notificationService, resultService, s3Service, objectMapper, uuidGeneratorService, provider);
 
         MessageBuilder<String> builder = MessageBuilder
                 .withPayload("")
@@ -342,25 +357,40 @@ class ComputationTest implements WithAssertions {
         initComputationExecution();
         runContext.setComputationResWanted(ComputationResultWanted.SUCCESS);
         runContext.setDebug(true);
-//        Path tempDir = Files.createTempDirectory("test");
-//        Path zipPath = tempDir.resolve("test.zip");
-//        ComputationManager mockCM = mock(ComputationManager.class);
-//        runContext.setComputationManager(mockCM);
-//        when(mockCM.getLocalDir()).thenReturn(tempDir);
 
-        // Mock ZipUtils and S3Service behavior
+        // Mock ZipUtils
         try (var mockedStatic = mockStatic(ZipUtils.class)) {
             mockedStatic.when(() -> ZipUtils.zip(any(Path.class), any(Path.class))).thenAnswer(invocation -> null);
             workerService.consumeRun().accept(message);
 
             // Verify interactions
-            // verify(s3Service).uploadFile(eq(zipPath), eq("debug/test.zip"), eq("test.zip"), eq(30));
-            // (resultService).updateDebugFileLocation(eq(RESULT_UUID), anyString());
+            verify(resultService).updateDebugFileLocation(eq(RESULT_UUID), anyString());
+            verify(s3Service).uploadFile(any(Path.class), anyString(), anyString(), eq(30));
             verify(notificationService.getPublisher()).send(eq("publishResult-out-0"), argThat((Message<String> msg) ->
                     msg.getHeaders().containsKey(HEADER_DEBUG) &&
                     msg.getHeaders().get(HEADER_DEBUG).equals(true) &&
                     msg.getHeaders().get(HEADER_ERROR_MESSAGE) == null));
+            verify(notificationService.getPublisher(), times(2 /* for result and debug message which shared the same chanel */))
+                    .send(eq("publishResult-out-0"), isA(Message.class));
         }
+    }
+
+    @Test
+    void testConsumeRunWithoutDebug() {
+        // Setup
+        initComputationExecution();
+        runContext.setComputationResWanted(ComputationResultWanted.SUCCESS);
+        runContext.setDebug(null);
+
+        // Execute
+        workerService.consumeRun().accept(message);
+
+        // Verify interactions
+        verifyNoInteractions(s3Service, resultService);
+        verify(notificationService.getPublisher()).send(eq("publishResult-out-0"), argThat((Message<String> msg) ->
+                !msg.getHeaders().containsKey(HEADER_DEBUG)));
+        verify(notificationService.getPublisher(), times(1 /* only result */))
+                .send(eq("publishResult-out-0"), isA(Message.class));
     }
 
     @Test
@@ -387,36 +417,8 @@ class ComputationTest implements WithAssertions {
         verify(notificationService.getPublisher()).send(eq("publishResult-out-0"), argThat((Message<String> msg) ->
                 msg.getHeaders().containsKey(HEADER_DEBUG) &&
                 msg.getHeaders().get(HEADER_DEBUG).equals(true) &&
-                msg.getHeaders().get(HEADER_ERROR_MESSAGE).equals("S3 service not available")));
-        // verifyNoInteractions(s3Service, resultService);
-    }
-
-    @Test
-    void testConsumeRunWithDebugMode() throws IOException {
-        // Setup
-        initComputationExecution();
-        runContext.setComputationResWanted(ComputationResultWanted.SUCCESS);
-        runContext.setDebug(true);
-//        Path tempDir = Files.createTempDirectory("test");
-//        Path zipPath = tempDir.resolve("test.zip");
-//        ComputationManager mockCM = mock(ComputationManager.class);
-//        runContext.setComputationManager(mockCM);
-//        when(mockCM.getLocalDir()).thenReturn(tempDir);
-
-        // Mock ZipUtils and S3Service behavior
-        try (var mockedStatic = mockStatic(ZipUtils.class)) {
-            mockedStatic.when(() -> ZipUtils.zip(any(Path.class), any(Path.class))).thenAnswer(invocation -> null);
-            workerService.consumeRun().accept(message);
-
-            // Verify interactions
-            // verify(s3Service).uploadFile(eq(zipPath), eq("debug/test.zip"), eq("test.zip"), eq(30));
-            // verify(resultService).updateDebugFileLocation(eq(RESULT_UUID), eq("debug/test.zip"));
-            verify(notificationService.getPublisher()).send(eq("publishResult-out-0"), argThat((Message<String> msg) ->
-                    msg.getHeaders().containsKey(HEADER_DEBUG) &&
-                    msg.getHeaders().get(HEADER_DEBUG).equals(true) &&
-                    msg.getHeaders().get(HEADER_ERROR_MESSAGE) == null));
-            verify(notificationService.getPublisher(), times(2)).send(eq("publishResult-out-0"), isA(Message.class));
-        }
+                msg.getHeaders().get(HEADER_ERROR_MESSAGE).equals(S3_SERVICE_NOT_AVAILABLE_MESSAGE)));
+        verifyNoInteractions(s3Service, resultService);
     }
 
     @Test
@@ -425,11 +427,6 @@ class ComputationTest implements WithAssertions {
         initComputationExecution();
         runContext.setComputationResWanted(ComputationResultWanted.SUCCESS);
         runContext.setDebug(true);
-//        Path tempDir = Files.createTempDirectory("test");
-//        Path zipPath = tempDir.resolve("test.zip");
-//        ComputationManager mockCM = mock(ComputationManager.class);
-//        runContext.setComputationManager(mockCM);
-//        when(mockCM.getLocalDir()).thenReturn(tempDir);
 
         // Mock ZipUtils to throw IOException
         try (var mockedStatic = mockStatic(ZipUtils.class)) {
@@ -439,11 +436,75 @@ class ComputationTest implements WithAssertions {
 
             // Verify interactions
             verify(s3Service, never()).uploadFile(any(), any(), any(), anyInt());
-            // verify(resultService, never()).updateDebugFileLocation(any(), any());
+            verify(resultService, never()).updateDebugFileLocation(any(), any());
             verify(notificationService.getPublisher()).send(eq("publishResult-out-0"), argThat((Message<String> msg) ->
                     msg.getHeaders().containsKey(HEADER_DEBUG) &&
                     msg.getHeaders().get(HEADER_DEBUG).equals(true) &&
                     msg.getHeaders().get(HEADER_ERROR_MESSAGE).equals("Zip error")));
         }
     }
+
+    @Test
+    void testDownloadDebugFileSuccess() throws IOException {
+        // Setup
+        String fileName = S3_DEBUG_FILE_ZIP;
+        long fileLength = 1024L;
+        ByteArrayInputStream inputStream = new ByteArrayInputStream(new byte[1024]);
+        S3InputStreamInfos s3InputStreamInfos = S3InputStreamInfos.builder()
+                .inputStream(inputStream)
+                .fileName(fileName)
+                .fileLength(fileLength)
+                .build();
+        when(resultService.findDebugFileLocation(RESULT_UUID)).thenReturn(S3_KEY);
+        when(s3Service.downloadFile(S3_KEY)).thenReturn(s3InputStreamInfos);
+
+        // Execute
+        ResponseEntity<?> response = computationService.downloadDebugFile(RESULT_UUID);
+
+        // Assert
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isInstanceOf(InputStreamResource.class);
+        assertThat(response.getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_OCTET_STREAM);
+        assertThat(response.getHeaders().getContentLength()).isEqualTo(fileLength);
+        assertThat(response.getHeaders().get(HttpHeaders.CONTENT_DISPOSITION)).contains("attachment; filename=\"" + fileName + "\"");
+        verify(s3Service).downloadFile(S3_KEY);
+    }
+
+    @Test
+    void testDownloadDebugFileS3NotAvailable() throws IOException {
+        // Setup
+        computationService = new MockComputationService(notificationService, resultService, null, objectMapper, uuidGeneratorService, "defaultProvider");
+
+        // Execute & Check
+        assertThrows(PowsyblException.class, () -> computationService.downloadDebugFile(RESULT_UUID), "S3 service not available");
+        verify(s3Service, never()).downloadFile(any());
+    }
+
+    @Test
+    void testDownloadDebugFileNotFound() throws IOException {
+        // Setup
+        when(resultService.findDebugFileLocation(RESULT_UUID)).thenReturn(null);
+
+        // Execute
+        ResponseEntity<?> response = computationService.downloadDebugFile(RESULT_UUID);
+
+        // Check
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        verify(s3Service, never()).downloadFile(any());
+    }
+
+    @Test
+    void testDownloadDebugFileIOException() throws IOException {
+        // Setup
+        when(resultService.findDebugFileLocation(RESULT_UUID)).thenReturn(S3_KEY);
+        when(s3Service.downloadFile(S3_KEY)).thenThrow(new IOException("S3 error"));
+
+        // Act
+        ResponseEntity<?> response = computationService.downloadDebugFile(RESULT_UUID);
+
+        // Assert
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        verify(s3Service).downloadFile(S3_KEY);
+    }
+
 }

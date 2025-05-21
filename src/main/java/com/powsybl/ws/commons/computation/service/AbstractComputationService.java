@@ -25,6 +25,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+import static com.powsybl.ws.commons.s3.S3Service.S3_SERVICE_NOT_AVAILABLE_MESSAGE;
+
 /**
  * @author Mathieu Deharbe <mathieu.deharbe at rte-france.com>
  * @param <C> run context specific to a computation, including parameters
@@ -101,7 +103,7 @@ public abstract class AbstractComputationService<C extends AbstractComputationRu
 
     public ResponseEntity<Resource> downloadDebugFile(UUID resultUuid) {
         if (s3Service == null) {
-            throw new PowsyblException("S3 service not available");
+            throw new PowsyblException(S3_SERVICE_NOT_AVAILABLE_MESSAGE);
         }
 
         String s3Key = resultService.findDebugFileLocation(resultUuid);

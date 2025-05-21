@@ -47,6 +47,7 @@ import java.util.function.Consumer;
 
 import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_DEBUG;
 import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_ERROR_MESSAGE;
+import static com.powsybl.ws.commons.s3.S3Service.*;
 
 /**
  * @author Mathieu Deharbe <mathieu.deharbe at rte-france.com>
@@ -57,9 +58,6 @@ import static com.powsybl.ws.commons.computation.service.NotificationService.HEA
  */
 public abstract class AbstractWorkerService<R, C extends AbstractComputationRunContext<P>, P, S extends AbstractComputationResultService<?>> {
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractWorkerService.class);
-
-    private static final String S3_DEBUG_DIR = "debug";
-    private static final String S3_DELIMITER = "/";
 
     protected final Lock lockRunAndCancel = new ReentrantLock();
     protected final ObjectMapper objectMapper;
@@ -217,7 +215,7 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
 
         if (Boolean.TRUE.equals(runContext.getDebug())) {
             if (s3Service == null) {
-                sendDebugMessage(resultContext, "S3 service not available");
+                sendDebugMessage(resultContext, S3_SERVICE_NOT_AVAILABLE_MESSAGE);
                 return;
             }
 

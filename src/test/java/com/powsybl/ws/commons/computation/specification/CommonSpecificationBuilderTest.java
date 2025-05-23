@@ -77,7 +77,7 @@ class CommonSpecificationBuilderTest {
         );
         List<ResourceFilterDTO> emptyResourceFilters = List.of();
 
-        var specification = builder.buildSpecification(resUuid, resourceFilters, true);
+        var specification = builder.buildSpecification(resUuid, resourceFilters);
         assertNotNull(specification);
         Predicate predicate = specification.toPredicate(root, cq, cb);
         assertNotNull(predicate);
@@ -109,12 +109,12 @@ class CommonSpecificationBuilderTest {
         List<ResourceFilterDTO> textResourceFilters = List.of(
                 new ResourceFilterDTO(TEXT, GREATER_THAN_OR_EQUAL, "dummyValue", "dummyColumn")
         );
-        assertThrows(IllegalArgumentException.class, () -> builder.buildSpecification(resultUuid, textResourceFilters, true));
+        assertThrows(IllegalArgumentException.class, () -> builder.buildSpecification(resultUuid, textResourceFilters));
 
         List<ResourceFilterDTO> numResourceFilters = List.of(
                 new ResourceFilterDTO(NUMBER, IN, 1, "dummyColumn")
         );
-        assertThrows(IllegalArgumentException.class, () -> builder.buildSpecification(resultUuid, numResourceFilters, true));
+        assertThrows(IllegalArgumentException.class, () -> builder.buildSpecification(resultUuid, numResourceFilters));
     }
 
     // test specific dummy implementation

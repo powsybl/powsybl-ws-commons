@@ -58,6 +58,10 @@ public abstract class AbstractCommonSpecificationBuilder<T> {
         return SpecificationUtils.appendFiltersToSpecification(specification, resourceFilters);
     }
 
+    public Specification<T> buildSpecification(UUID resultUuid, List<ResourceFilterDTO> resourceFilters) {
+        return buildSpecification(resultUuid, resourceFilters, true);
+    }
+
     public Specification<T> buildLimitViolationsSpecification(List<UUID> uuids, List<ResourceFilterDTO> resourceFilters) {
         List<ResourceFilterDTO> childrenFilters = resourceFilters.stream().filter(this::isNotParentFilter).toList();
         Specification<T> specification = Specification.where(uuidIn(uuids));

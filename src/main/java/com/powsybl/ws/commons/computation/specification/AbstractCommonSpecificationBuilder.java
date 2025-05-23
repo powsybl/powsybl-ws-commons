@@ -65,13 +65,17 @@ public abstract class AbstractCommonSpecificationBuilder<T> {
         return SpecificationUtils.appendFiltersToSpecification(specification, childrenFilters);
     }
 
-    public abstract Specification<T> addSpecificFilterWhenChildrenFilters();
+    public Specification<T> addSpecificFilterWhenChildrenFilters() {
+        return null;
+    }
+
+    public Specification<T> addSpecificFilterWhenNoChildrenFilter() {
+        return null;
+    }
 
     public abstract boolean isNotParentFilter(ResourceFilterDTO filter);
 
     public abstract String getIdFieldName();
 
     public abstract Path<UUID> getResultIdPath(Root<T> root);
-
-    public abstract Specification<T> addSpecificFilterWhenNoChildrenFilter();
 }

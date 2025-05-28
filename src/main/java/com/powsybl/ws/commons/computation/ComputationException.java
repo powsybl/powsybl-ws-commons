@@ -6,49 +6,58 @@
  */
 package com.powsybl.ws.commons.computation;
 
+import lombok.Getter;
+
 import java.util.Objects;
 
 /**
  * @author Anis Touri <anis.touri at rte-france.com>
  */
-
+@Getter
 public class ComputationException extends RuntimeException {
     public enum Type {
-        RESULT_NOT_FOUND,
-        INVALID_FILTER_FORMAT,
-        INVALID_SORT_FORMAT,
-        INVALID_FILTER,
-        NETWORK_NOT_FOUND,
-        PARAMETERS_NOT_FOUND,
-        FILE_EXPORT_ERROR,
-        EVALUATE_FILTER_FAILED,
-        LIMIT_REDUCTION_CONFIG_ERROR,
-        SPECIFIC,
+        RESULT_NOT_FOUND("Result not found."),
+        INVALID_FILTER_FORMAT("The filter format is invalid."),
+        INVALID_SORT_FORMAT("The sort format is invalid"),
+        INVALID_FILTER("Invalid filter"),
+        NETWORK_NOT_FOUND("Network not found"),
+        PARAMETERS_NOT_FOUND("Computation parameters not found"),
+        FILE_EXPORT_ERROR("Error exporting the file"),
+        EVALUATE_FILTER_FAILED("Error evaluating the file"),
+        LIMIT_REDUCTION_CONFIG_ERROR("Error int the configuration of the limit reduction"),
+        SPECIFIC("Unknown error during the computation");
+
+        private final String defaultMessage;
+
+        Type(String defaultMessage) {
+            this.defaultMessage = defaultMessage;
+        }
     }
 
-    private final Type type;
+    private final Type exceptionType;
 
-    public ComputationException(Type type) {
-        super(Objects.requireNonNull(type.name()));
-        this.type = type;
+    public ComputationException(Type exceptionType) {
+        super(Objects.requireNonNull(exceptionType.defaultMessage));
+        this.exceptionType = Objects.requireNonNull(exceptionType);
     }
 
     public ComputationException(String message) {
         super(message);
-        this.type = Type.SPECIFIC;
+        this.exceptionType = Type.SPECIFIC;
     }
 
     public ComputationException(String message, Throwable cause) {
         super(message, cause);
-        this.type = Type.SPECIFIC;
+        this.exceptionType = Type.SPECIFIC;
     }
 
-    public ComputationException(Type type, String message) {
+    public ComputationException(Type exceptionType, String message) {
         super(message);
-        this.type = type;
+        this.exceptionType = Objects.requireNonNull(exceptionType);
     }
 
-    public Type getType() {
-        return type;
+    public ComputationException(Type exceptionType, String message, Throwable cause) {
+        super(message, cause);
+        this.exceptionType = Objects.requireNonNull(exceptionType);
     }
 }

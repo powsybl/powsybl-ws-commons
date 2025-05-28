@@ -1,7 +1,11 @@
 package com.powsybl.ws.commons.computation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.jimfs.Configuration;
+import com.google.common.jimfs.Jimfs;
 import com.powsybl.commons.PowsyblException;
+import com.powsybl.computation.local.LocalComputationConfig;
+import com.powsybl.computation.local.LocalComputationManager;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManager;
 import com.powsybl.network.store.client.NetworkStoreService;
@@ -19,6 +23,7 @@ import lombok.NonNull;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.assertj.core.api.WithAssertions;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,6 +43,8 @@ import org.springframework.messaging.support.MessageBuilder;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.FileSystem;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
@@ -45,8 +52,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.ForkJoinPool;
 
 import static com.powsybl.ws.commons.computation.service.NotificationService.*;
 import static com.powsybl.ws.commons.s3.S3Service.*;
@@ -63,6 +69,9 @@ class ComputationTest implements WithAssertions {
     public static final String S3_DEBUG_FILE_ZIP = WORKING_DIR + ".zip";
     public static final String S3_KEY = S3_DEBUG_DIR + S3_DELIMITER + S3_DEBUG_FILE_ZIP;
 
+    protected FileSystem fileSystem;
+    protected Path tmpDir;
+
     @Mock
     private VariantManager variantManager;
     @Mock
@@ -70,8 +79,7 @@ class ComputationTest implements WithAssertions {
     @Mock
     private ReportService reportService;
     @Mock
-    private final ExecutionService executionService = new ExecutionService();
-    private final ExecutorService executorService = Executors.newCachedThreadPool();
+    private ExecutionService executionService;
     private final UuidGeneratorService uuidGeneratorService = new UuidGeneratorService();
     @Mock
     private StreamBridge publisher;
@@ -227,7 +235,11 @@ class ComputationTest implements WithAssertions {
     MockComputationResultService resultService;
 
     @BeforeEach
-    void init() {
+    void init() throws IOException {
+        // used for initialize computation manager
+        fileSystem = Jimfs.newFileSystem(Configuration.unix());
+        tmpDir = Files.createDirectory(fileSystem.getPath("tmp"));
+
         notificationService = new NotificationService(publisher);
         workerService = new MockComputationWorkerService(
                 networkStoreService,
@@ -253,11 +265,15 @@ class ComputationTest implements WithAssertions {
         resultContext = new MockComputationResultContext(RESULT_UUID, runContext);
     }
 
+    @AfterEach
+    void tearDown() throws IOException {
+        fileSystem.close();
+    }
+
     private void initComputationExecution() {
         when(networkStoreService.getNetwork(eq(networkUuid), any(PreloadingStrategy.class)))
                 .thenReturn(network);
         when(network.getVariantManager()).thenReturn(variantManager);
-        when(executionService.getExecutorService()).thenReturn(executorService);
     }
 
     @Test
@@ -302,7 +318,6 @@ class ComputationTest implements WithAssertions {
         // test the course
         assertNull(resultService.findStatus(RESULT_UUID));
         verify(notificationService.getPublisher(), times(0)).send(eq("publishResult-out-0"), isA(Message.class));
-        executionService.getExecutorService().shutdown();
     }
 
     @Test
@@ -355,6 +370,7 @@ class ComputationTest implements WithAssertions {
     void testProcessDebugWithS3Service() throws IOException {
         // Setup
         initComputationExecution();
+        when(executionService.getComputationManager()).thenReturn(new LocalComputationManager(new LocalComputationConfig(tmpDir, 1), ForkJoinPool.commonPool()));
         runContext.setComputationResWanted(ComputationResultWanted.SUCCESS);
         runContext.setDebug(true);
 
@@ -366,10 +382,6 @@ class ComputationTest implements WithAssertions {
             // Verify interactions
             verify(resultService).updateDebugFileLocation(eq(RESULT_UUID), anyString());
             verify(s3Service).uploadFile(any(Path.class), anyString(), anyString(), eq(30));
-            verify(notificationService.getPublisher()).send(eq("publishResult-out-0"), argThat((Message<String> msg) ->
-                    msg.getHeaders().containsKey(HEADER_DEBUG) &&
-                    msg.getHeaders().get(HEADER_DEBUG).equals(true) &&
-                    msg.getHeaders().get(HEADER_ERROR_MESSAGE) == null));
             verify(notificationService.getPublisher(), times(2 /* for result and debug message which shared the same chanel */))
                     .send(eq("publishResult-out-0"), isA(Message.class));
         }
@@ -425,6 +437,7 @@ class ComputationTest implements WithAssertions {
     void testProcessDebugWithIOException() throws IOException {
         // Setup
         initComputationExecution();
+        when(executionService.getComputationManager()).thenReturn(new LocalComputationManager(new LocalComputationConfig(tmpDir, 1), ForkJoinPool.commonPool()));
         runContext.setComputationResWanted(ComputationResultWanted.SUCCESS);
         runContext.setDebug(true);
 

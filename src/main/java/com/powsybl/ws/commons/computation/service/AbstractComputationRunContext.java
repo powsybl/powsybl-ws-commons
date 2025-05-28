@@ -7,12 +7,12 @@
 package com.powsybl.ws.commons.computation.service;
 
 import com.powsybl.commons.report.ReportNode;
-import com.powsybl.computation.ComputationManager;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.ws.commons.computation.dto.ReportInfos;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.nio.file.Path;
 import java.util.UUID;
 
 /**
@@ -32,7 +32,7 @@ public abstract class AbstractComputationRunContext<P> {
     private ReportNode reportNode;
     private Network network;
     private Boolean debug;
-    private ComputationManager computationManager;
+    private Path debugDir;
 
     protected AbstractComputationRunContext(UUID networkUuid, String variantId, String receiver, ReportInfos reportInfos,
                                             String userId, String provider, P parameters) {

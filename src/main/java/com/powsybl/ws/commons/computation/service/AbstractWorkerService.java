@@ -10,9 +10,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.powsybl.commons.PowsyblException;
 import com.powsybl.commons.io.FileUtil;
 import com.powsybl.commons.report.ReportNode;
-import com.powsybl.computation.ComputationManager;
-import com.powsybl.computation.local.LocalComputationConfig;
-import com.powsybl.computation.local.LocalComputationManager;
 import com.powsybl.iidm.network.Network;
 import com.powsybl.iidm.network.VariantManagerConstants;
 import com.powsybl.network.store.client.NetworkStoreService;
@@ -34,7 +31,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
@@ -196,13 +192,10 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
         futures.remove(resultContext.getResultUuid());
         cancelComputationRequests.remove(resultContext.getResultUuid());
 
+        // run in debug mode, clean debug dir
         C runContext = resultContext.getRunContext();
-        Optional.ofNullable(runContext.getComputationManager()).ifPresent(ComputationManager::close);
-
-        // clean the working directory
-        if (Boolean.TRUE.equals(runContext.getDebug())) {
-            Path workDir = runContext.getComputationManager().getLocalDir();
-            removeDirectory(workDir);
+        if (Boolean.TRUE.equals(runContext.getDebug()) && s3Service != null) {
+            removeDirectory(runContext.getDebugDir());
         }
     }
 
@@ -218,15 +211,14 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
                 sendDebugMessage(resultContext, S3_SERVICE_NOT_AVAILABLE_MESSAGE);
                 return;
             }
-
-            Path workDir = runContext.getComputationManager().getLocalDir();
-            Path parentDir = workDir.getParent();
-            Path debugFilePath = parentDir.resolve(workDir.getFileName().toString() + ".zip");
+            Path debugDir = runContext.getDebugDir();
+            Path parentDir = debugDir.getParent();
+            Path debugFilePath = parentDir.resolve(debugDir.getFileName().toString() + ".zip");
             String fileName = debugFilePath.getFileName().toString();
 
             try {
                 // zip the working directory
-                ZipUtils.zip(workDir, debugFilePath);
+                ZipUtils.zip(debugDir, debugFilePath);
                 String s3Key = S3_DEBUG_DIR + S3_DELIMITER + fileName;
 
                 // insert debug file path into db
@@ -240,6 +232,13 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
             } catch (IOException | UncheckedIOException e) {
                 LOGGER.info("Error occurred while uploading debug file {}: {}", fileName, e.getMessage());
                 sendDebugMessage(resultContext, e.getMessage());
+            } finally {
+                // clean debug file
+                try {
+                    Files.delete(debugFilePath);
+                } catch (IOException e) {
+                    LOGGER.info("Error occurred while deleting debug file {}: {}", fileName, e.getMessage());
+                }
             }
         }
     }
@@ -288,7 +287,11 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
      */
     protected void preRun(C runContext) {
         LOGGER.info("Run {} computation...", getComputationType());
-        runContext.setComputationManager(createComputationManager());
+
+        // run in debug mode, create debug dir
+        if (Boolean.TRUE.equals(runContext.getDebug()) && s3Service != null) {
+            runContext.setDebugDir(createDebugDir());
+        }
     }
 
     protected R run(C runContext, UUID resultUuid, AtomicReference<ReportNode> rootReporter) {
@@ -354,24 +357,22 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
 
     protected abstract CompletableFuture<R> getCompletableFuture(C runContext, String provider, UUID resultUuid);
 
-    /**
-     * set method as public to mock DockerLocalComputationManager when testing with test container
-     * @return a computation manager
-     */
-    public ComputationManager createComputationManager() {
-        LocalComputationConfig localComputationConfig = LocalComputationConfig.load();
-        Path localDir = localComputationConfig.getLocalDir();
+    private Path createDebugDir() {
+        Path localDir = executionService.getComputationManager().getLocalDir();
         try {
-            String workDirPrefix = getComputationType().replaceAll("\\s+", "_").toLowerCase() + "_";
-            Path workDir = Files.createTempDirectory(localDir, workDirPrefix);
-            return new LocalComputationManager(new LocalComputationConfig(workDir, localComputationConfig.getAvailableCore()), executionService.getExecutorService());
+            String debugDirPrefix = buildComputationDirPrefix() + "debug_";
+            return Files.createTempDirectory(localDir, debugDirPrefix);
         } catch (IOException e) {
-            throw new UncheckedIOException(String.format("Error occurred while creating a working directory inside the local directory %s",
+            throw new UncheckedIOException(String.format("Error occurred while creating a debug directory inside the local directory %s",
                     localDir.toAbsolutePath()), e);
         }
     }
 
-    private void removeDirectory(Path dir) {
+    protected String buildComputationDirPrefix() {
+        return getComputationType().replaceAll("\\s+", "_").toLowerCase() + "_";
+    }
+
+    protected void removeDirectory(Path dir) {
         if (dir != null) {
             try {
                 FileUtil.removeDir(dir);

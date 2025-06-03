@@ -18,7 +18,7 @@
     </parent>
 
     <artifactId>powsybl-ws-commons</artifactId>
-    <version>1.25.0-SNAPSHOT</version>
+    <version>1.26.0-SNAPSHOT</version>
     <name>powsybl ws commons</name>
     <description>Powsybl WS commons</description>
 
@@ -103,6 +103,11 @@
              autoconfiguration. Because an autoconfiguration is automatically activated or ignored without doing anything
              depending on the context. -->
         <dependency>
+            <groupId>jakarta.persistence</groupId>
+            <artifactId>jakarta.persistence-api</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot</artifactId>
             <optional>true</optional>
@@ -120,6 +125,11 @@
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-stream</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.data</groupId>
+            <artifactId>spring-data-jpa</artifactId>
             <optional>true</optional>
         </dependency>
         <dependency>

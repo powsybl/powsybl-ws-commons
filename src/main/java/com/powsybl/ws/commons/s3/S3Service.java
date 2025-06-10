@@ -8,12 +8,12 @@
 package com.powsybl.ws.commons.s3;
 
 import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -48,7 +48,7 @@ public class S3Service {
                     .tagging(expireAfterMinutes != null ? "expire-after-minutes=" + expireAfterMinutes : null)
                     .build();
             s3Client.putObject(putRequest, RequestBody.fromFile(filePath));
-        } catch (S3Exception e) {
+        } catch (SdkException e) {
             throw new IOException("Error occurred while uploading file to S3: " + e.getMessage());
         }
     }
@@ -65,7 +65,7 @@ public class S3Service {
                     .fileName(inputStream.response().metadata().get(METADATA_FILE_NAME))
                     .fileLength(inputStream.response().contentLength())
                     .build();
-        } catch (S3Exception e) {
+        } catch (SdkException e) {
             throw new IOException("Error occurred while downloading file from S3: " + e.getMessage());
         }
     }

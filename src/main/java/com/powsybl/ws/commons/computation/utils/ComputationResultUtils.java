@@ -16,6 +16,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.powsybl.iidm.network.IdentifiableType.BUSBAR_SECTION;
+import static com.powsybl.security.LimitViolationType.*;
 import static com.powsybl.security.ViolationLocation.Type.NODE_BREAKER;
 
 /**
@@ -27,6 +28,11 @@ public final class ComputationResultUtils {
     }
 
     public static String getViolationLocationId(LimitViolation limitViolation, Network network) {
+        // LocationId only for voltage-based limit violations
+        if (!Set.of(LOW_VOLTAGE, HIGH_VOLTAGE, LOW_VOLTAGE_ANGLE, HIGH_VOLTAGE_ANGLE).contains(limitViolation.getLimitType())) {
+            return null;
+        }
+
         Optional<ViolationLocation> violationLocation = limitViolation.getViolationLocation();
         if (violationLocation.isEmpty()) {
             return limitViolation.getSubjectId();
@@ -84,7 +90,7 @@ public final class ComputationResultUtils {
                 .distinct()
                 .toList();
 
-        return busBreakerIds.size() == 1 ? formatViolationLocationId(List.of(), busBreakerIds.get(0)) : formatViolationLocationId(busBreakerIds, subjectId);
+        return busBreakerIds.size() == 1 ? formatViolationLocationId(List.of(), busBreakerIds.getFirst()) : formatViolationLocationId(busBreakerIds, subjectId);
     }
 
 }

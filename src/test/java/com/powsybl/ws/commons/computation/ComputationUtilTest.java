@@ -8,10 +8,7 @@ package com.powsybl.ws.commons.computation;
 
 import com.powsybl.iidm.network.*;
 import com.powsybl.network.store.iidm.impl.NetworkFactoryImpl;
-import com.powsybl.security.BusBreakerViolationLocation;
-import com.powsybl.security.LimitViolation;
-import com.powsybl.security.NodeBreakerViolationLocation;
-import com.powsybl.security.ViolationLocation;
+import com.powsybl.security.*;
 import com.powsybl.ws.commons.computation.utils.ComputationResultUtils;
 import org.junit.jupiter.api.Test;
 
@@ -112,6 +109,7 @@ class ComputationUtilTest {
 
         LimitViolation limitViolation = mock(LimitViolation.class);
 
+        when(limitViolation.getLimitType()).thenReturn(LimitViolationType.HIGH_VOLTAGE);
         when(limitViolation.getViolationLocation()).thenReturn(Optional.of(new BusBreakerViolationLocation(List.of("NGEN"))));
         assertEquals("VLGEN_0", ComputationResultUtils.getViolationLocationId(limitViolation, network));
 
@@ -128,10 +126,22 @@ class ComputationUtilTest {
     }
 
     @Test
+    void testNoViolationLocationIdNodeBreaker() {
+        Network network = createNodeBreakerNetwork();
+        LimitViolation limitViolation = mock(LimitViolation.class);
+
+        when(limitViolation.getLimitType()).thenReturn(LimitViolationType.CURRENT);
+        when(limitViolation.getViolationLocation()).thenReturn(Optional.empty());
+        when(limitViolation.getSubjectId()).thenReturn("subjectId");
+        assertEquals(null, ComputationResultUtils.getViolationLocationId(limitViolation, network));
+    }
+
+    @Test
     void testNoViolationLocationIdBusBreaker() {
         Network network = createBusBreakerNetwork();
         LimitViolation limitViolation = mock(LimitViolation.class);
 
+        when(limitViolation.getLimitType()).thenReturn(LimitViolationType.HIGH_VOLTAGE);
         when(limitViolation.getViolationLocation()).thenReturn(Optional.empty());
         when(limitViolation.getSubjectId()).thenReturn("subjectId");
         assertEquals("subjectId", ComputationResultUtils.getViolationLocationId(limitViolation, network));
@@ -147,6 +157,7 @@ class ComputationUtilTest {
         when(nodeBreakerViolationLocation.getNodes()).thenReturn(List.of());
 
         LimitViolation limitViolation = mock(LimitViolation.class);
+        when(limitViolation.getLimitType()).thenReturn(LimitViolationType.HIGH_VOLTAGE);
         when(limitViolation.getViolationLocation()).thenReturn(Optional.of(nodeBreakerViolationLocation));
         when(limitViolation.getSubjectId()).thenReturn("VLHV1");
 

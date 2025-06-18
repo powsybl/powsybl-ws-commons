@@ -183,7 +183,9 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
                 this.handleNonCancellationException(resultContext, e, rootReporter);
                 throw new ComputationException(String.format("%s: %s", NotificationService.getFailedMessage(getComputationType()), e.getMessage()), e.getCause());
             } finally {
-                processDebug(resultContext);
+                if (Boolean.TRUE.equals(resultContext.getRunContext().getDebug())) {
+                    processDebug(resultContext);
+                }
                 clean(resultContext);
             }
         };
@@ -209,41 +211,39 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
      * @param resultContext The context of the computation
      */
     protected void processDebug(AbstractResultContext<C> resultContext) {
+        if (s3Service == null) {
+            sendDebugMessage(resultContext, S3_SERVICE_NOT_AVAILABLE_MESSAGE);
+            return;
+        }
+
         C runContext = resultContext.getRunContext();
+        Path debugDir = runContext.getDebugDir();
+        Path parentDir = debugDir.getParent();
+        Path debugFilePath = parentDir.resolve(debugDir.getFileName().toString() + ".zip");
+        String fileName = debugFilePath.getFileName().toString();
 
-        if (Boolean.TRUE.equals(runContext.getDebug())) {
-            if (s3Service == null) {
-                sendDebugMessage(resultContext, S3_SERVICE_NOT_AVAILABLE_MESSAGE);
-                return;
-            }
-            Path debugDir = runContext.getDebugDir();
-            Path parentDir = debugDir.getParent();
-            Path debugFilePath = parentDir.resolve(debugDir.getFileName().toString() + ".zip");
-            String fileName = debugFilePath.getFileName().toString();
+        try {
+            // zip the working directory
+            ZipUtils.zip(debugDir, debugFilePath);
+            String s3Key = s3DebugSubpath + S3_DELIMITER + fileName;
 
+            // insert debug file path into db
+            resultService.updateDebugFileLocation(resultContext.getResultUuid(), s3Key);
+
+            // upload  zip file to s3 storage
+            s3Service.uploadFile(debugFilePath, s3Key, fileName, 30);
+
+            // notify to study-server
+            sendDebugMessage(resultContext, null);
+        } catch (IOException | UncheckedIOException e) {
+            LOGGER.info("Error occurred while uploading debug file {}: {}", fileName, e.getMessage());
+            sendDebugMessage(resultContext, e.getMessage());
+        } finally {
+            // delete debug file
             try {
-                // zip the working directory
-                ZipUtils.zip(debugDir, debugFilePath);
-                String s3Key = s3DebugSubpath + S3_DELIMITER + fileName;
-
-                // insert debug file path into db
-                resultService.updateDebugFileLocation(resultContext.getResultUuid(), s3Key);
-
-                // upload  zip file to s3 storage
-                s3Service.uploadFile(debugFilePath, s3Key, fileName, 30);
-
-                // notify to study-server
-                sendDebugMessage(resultContext, null);
-            } catch (IOException | UncheckedIOException e) {
-                LOGGER.info("Error occurred while uploading debug file {}: {}", fileName, e.getMessage());
-                sendDebugMessage(resultContext, e.getMessage());
-            } finally {
-                // clean debug file
-                try {
-                    Files.delete(debugFilePath);
-                } catch (IOException e) {
-                    LOGGER.info("Error occurred while deleting debug file {}: {}", fileName, e.getMessage());
-                }
+                Files.delete(debugFilePath);
+            } catch (IOException e) {
+                LOGGER.info("Error occurred while deleting debug file {}: {}", fileName, e.getMessage());
             }
         }
     }
@@ -382,7 +382,7 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
             try {
                 FileUtil.removeDir(dir);
             } catch (IOException e) {
-                LOGGER.error(String.format("%s: Error occurred while cleaning directory at %s", getComputationType(), dir.toAbsolutePath()), e);
+                LOGGER.error(String.format("%s: Error occurred while removing directory %s", getComputationType(), dir.toAbsolutePath()), e);
             }
         } else {
             LOGGER.info("{}: No directory to clean", getComputationType());

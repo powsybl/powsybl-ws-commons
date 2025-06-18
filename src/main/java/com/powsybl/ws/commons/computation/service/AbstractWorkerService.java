@@ -20,6 +20,7 @@ import com.powsybl.ws.commons.s3.S3Service;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.lang.Nullable;
 import org.springframework.messaging.Message;
@@ -43,7 +44,8 @@ import java.util.function.Consumer;
 
 import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_DEBUG;
 import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_ERROR_MESSAGE;
-import static com.powsybl.ws.commons.s3.S3Service.*;
+import static com.powsybl.ws.commons.s3.S3Service.S3_DELIMITER;
+import static com.powsybl.ws.commons.s3.S3Service.S3_SERVICE_NOT_AVAILABLE_MESSAGE;
 
 /**
  * @author Mathieu Deharbe <mathieu.deharbe at rte-france.com>
@@ -54,6 +56,9 @@ import static com.powsybl.ws.commons.s3.S3Service.*;
  */
 public abstract class AbstractWorkerService<R, C extends AbstractComputationRunContext<P>, P, S extends AbstractComputationResultService<?>> {
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractWorkerService.class);
+
+    @Value("${debug-subpath:debug}")
+    private String s3DebugSubpath;
 
     protected final Lock lockRunAndCancel = new ReentrantLock();
     protected final ObjectMapper objectMapper;
@@ -219,7 +224,7 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
             try {
                 // zip the working directory
                 ZipUtils.zip(debugDir, debugFilePath);
-                String s3Key = S3_DEBUG_DIR + S3_DELIMITER + fileName;
+                String s3Key = s3DebugSubpath + S3_DELIMITER + fileName;
 
                 // insert debug file path into db
                 resultService.updateDebugFileLocation(resultContext.getResultUuid(), s3Key);

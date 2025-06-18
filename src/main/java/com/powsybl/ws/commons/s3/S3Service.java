@@ -24,7 +24,6 @@ import java.util.Map;
  */
 public class S3Service {
 
-    public static final String S3_DEBUG_DIR = "debug";
     public static final String S3_DELIMITER = "/";
     public static final String S3_SERVICE_NOT_AVAILABLE_MESSAGE = "S3 service not available";
 

@@ -64,10 +64,11 @@ import static org.mockito.Mockito.*;
 @Slf4j
 class ComputationTest implements WithAssertions {
     private static final String COMPUTATION_TYPE = "mockComputation";
+    public static final String S3_DEBUG_SUBPATH = "debug";
 
     public static final String WORKING_DIR = "test";
     public static final String S3_DEBUG_FILE_ZIP = WORKING_DIR + ".zip";
-    public static final String S3_KEY = S3_DEBUG_DIR + S3_DELIMITER + S3_DEBUG_FILE_ZIP;
+    public static final String S3_KEY = S3_DEBUG_SUBPATH + S3_DELIMITER + S3_DEBUG_FILE_ZIP;
 
     protected FileSystem fileSystem;
     protected Path tmpDir;

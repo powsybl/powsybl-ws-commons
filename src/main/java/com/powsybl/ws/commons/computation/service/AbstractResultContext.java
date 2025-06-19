@@ -40,8 +40,6 @@ public abstract class AbstractResultContext<C extends AbstractComputationRunCont
 
     protected static final String MESSAGE_ROOT_NAME = "parameters";
 
-    protected static final String DEBUG_HEADER = "debug";
-
     private final UUID resultUuid;
     private final C runContext;
 
@@ -69,7 +67,7 @@ public abstract class AbstractResultContext<C extends AbstractComputationRunCont
                 .setHeader(REPORT_UUID_HEADER, runContext.getReportInfos().reportUuid() != null ? runContext.getReportInfos().reportUuid().toString() : null)
                 .setHeader(REPORTER_ID_HEADER, runContext.getReportInfos().reporterId())
                 .setHeader(REPORT_TYPE_HEADER, runContext.getReportInfos().computationType())
-                .setHeader(DEBUG_HEADER, runContext.getDebug())
+                .setHeader(HEADER_DEBUG, runContext.getDebug())
                 .copyHeaders(getSpecificMsgHeaders(objectMapper))
                 .build();
     }

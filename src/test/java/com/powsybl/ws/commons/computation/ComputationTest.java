@@ -237,7 +237,7 @@ class ComputationTest implements WithAssertions {
 
     @BeforeEach
     void init() throws IOException {
-        // used for initialize computation manager
+        // used to initialize the computation manager
         fileSystem = Jimfs.newFileSystem(Configuration.unix());
         tmpDir = Files.createDirectory(fileSystem.getPath("tmp"));
 

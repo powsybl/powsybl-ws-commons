@@ -288,7 +288,7 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
 
     /**
      * Do some extra task before running the computation, e.g. print log or init extra data for the run context
-     * @param runContext This context may be used for further computation in overriding classes
+     * @param runContext The run context of the computation
      */
     protected void preRun(C runContext) {
         LOGGER.info("Run {} computation...", getComputationType());

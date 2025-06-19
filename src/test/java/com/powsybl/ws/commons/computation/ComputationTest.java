@@ -55,7 +55,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ForkJoinPool;
 
 import static com.powsybl.ws.commons.computation.service.NotificationService.*;
-import static com.powsybl.ws.commons.s3.S3Service.*;
+import static com.powsybl.ws.commons.s3.S3Service.S3_DELIMITER;
+import static com.powsybl.ws.commons.s3.S3Service.S3_SERVICE_NOT_AVAILABLE_MESSAGE;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -381,7 +382,7 @@ class ComputationTest implements WithAssertions {
             workerService.consumeRun().accept(message);
 
             // Verify interactions
-            verify(resultService).updateDebugFileLocation(eq(RESULT_UUID), anyString());
+            verify(resultService).saveDebugFileLocation(eq(RESULT_UUID), anyString());
             verify(s3Service).uploadFile(any(Path.class), anyString(), anyString(), eq(30));
             verify(notificationService.getPublisher(), times(2 /* for result and debug message which shared the same chanel */))
                     .send(eq("publishResult-out-0"), isA(Message.class));
@@ -450,7 +451,7 @@ class ComputationTest implements WithAssertions {
 
             // Verify interactions
             verify(s3Service, never()).uploadFile(any(), any(), any(), anyInt());
-            verify(resultService, never()).updateDebugFileLocation(any(), any());
+            verify(resultService, never()).saveDebugFileLocation(any(), any());
             verify(notificationService.getPublisher()).send(eq("publishResult-out-0"), argThat((Message<String> msg) ->
                     msg.getHeaders().containsKey(HEADER_DEBUG) &&
                     msg.getHeaders().get(HEADER_DEBUG).equals(true) &&

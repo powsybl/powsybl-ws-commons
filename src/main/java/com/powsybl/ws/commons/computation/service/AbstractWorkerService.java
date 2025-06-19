@@ -228,7 +228,7 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
             String s3Key = s3DebugSubpath + S3_DELIMITER + fileName;
 
             // insert debug file path into db
-            resultService.updateDebugFileLocation(resultContext.getResultUuid(), s3Key);
+            resultService.saveDebugFileLocation(resultContext.getResultUuid(), s3Key);
 
             // upload  zip file to s3 storage
             s3Service.uploadFile(debugFilePath, s3Key, fileName, 30);

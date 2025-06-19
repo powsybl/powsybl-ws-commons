@@ -24,7 +24,7 @@ public abstract class AbstractComputationResultService<S> {
     public abstract S findStatus(UUID resultUuid);
 
     // --- Must implement these following methods if a computation server supports s3 storage --- //
-    public void updateDebugFileLocation(UUID resultUuid, String debugFilePath) {
+    public void saveDebugFileLocation(UUID resultUuid, String debugFilePath) {
         // to override by subclasses
     }
 

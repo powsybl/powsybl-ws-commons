@@ -42,7 +42,6 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
-import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_DEBUG;
 import static com.powsybl.ws.commons.computation.service.NotificationService.HEADER_ERROR_MESSAGE;
 import static com.powsybl.ws.commons.s3.S3Service.S3_DELIMITER;
 import static com.powsybl.ws.commons.s3.S3Service.S3_SERVICE_NOT_AVAILABLE_MESSAGE;
@@ -277,12 +276,9 @@ public abstract class AbstractWorkerService<R, C extends AbstractComputationRunC
         Map<String, Object> resultHeaders = new HashMap<>();
 
         // --- attach debug to result headers --- //
-        resultHeaders.put(HEADER_DEBUG, resultContext.getRunContext().getDebug());
         resultHeaders.put(HEADER_ERROR_MESSAGE, messageError);
 
-        // actually shared with result channel and discriminate by debug present or not
-        // TODO whether need a new debug channel
-        notificationService.sendResultMessage(resultContext.getResultUuid(), resultContext.getRunContext().getReceiver(),
+        notificationService.sendDebugMessage(resultContext.getResultUuid(), resultContext.getRunContext().getReceiver(),
                 resultContext.getRunContext().getUserId(), resultHeaders);
     }
 

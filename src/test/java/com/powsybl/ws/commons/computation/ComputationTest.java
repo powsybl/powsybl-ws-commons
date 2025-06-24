@@ -384,8 +384,10 @@ class ComputationTest implements WithAssertions {
             // Verify interactions
             verify(resultService).saveDebugFileLocation(eq(RESULT_UUID), anyString());
             verify(s3Service).uploadFile(any(Path.class), anyString(), anyString(), eq(30));
-            verify(notificationService.getPublisher(), times(2 /* for result and debug message which shared the same chanel */))
+            verify(notificationService.getPublisher(), times(1 /* for result message */))
                     .send(eq("publishResult-out-0"), isA(Message.class));
+            verify(notificationService.getPublisher(), times(1 /* for debug message */))
+                    .send(eq("publishDebug-out-0"), isA(Message.class));
         }
     }
 
@@ -401,10 +403,10 @@ class ComputationTest implements WithAssertions {
 
         // Verify interactions
         verifyNoInteractions(s3Service, resultService);
-        verify(notificationService.getPublisher()).send(eq("publishResult-out-0"), argThat((Message<String> msg) ->
-                !msg.getHeaders().containsKey(HEADER_DEBUG)));
         verify(notificationService.getPublisher(), times(1 /* only result */))
                 .send(eq("publishResult-out-0"), isA(Message.class));
+        verify(notificationService.getPublisher(), times(0 /* no debug */))
+                .send(eq("publishDebug-out-0"), isA(Message.class));
     }
 
     @Test
@@ -428,9 +430,7 @@ class ComputationTest implements WithAssertions {
         workerService.consumeRun().accept(message);
 
         // Verify
-        verify(notificationService.getPublisher()).send(eq("publishResult-out-0"), argThat((Message<String> msg) ->
-                msg.getHeaders().containsKey(HEADER_DEBUG) &&
-                msg.getHeaders().get(HEADER_DEBUG).equals(true) &&
+        verify(notificationService.getPublisher()).send(eq("publishDebug-out-0"), argThat((Message<String> msg) ->
                 msg.getHeaders().get(HEADER_ERROR_MESSAGE).equals(S3_SERVICE_NOT_AVAILABLE_MESSAGE)));
         verifyNoInteractions(s3Service, resultService);
     }
@@ -452,9 +452,7 @@ class ComputationTest implements WithAssertions {
             // Verify interactions
             verify(s3Service, never()).uploadFile(any(), any(), any(), anyInt());
             verify(resultService, never()).saveDebugFileLocation(any(), any());
-            verify(notificationService.getPublisher()).send(eq("publishResult-out-0"), argThat((Message<String> msg) ->
-                    msg.getHeaders().containsKey(HEADER_DEBUG) &&
-                    msg.getHeaders().get(HEADER_DEBUG).equals(true) &&
+            verify(notificationService.getPublisher()).send(eq("publishDebug-out-0"), argThat((Message<String> msg) ->
                     msg.getHeaders().get(HEADER_ERROR_MESSAGE).equals("Zip error")));
         }
     }

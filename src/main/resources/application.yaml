@@ -121,6 +121,18 @@ spring:
       - org.springframework.boot.autoconfigure.data.elasticsearch.ReactiveElasticsearchRepositoriesAutoConfiguration
       - org.springframework.boot.autoconfigure.data.elasticsearch.ReactiveElasticsearchRestClientAutoConfiguration
 
+  # for microservices with S3
+  cloud:
+    aws:
+      s3:
+        path-style-access-enabled: true
+      endpoint: ${powsybl-ws.s3.endpoint}
+      region:
+        static: test
+      bucket: ${powsybl-ws.s3.bucket}
+      credentials:
+        access-key: ${powsybl-ws.s3.login}
+        secret-key: ${powsybl-ws.s3.password}
 
 
 powsybl-ws:
@@ -132,10 +144,21 @@ powsybl-ws:
     index:
       prefix: ${powsybl-ws.environment:}
 
-  # To set rabbitmq bidings destination prefixes (default empty)
+  # To set rabbitmq bindings destination prefixes (default empty)
   # please use a separator '_' at prefix end for readability
   rabbitmq:
     destination:
+      prefix: ${powsybl-ws.environment:}
+
+  s3:
+    # default values
+    endpoint: http://s3-storage:9000
+    bucket: ws-bucket
+    login: s3username
+    password: s3password
+    # To set the path prefix (default empty)
+    # add a separator '_' at prefix end for readability
+    subpath:
       prefix: ${powsybl-ws.environment:}
 
   database:

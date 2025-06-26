@@ -121,6 +121,7 @@ spring:
       - org.springframework.boot.autoconfigure.data.elasticsearch.ReactiveElasticsearchRepositoriesAutoConfiguration
       - org.springframework.boot.autoconfigure.data.elasticsearch.ReactiveElasticsearchRestClientAutoConfiguration
 
+  # for microservices with S3
   cloud:
     aws:
       s3:

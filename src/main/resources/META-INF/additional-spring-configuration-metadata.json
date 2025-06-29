@@ -1,0 +1,66 @@
+{
+  "groups": [
+    {
+      "name": "powsybl.computation.executor.pool.shutdown",
+      "type": "org.springframework.boot.autoconfigure.task.TaskExecutionProperties$Pool$Shutdown",
+      "sourceType": "org.springframework.boot.autoconfigure.task.TaskExecutionProperties$Pool",
+      "sourceMethod": "getShutdown()"
+    }
+  ],
+  "properties": [
+    {
+      "name": "powsybl.computation.executor.pool.allow-core-thread-timeout",
+      "type": "java.lang.Boolean",
+      "description": "Whether core threads are allowed to time out. This enables dynamic growing and shrinking of the pool. Doesn't have an effect if virtual threads are enabled.",
+      "sourceType": "org.springframework.boot.autoconfigure.task.TaskExecutionProperties$Pool",
+      "defaultValue": true
+    },
+    {
+      "name": "powsybl.computation.executor.pool.core-size",
+      "type": "java.lang.Integer",
+      "description": "Core number of threads. Doesn't have an effect if virtual threads are enabled.",
+      "sourceType": "org.springframework.boot.autoconfigure.task.TaskExecutionProperties$Pool",
+      "defaultValue": 8
+    },
+    {
+      "name": "powsybl.computation.executor.pool.keep-alive",
+      "type": "java.time.Duration",
+      "description": "Time limit for which threads may remain idle before being terminated. Doesn't have an effect if virtual threads are enabled.",
+      "sourceType": "org.springframework.boot.autoconfigure.task.TaskExecutionProperties$Pool",
+      "defaultValue": "60s"
+    },
+    {
+      "name": "powsybl.computation.executor.pool.max-size",
+      "type": "java.lang.Integer",
+      "description": "Maximum allowed number of threads. If tasks are filling up the queue, the pool can expand up to that size to accommodate the load. Ignored if the queue is unbounded. Doesn't have an effect if virtual threads are enabled.",
+      "sourceType": "org.springframework.boot.autoconfigure.task.TaskExecutionProperties$Pool"
+    },
+    {
+      "name": "powsybl.computation.executor.pool.queue-capacity",
+      "type": "java.lang.Integer",
+      "description": "Queue capacity. An unbounded capacity does not increase the pool and therefore ignores the \"max-size\" property. Doesn't have an effect if virtual threads are enabled.",
+      "sourceType": "org.springframework.boot.autoconfigure.task.TaskExecutionProperties$Pool"
+    },
+    {
+      "name": "powsybl.computation.executor.pool.shutdown.accept-tasks-after-context-close",
+      "type": "java.lang.Boolean",
+      "description": "Whether to accept further tasks after the application context close phase has begun.",
+      "sourceType": "org.springframework.boot.autoconfigure.task.TaskExecutionProperties$Pool$Shutdown",
+      "defaultValue": false
+    },
+    {
+      "name": "powsybl.computation.executor.shutdown.await-termination",
+      "type": "java.lang.Boolean",
+      "description": "Whether the executor should wait for scheduled tasks to complete on shutdown.",
+      "sourceType": "org.springframework.boot.autoconfigure.task.TaskExecutionProperties$Shutdown",
+      "defaultValue": false
+    },
+    {
+      "name": "powsybl.computation.executor.shutdown.await-termination-period",
+      "type": "java.time.Duration",
+      "description": "Maximum time the executor should wait for remaining tasks to complete.",
+      "sourceType": "org.springframework.boot.autoconfigure.task.TaskExecutionProperties$Shutdown"
+    }
+  ],
+  "hints": []
+}

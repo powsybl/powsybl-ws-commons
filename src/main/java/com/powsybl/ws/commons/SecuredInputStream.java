@@ -10,9 +10,9 @@ package com.powsybl.ws.commons;
  * @author Etienne Lesot <etienne.lesot at rte-france.com>
  */
 public class SecuredInputStream {
-    // This attribute defines the maximum of entries count an archive can contain. This limit is defined to avoid zip bombs.
+    // This attribute defines the maximum of entries count an archive can contain. This limit is defined to avoid zip/tar bombs.
     private final int maxEntries;
-    // This attribute defines the maximum for the total of the sizes of the uncompressed entries. This limit is defined to avoid zip bombs.
+    // This attribute defines the maximum for the total of the sizes of the uncompressed entries. This limit is defined to avoid zip/tar bombs.
     private final long maxUncompressedArchiveSize;
     private int entryCount = 0;
     private long totalReadBytes = 0;

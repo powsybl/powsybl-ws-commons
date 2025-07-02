@@ -6,13 +6,10 @@
  */
 package com.powsybl.ws.commons;
 
-import com.google.common.io.ByteStreams;
 import org.junit.jupiter.api.Test;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Objects;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -25,20 +22,22 @@ class SecuredZipInputStreamTest {
     @Test
     void test() throws IOException {
         InputStream inputStream = getClass().getResourceAsStream("/MicroGridTestConfiguration_T4_BE_BB_Complete_v2.zip");
-        Objects.requireNonNull(inputStream);
-        byte[] fileContent = ByteStreams.toByteArray(inputStream);
-        try (SecuredZipInputStream tooManyEntriesSecuredZis = new SecuredZipInputStream(new ByteArrayInputStream(fileContent), 3, 1000000000)) {
+        try (SecuredZipInputStream tooManyEntriesSecuredZis = new SecuredZipInputStream(inputStream, 3, 1000000000)) {
             assertTrue(assertThrows(IllegalStateException.class, () -> readZip(tooManyEntriesSecuredZis))
                     .getMessage().contains("Archive has too many entries."));
         }
 
-        try (SecuredZipInputStream tooBigSecuredZis = new SecuredZipInputStream(new ByteArrayInputStream(fileContent), 1000, 15000)) {
+        // must reload or the inpustream is closing
+        inputStream = getClass().getResourceAsStream("/MicroGridTestConfiguration_T4_BE_BB_Complete_v2.zip");
+        try (SecuredZipInputStream tooBigSecuredZis = new SecuredZipInputStream(inputStream, 10, 40000)) {
             assertTrue(assertThrows(IllegalStateException.class, () -> readZip(tooBigSecuredZis))
                     .getMessage().contains("Archive size is too big."));
         }
 
-        try (SecuredZipInputStream okSecuredZis = new SecuredZipInputStream(new ByteArrayInputStream(fileContent), 1000, 1000000000)) {
-            ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(fileContent));
+        // must reload or the inpustream is closing
+        inputStream = getClass().getResourceAsStream("/MicroGridTestConfiguration_T4_BE_BB_Complete_v2.zip");
+        try (SecuredZipInputStream okSecuredZis = new SecuredZipInputStream(inputStream, 1000, 500000)) {
+            ZipInputStream zis = new ZipInputStream(getClass().getResourceAsStream("/MicroGridTestConfiguration_T4_BE_BB_Complete_v2.zip"));
             assertEquals(readZip(zis), readZip(okSecuredZis));
         }
     }

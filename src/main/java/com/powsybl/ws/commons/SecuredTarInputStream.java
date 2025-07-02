@@ -33,7 +33,7 @@ public class SecuredTarInputStream extends TarArchiveInputStream {
     public int read(byte[] b, int off, int len) throws IOException {
         securedStream.checkBeforeRead(len);
         int readBytes = super.read(b, off, len);
-        securedStream.incrementAndValidateMaxSize(len, readBytes);
+        securedStream.incrementAndValidateMaxSize(readBytes);
         return readBytes;
     }
 }

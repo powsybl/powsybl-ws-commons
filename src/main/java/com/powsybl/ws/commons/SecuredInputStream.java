@@ -29,14 +29,14 @@ public class SecuredInputStream {
 
     public void checkBeforeRead(int len) {
         if (len + totalReadBytes > maxSize) {
-            throw new IllegalStateException("Zip size is too big.");
+            throw new IllegalStateException("Archive size is too big.");
         }
     }
 
-    public void incrementAndValidateMaxSize(int len, int readBytes) {
+    public void incrementAndValidateMaxSize(int readBytes) {
         totalReadBytes += readBytes;
         if (totalReadBytes > maxSize) {
-            throw new IllegalStateException("Zip size is too big.");
+            throw new IllegalStateException("Archive size is too big.");
         }
     }
 }

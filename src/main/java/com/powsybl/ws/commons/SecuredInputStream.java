@@ -11,14 +11,14 @@ package com.powsybl.ws.commons;
  */
 public class SecuredInputStream {
     private final int maxEntries;
-    private final long maxSize;
+    private final long maxUncompressedSize;
     private int entryCount = 0;
     private long totalReadBytes = 0;
 
-    protected SecuredInputStream(int maxEntries, long maxSize) {
+    protected SecuredInputStream(int maxEntries, long maxUncompressedSize) {
         super();
         this.maxEntries = maxEntries;
-        this.maxSize = maxSize;
+        this.maxUncompressedSize = maxUncompressedSize;
     }
 
     public void incrementAndValidateEntryLimit() {
@@ -28,14 +28,14 @@ public class SecuredInputStream {
     }
 
     public void checkBeforeRead(int len) {
-        if (len + totalReadBytes > maxSize) {
+        if (len + totalReadBytes > maxUncompressedSize) {
             throw new IllegalStateException("Archive size is too big.");
         }
     }
 
     public void incrementAndValidateMaxSize(int readBytes) {
         totalReadBytes += readBytes;
-        if (totalReadBytes > maxSize) {
+        if (totalReadBytes > maxUncompressedSize) {
             throw new IllegalStateException("Archive size is too big.");
         }
     }

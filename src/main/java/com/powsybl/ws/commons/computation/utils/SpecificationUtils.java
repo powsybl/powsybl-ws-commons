@@ -27,7 +27,7 @@ import static org.springframework.data.jpa.domain.Specification.not;
  * @author Kevin Le Saulnier <kevin.lesaulnier@rte-france.com>
  */
 public final class SpecificationUtils {
-    private static final int MAX_IN_CLAUSE_SIZE = 500;
+    public static final int MAX_IN_CLAUSE_SIZE = 500;
 
     public static final String FIELD_SEPARATOR = ".";
 

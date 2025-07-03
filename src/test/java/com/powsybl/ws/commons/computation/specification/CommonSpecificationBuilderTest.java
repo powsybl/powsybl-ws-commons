@@ -66,7 +66,7 @@ class CommonSpecificationBuilderTest {
         List<String> tooManyInValues = new ArrayList<>(
                 List.of("dummyColumnValue", "otherDummyColumnValue", "willTriggerChunksSecurity")
         );
-        for (int i = 0 ; i < MAX_IN_CLAUSE_SIZE + 1 ; ++i) {
+        for (int i = 0; i < MAX_IN_CLAUSE_SIZE + 1; ++i) {
             tooManyInValues.add("dummyValue" + i);
         }
 

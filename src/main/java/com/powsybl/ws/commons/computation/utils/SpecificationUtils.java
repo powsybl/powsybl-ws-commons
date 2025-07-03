@@ -130,7 +130,7 @@ public final class SpecificationUtils {
                 // this type can manage one value or a list of values (with OR)
                 if (resourceFilter.value() instanceof Collection<?> valueList) {
                     // implicitely an IN resourceFilter type because only IN may have value lists as filter value
-                    completedSpecification = completedSpecification.and(generateInSpecification(resourceFilter.column(), (List<String>)valueList));
+                    completedSpecification = completedSpecification.and(generateInSpecification(resourceFilter.column(), (List<String>) valueList));
                 } else if (resourceFilter.value() == null) {
                     // if the value is null, we build an impossible specification (trick to remove later on ?)
                     completedSpecification = completedSpecification.and(not(completedSpecification));
@@ -165,7 +165,7 @@ public final class SpecificationUtils {
             // => the specification is divided into several specifications which have an OR between them :
             List<List<String>> chunksOfInValues = Lists.partition(inPossibleValues, MAX_IN_CLAUSE_SIZE);
             Specification<X> containerSpec = null;
-            for (List<String> chunk: chunksOfInValues) {
+            for (List<String> chunk : chunksOfInValues) {
                 Specification<X> multiOrEqualSpec = anyOf(
                         chunk
                                 .stream()

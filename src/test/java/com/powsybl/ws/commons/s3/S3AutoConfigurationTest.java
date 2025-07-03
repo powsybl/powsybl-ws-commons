@@ -28,7 +28,7 @@ class S3AutoConfigurationTest {
     void s3ServiceBeanShouldBeCreatedWhenS3Enabled() {
         contextRunner
                 .withPropertyValues(
-                        "spring.cloud.aws.s3.enabled=true",
+                        "s3.computation.enabled=true",
                         "spring.cloud.aws.bucket=test-bucket"
                 )
                 .run(context -> {

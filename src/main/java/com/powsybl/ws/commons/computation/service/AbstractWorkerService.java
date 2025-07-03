@@ -56,7 +56,7 @@ import static com.powsybl.ws.commons.s3.S3Service.S3_SERVICE_NOT_AVAILABLE_MESSA
 public abstract class AbstractWorkerService<R, C extends AbstractComputationRunContext<P>, P, S extends AbstractComputationResultService<?>> {
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractWorkerService.class);
 
-    @Value("${debug-subpath:debug}")
+    @Value("${powsybl-ws.s3.subpath.prefix:}${debug-subpath:debug}")
     private String s3DebugSubpath;
 
     protected final Lock lockRunAndCancel = new ReentrantLock();

@@ -19,10 +19,10 @@ import software.amazon.awssdk.services.s3.S3Client;
  * @author Thang PHAM <quyet-thang.pham at rte-france.com>
  */
 @AutoConfiguration
-@ConditionalOnProperty(name = "spring.cloud.aws.s3.enabled", havingValue = "true")
+@ConditionalOnProperty(name = "s3.computation.enabled", havingValue = "true")
 public class S3AutoConfiguration {
     private static final Logger LOGGER = LoggerFactory.getLogger(S3AutoConfiguration.class);
-    @Value("${spring.cloud.aws.bucket:my-bucket}")
+    @Value("${spring.cloud.aws.bucket:ws-bucket}")
     private String bucketName;
 
     @Bean

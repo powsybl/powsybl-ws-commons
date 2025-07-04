@@ -130,7 +130,12 @@ public final class SpecificationUtils {
                 // this type can manage one value or a list of values (with OR)
                 if (resourceFilter.value() instanceof Collection<?> valueList) {
                     // implicitly an IN resourceFilter type because only IN may have value lists as filter value
-                    completedSpecification = completedSpecification.and(generateInSpecification(resourceFilter.column(), (List<String>) valueList));
+                    List<String> inValues = valueList.stream()
+                            .map(Object::toString)
+                            .toList();
+                    completedSpecification = completedSpecification.and(
+                            generateInSpecification(resourceFilter.column(), inValues)
+                    );
                 } else if (resourceFilter.value() == null) {
                     // if the value is null, we build an impossible specification (trick to remove later on ?)
                     completedSpecification = completedSpecification.and(not(completedSpecification));
@@ -159,15 +164,15 @@ public final class SpecificationUtils {
         return completedSpecification;
     }
 
-   /**
- * Generates a specification for IN clause with the given column and values.
- * Handles large value lists by chunking them to avoid StackOverflow.
- * 
- * @param column the column name to filter on
- * @param inPossibleValues the list of values for the IN clause
- * @return a specification for the IN clause
- */
-private static <X> Specification<X> generateInSpecification(String column, List<String> inPossibleValues) {
+    /**
+    * Generates a specification for IN clause with the given column and values.
+    * Handles large value lists by chunking them to avoid StackOverflow.
+    *
+    * @param column the column name to filter on
+    * @param inPossibleValues the list of values for the IN clause
+    * @return a specification for the IN clause
+    */
+    private static <X> Specification<X> generateInSpecification(String column, List<String> inPossibleValues) {
 
         if (inPossibleValues.size() > MAX_IN_CLAUSE_SIZE) {
             // there are too many values for only one call to anyOf() : it might cause a StackOverflow

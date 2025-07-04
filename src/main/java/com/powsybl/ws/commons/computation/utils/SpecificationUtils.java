@@ -159,7 +159,16 @@ public final class SpecificationUtils {
         return completedSpecification;
     }
 
-    private static <X> Specification<X> generateInSpecification(String column, List<String> inPossibleValues) {
+   /**
+ * Generates a specification for IN clause with the given column and values.
+ * Handles large value lists by chunking them to avoid StackOverflow.
+ * 
+ * @param column the column name to filter on
+ * @param inPossibleValues the list of values for the IN clause
+ * @return a specification for the IN clause
+ */
+private static <X> Specification<X> generateInSpecification(String column, List<String> inPossibleValues) {
+
         if (inPossibleValues.size() > MAX_IN_CLAUSE_SIZE) {
             // there are too many values for only one call to anyOf() : it might cause a StackOverflow
             // => the specification is divided into several specifications which have an OR between them :

@@ -7,6 +7,7 @@
 
 package com.powsybl.ws.commons.computation.utils;
 
+import com.google.common.collect.Lists;
 import com.powsybl.ws.commons.computation.dto.ResourceFilterDTO;
 import jakarta.persistence.criteria.*;
 import org.jetbrains.annotations.NotNull;
@@ -26,6 +27,11 @@ import static org.springframework.data.jpa.domain.Specification.not;
  * @author Kevin Le Saulnier <kevin.lesaulnier@rte-france.com>
  */
 public final class SpecificationUtils {
+  /**
+   * Maximum values per IN clause chunk to avoid StackOverflow exceptions.
+   * Current value (500) is a safe default but can be changed
+   */
+    public static final int MAX_IN_CLAUSE_SIZE = 500;
 
     public static final String FIELD_SEPARATOR = ".";
 
@@ -127,13 +133,13 @@ public final class SpecificationUtils {
             case NOT_EQUAL, EQUALS, IN -> {
                 // this type can manage one value or a list of values (with OR)
                 if (resourceFilter.value() instanceof Collection<?> valueList) {
+                    // implicitly an IN resourceFilter type because only IN may have value lists as filter value
+                    List<String> inValues = valueList.stream()
+                            .map(Object::toString)
+                            .toList();
                     completedSpecification = completedSpecification.and(
-                            anyOf(
-                                    valueList
-                                            .stream()
-                                            .map(value -> SpecificationUtils.<X>equals(resourceFilter.column(), value.toString()))
-                                            .toList()
-                            ));
+                            generateInSpecification(resourceFilter.column(), inValues)
+                    );
                 } else if (resourceFilter.value() == null) {
                     // if the value is null, we build an impossible specification (trick to remove later on ?)
                     completedSpecification = completedSpecification.and(not(completedSpecification));
@@ -160,6 +166,43 @@ public final class SpecificationUtils {
         }
 
         return completedSpecification;
+    }
+
+    /**
+    * Generates a specification for IN clause with the given column and values.
+    * Handles large value lists by chunking them to avoid StackOverflow.
+    *
+    * @param column the column name to filter on
+    * @param inPossibleValues the list of values for the IN clause
+    * @return a specification for the IN clause
+    */
+    private static <X> Specification<X> generateInSpecification(String column, List<String> inPossibleValues) {
+
+        if (inPossibleValues.size() > MAX_IN_CLAUSE_SIZE) {
+            // there are too many values for only one call to anyOf() : it might cause a StackOverflow
+            // => the specification is divided into several specifications which have an OR between them :
+            List<List<String>> chunksOfInValues = Lists.partition(inPossibleValues, MAX_IN_CLAUSE_SIZE);
+            Specification<X> containerSpec = null;
+            for (List<String> chunk : chunksOfInValues) {
+                Specification<X> multiOrEqualSpec = anyOf(
+                        chunk
+                                .stream()
+                                .map(value -> SpecificationUtils.<X>equals(column, value))
+                                .toList()
+                );
+                if (containerSpec == null) {
+                    containerSpec = multiOrEqualSpec;
+                } else {
+                    containerSpec = containerSpec.or(multiOrEqualSpec);
+                }
+            }
+            return containerSpec;
+        }
+        return anyOf(inPossibleValues
+                        .stream()
+                        .map(value -> SpecificationUtils.<X>equals(column, value))
+                        .toList()
+        );
     }
 
     @NotNull

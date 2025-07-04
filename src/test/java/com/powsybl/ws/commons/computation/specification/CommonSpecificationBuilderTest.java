@@ -8,12 +8,14 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.data.jpa.domain.Specification;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 import static com.powsybl.ws.commons.computation.dto.ResourceFilterDTO.DataType.NUMBER;
 import static com.powsybl.ws.commons.computation.dto.ResourceFilterDTO.DataType.TEXT;
 import static com.powsybl.ws.commons.computation.dto.ResourceFilterDTO.Type.*;
+import static com.powsybl.ws.commons.computation.utils.SpecificationUtils.MAX_IN_CLAUSE_SIZE;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -61,11 +63,19 @@ class CommonSpecificationBuilderTest {
     void testBuildSpecification() {
         CriteriaQuery<?> cq = Mockito.mock(CriteriaQuery.class);
 
+        List<String> tooManyInValues = new ArrayList<>(
+                List.of("dummyColumnValue", "otherDummyColumnValue", "willTriggerChunksSecurity")
+        );
+        for (int i = 0; i < MAX_IN_CLAUSE_SIZE + 1; ++i) {
+            tooManyInValues.add("dummyValue" + i);
+        }
+
         // test data
         List<ResourceFilterDTO> resourceFilters = List.of(
                 new ResourceFilterDTO(TEXT, EQUALS, "dummyColumnValue", "dummyColumn"),
                 new ResourceFilterDTO(TEXT, STARTS_WITH, "dum", "dummyColumn"),
                 new ResourceFilterDTO(TEXT, IN, List.of("dummyColumnValue", "otherDummyColumnValue"), "dummyColumn"),
+                new ResourceFilterDTO(TEXT, IN, tooManyInValues, "dummyColumn"),
                 new ResourceFilterDTO(TEXT, CONTAINS, "partialValue", "dummyColumn"),
                 new ResourceFilterDTO(TEXT, CONTAINS, List.of("partialValue1", "partialValue2"), "dummyColumn"),
                 new ResourceFilterDTO(NUMBER, LESS_THAN_OR_EQUAL, 100.0157, "dummyNumberColumn"),

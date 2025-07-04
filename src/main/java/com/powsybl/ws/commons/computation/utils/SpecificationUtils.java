@@ -129,7 +129,7 @@ public final class SpecificationUtils {
             case NOT_EQUAL, EQUALS, IN -> {
                 // this type can manage one value or a list of values (with OR)
                 if (resourceFilter.value() instanceof Collection<?> valueList) {
-                    // implicitely an IN resourceFilter type because only IN may have value lists as filter value
+                    // implicitly an IN resourceFilter type because only IN may have value lists as filter value
                     completedSpecification = completedSpecification.and(generateInSpecification(resourceFilter.column(), (List<String>) valueList));
                 } else if (resourceFilter.value() == null) {
                     // if the value is null, we build an impossible specification (trick to remove later on ?)

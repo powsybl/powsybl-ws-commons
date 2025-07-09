@@ -13,6 +13,8 @@ import com.powsybl.iidm.network.TwoSides;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.client.PreloadingStrategy;
 import com.powsybl.ws.commons.computation.dto.GlobalFilter;
+import com.powsybl.ws.commons.computation.dto.ResourceFilterDTO;
+import lombok.NonNull;
 import org.apache.commons.collections4.CollectionUtils;
 import org.gridsuite.filter.AbstractFilter;
 import org.gridsuite.filter.expertfilter.ExpertFilter;
@@ -101,6 +103,35 @@ public abstract class AbstractFilterService implements FilterService {
                 .toList();
     }
 
+    /**
+     * Common implementation of getResourceFilter that accepts equipment types as parameter
+     */
+    public Optional<ResourceFilterDTO> getResourceFilter(@NonNull UUID networkUuid, @NonNull String variantId, @NonNull GlobalFilter globalFilter,
+                                                         List<EquipmentType> equipmentTypes, String columnName) {
+
+        Network network = getNetwork(networkUuid, variantId);
+        List<AbstractFilter> genericFilters = getFilters(globalFilter.getGenericFilter());
+
+        // Filter equipments by type
+        Map<EquipmentType, List<String>> subjectIdsByEquipmentType = filterEquipmentsByType(
+                network, globalFilter, genericFilters, equipmentTypes
+        );
+
+        // Combine all results into one list
+        List<String> subjectIds = subjectIdsByEquipmentType.values().stream()
+                .filter(Objects::nonNull)
+                .flatMap(List::stream)
+                .toList();
+
+        return subjectIds.isEmpty() ? Optional.empty() :
+                Optional.of(new ResourceFilterDTO(
+                        ResourceFilterDTO.DataType.TEXT,
+                        ResourceFilterDTO.Type.IN,
+                        subjectIds,
+                        columnName
+                ));
+    }
+
     protected List<AbstractExpertRule> createNumberExpertRules(List<String> values, FieldType fieldType) {
         List<AbstractExpertRule> rules = new ArrayList<>();
         if (values != null) {
@@ -147,7 +178,7 @@ public abstract class AbstractFilterService implements FilterService {
         if (rules.isEmpty()) {
             return Optional.empty();
         }
-        return Optional.of(rules.size() > 1 ? createCombination(CombinatorType.OR, rules) : rules.get(0));
+        return Optional.of(rules.size() > 1 ? createCombination(CombinatorType.OR, rules) : rules.getFirst());
     }
 
     /**
@@ -193,6 +224,36 @@ public abstract class AbstractFilterService implements FilterService {
             filterResults.forEach(result::addAll);
             return new ArrayList<>(result);
         }
+    }
+
+    /**
+     * Extracts filtered equipment IDs by applying expert and generic filters
+     */
+    protected List<String> extractFilteredEquipmentIds(
+            Network network,
+            GlobalFilter globalFilter,
+            List<AbstractFilter> genericFilters,
+            EquipmentType equipmentType) {
+
+        List<List<String>> allFilterResults = new ArrayList<>();
+
+        // Extract IDs from expert filter
+        ExpertFilter expertFilter = buildExpertFilter(globalFilter, equipmentType);
+        if (expertFilter != null) {
+            allFilterResults.add(filterNetwork(expertFilter, network));
+        }
+
+        // Extract IDs from generic filters
+        for (AbstractFilter filter : genericFilters) {
+            List<String> filterResult = extractEquipmentIdsFromGenericFilter(filter, equipmentType, network);
+            if (!filterResult.isEmpty()) {
+                allFilterResults.add(filterResult);
+            }
+        }
+
+        // Combine results with appropriate logic
+        // Expert filters use OR between them, generic filters use AND
+        return combineFilterResults(allFilterResults, !genericFilters.isEmpty());
     }
 
     /**
@@ -282,6 +343,27 @@ public abstract class AbstractFilterService implements FilterService {
                 .toList();
 
         return createOrCombination(rules);
+    }
+
+    /**
+     * Filters equipments by type and returns map of IDs grouped by equipment type
+     */
+    protected Map<EquipmentType, List<String>> filterEquipmentsByType(
+            Network network,
+            GlobalFilter globalFilter,
+            List<AbstractFilter> genericFilters,
+            List<EquipmentType> equipmentTypes) {
+
+        Map<EquipmentType, List<String>> result = new EnumMap<>(EquipmentType.class);
+
+        for (EquipmentType equipmentType : equipmentTypes) {
+            List<String> filteredIds = extractFilteredEquipmentIds(network, globalFilter, genericFilters, equipmentType);
+            if (!filteredIds.isEmpty()) {
+                result.put(equipmentType, filteredIds);
+            }
+        }
+
+        return result;
     }
 
     /**

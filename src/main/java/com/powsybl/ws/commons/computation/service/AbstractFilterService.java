@@ -147,7 +147,7 @@ public abstract class AbstractFilterService implements FilterService {
         if (rules.isEmpty()) {
             return Optional.empty();
         }
-        return Optional.of(rules.size() > 1 ? createCombination(CombinatorType.OR, rules) : rules.getFirst());
+        return Optional.of(rules.size() > 1 ? createCombination(CombinatorType.OR, rules) : rules.get(0));
     }
 
     /**

@@ -17,6 +17,7 @@ import com.powsybl.ws.commons.computation.dto.ResourceFilterDTO;
 import lombok.NonNull;
 import org.apache.commons.collections4.CollectionUtils;
 import org.gridsuite.filter.AbstractFilter;
+import org.gridsuite.filter.FilterLoader;
 import org.gridsuite.filter.expertfilter.ExpertFilter;
 import org.gridsuite.filter.expertfilter.expertrule.*;
 import org.gridsuite.filter.identifierlistfilter.IdentifiableAttributes;
@@ -28,7 +29,6 @@ import org.gridsuite.filter.utils.expertfilter.OperatorType;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
@@ -40,8 +40,7 @@ import java.util.stream.Collectors;
 /**
  * @author Rehili Ghazwa <ghazwa.rehili at rte-france.com>
  */
-@Service
-public abstract class AbstractFilterService implements FilterService {
+public abstract class AbstractFilterService implements FilterLoader {
     protected static final String FILTERS_NOT_FOUND = "Filters not found";
     protected static final String FILTER_API_VERSION = "v1";
     protected static final String DELIMITER = "/";

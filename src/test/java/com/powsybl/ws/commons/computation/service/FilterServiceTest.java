@@ -15,6 +15,7 @@ import com.powsybl.iidm.network.VariantManager;
 import com.powsybl.network.store.client.NetworkStoreService;
 import com.powsybl.network.store.client.PreloadingStrategy;
 import com.powsybl.ws.commons.computation.dto.GlobalFilter;
+import com.powsybl.ws.commons.computation.dto.ResourceFilterDTO;
 import org.gridsuite.filter.AbstractFilter;
 import org.gridsuite.filter.expertfilter.ExpertFilter;
 import org.gridsuite.filter.expertfilter.expertrule.*;
@@ -724,6 +725,417 @@ class FilterServiceTest {
         CombinatorExpertRule combinatorRule = (CombinatorExpertRule) result.getRules();
         assertEquals(CombinatorType.OR, combinatorRule.getCombinator());
         assertEquals(2, combinatorRule.getRules().size());
+    }
+
+    @Test
+    void testGetNominalVoltageFieldType() {
+        // Given
+        when(filterService.getNominalVoltageFieldType(any())).thenCallRealMethod();
+
+        // When
+        List<FieldType> result = filterService.getNominalVoltageFieldType(EquipmentType.LINE);
+
+        // Then
+        assertNotNull(result);
+        assertEquals(2, result.size());
+        assertEquals(FieldType.NOMINAL_VOLTAGE_1, result.get(0));
+        assertEquals(FieldType.NOMINAL_VOLTAGE_2, result.get(1));
+    }
+
+    @Test
+    void testGetCountryCodeField() {
+        // Given
+        when(filterService.getCountryCodeFieldType(any())).thenCallRealMethod();
+
+        // When
+        List<FieldType> result = filterService.getCountryCodeFieldType(EquipmentType.LINE);
+
+        // Then
+        assertNotNull(result);
+        assertEquals(2, result.size());
+        assertEquals(FieldType.COUNTRY_1, result.get(0));
+        assertEquals(FieldType.COUNTRY_2, result.get(1));
+    }
+
+    @Test
+    void testGetSubstationPropertiesFieldTypes() {
+        // Given
+        when(filterService.getSubstationPropertiesFieldTypes(any())).thenCallRealMethod();
+
+        // When
+        List<FieldType> result = filterService.getSubstationPropertiesFieldTypes(EquipmentType.LINE);
+
+        // Then
+        assertNotNull(result);
+        assertEquals(2, result.size());
+        assertEquals(FieldType.SUBSTATION_PROPERTIES_1, result.get(0));
+        assertEquals(FieldType.SUBSTATION_PROPERTIES_2, result.get(1));
+    }
+
+    @Test
+    void testGetSubstationPropertiesFieldTypesWithNonLineEquipmentTypes() {
+        // Given
+        when(filterService.getSubstationPropertiesFieldTypes(any())).thenCallRealMethod();
+
+        // Test various non-LINE equipment types that should return single SUBSTATION_PROPERTIES
+        EquipmentType[] nonLineTypes = {
+            EquipmentType.VOLTAGE_LEVEL, EquipmentType.TWO_WINDINGS_TRANSFORMER, EquipmentType.GENERATOR,
+            EquipmentType.LOAD, EquipmentType.SHUNT_COMPENSATOR, EquipmentType.STATIC_VAR_COMPENSATOR,
+            EquipmentType.BATTERY, EquipmentType.BUSBAR_SECTION, EquipmentType.LCC_CONVERTER_STATION,
+            EquipmentType.VSC_CONVERTER_STATION, EquipmentType.SUBSTATION, EquipmentType.THREE_WINDINGS_TRANSFORMER
+        };
+
+        for (EquipmentType equipmentType : nonLineTypes) {
+            // When
+            List<FieldType> result = filterService.getSubstationPropertiesFieldTypes(equipmentType);
+
+            // Then
+            assertNotNull(result, "Result should not be null for " + equipmentType);
+            assertEquals(1, result.size(), "Result should have size 1 for " + equipmentType);
+            assertEquals(FieldType.SUBSTATION_PROPERTIES, result.getFirst(), "Should return SUBSTATION_PROPERTIES for " + equipmentType);
+            assertTrue(result.contains(FieldType.SUBSTATION_PROPERTIES), "Should contain SUBSTATION_PROPERTIES for " + equipmentType);
+        }
+    }
+
+    // Tests for filterEquipmentsByType
+    @Test
+    void testFilterEquipmentsByTypeWithEmptyEquipmentTypes() {
+        // Given
+        when(filterService.filterEquipmentsByType(any(), any(), any(), any())).thenCallRealMethod();
+        GlobalFilter globalFilter = mock(GlobalFilter.class);
+        List<AbstractFilter> genericFilters = Collections.emptyList();
+        List<EquipmentType> equipmentTypes = Collections.emptyList();
+
+        // When
+        Map<EquipmentType, List<String>> result = filterService.filterEquipmentsByType(
+                network, globalFilter, genericFilters, equipmentTypes);
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+        assertInstanceOf(EnumMap.class, result);
+    }
+
+    @Test
+    void testFilterEquipmentsByTypeWithEquipmentTypes() {
+        // Given
+        when(filterService.filterEquipmentsByType(any(), any(), any(), any())).thenCallRealMethod();
+        when(filterService.extractFilteredEquipmentIds(any(), any(), any(), any())).thenReturn(Arrays.asList("line1", "line2"));
+
+        GlobalFilter globalFilter = mock(GlobalFilter.class);
+        List<AbstractFilter> genericFilters = Collections.emptyList();
+        List<EquipmentType> equipmentTypes = Arrays.asList(EquipmentType.LINE, EquipmentType.GENERATOR);
+
+        // When
+        Map<EquipmentType, List<String>> result = filterService.filterEquipmentsByType(
+                network, globalFilter, genericFilters, equipmentTypes);
+
+        // Then
+        assertNotNull(result);
+        assertInstanceOf(EnumMap.class, result);
+        assertEquals(2, result.size());
+        assertTrue(result.containsKey(EquipmentType.LINE));
+        assertTrue(result.containsKey(EquipmentType.GENERATOR));
+        assertEquals(Arrays.asList("line1", "line2"), result.get(EquipmentType.LINE));
+        assertEquals(Arrays.asList("line1", "line2"), result.get(EquipmentType.GENERATOR));
+    }
+
+    @Test
+    void testFilterEquipmentsByTypeWithEmptyFilterResults() {
+        // Given
+        when(filterService.filterEquipmentsByType(any(), any(), any(), any())).thenCallRealMethod();
+        when(filterService.extractFilteredEquipmentIds(any(), any(), any(), any())).thenReturn(Collections.emptyList());
+
+        GlobalFilter globalFilter = mock(GlobalFilter.class);
+        List<AbstractFilter> genericFilters = Collections.emptyList();
+        List<EquipmentType> equipmentTypes = List.of(EquipmentType.LINE);
+
+        // When
+        Map<EquipmentType, List<String>> result = filterService.filterEquipmentsByType(
+                network, globalFilter, genericFilters, equipmentTypes);
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void testFilterEquipmentsByTypeWithMixedResults() {
+        // Given
+        when(filterService.filterEquipmentsByType(any(), any(), any(), any())).thenCallRealMethod();
+        when(filterService.extractFilteredEquipmentIds(any(), any(), any(), eq(EquipmentType.LINE)))
+                .thenReturn(Arrays.asList("line1", "line2"));
+        when(filterService.extractFilteredEquipmentIds(any(), any(), any(), eq(EquipmentType.GENERATOR)))
+                .thenReturn(Collections.emptyList());
+        when(filterService.extractFilteredEquipmentIds(any(), any(), any(), eq(EquipmentType.LOAD)))
+                .thenReturn(List.of("load1"));
+
+        GlobalFilter globalFilter = mock(GlobalFilter.class);
+        List<AbstractFilter> genericFilters = Collections.emptyList();
+        List<EquipmentType> equipmentTypes = Arrays.asList(EquipmentType.LINE, EquipmentType.GENERATOR, EquipmentType.LOAD);
+
+        // When
+        Map<EquipmentType, List<String>> result = filterService.filterEquipmentsByType(
+                network, globalFilter, genericFilters, equipmentTypes);
+
+        // Then
+        assertNotNull(result);
+        assertEquals(2, result.size()); // Only LINE and LOAD should be present (not GENERATOR with empty results)
+        assertTrue(result.containsKey(EquipmentType.LINE));
+        assertTrue(result.containsKey(EquipmentType.LOAD));
+        assertFalse(result.containsKey(EquipmentType.GENERATOR));
+        assertEquals(Arrays.asList("line1", "line2"), result.get(EquipmentType.LINE));
+        assertEquals(List.of("load1"), result.get(EquipmentType.LOAD));
+    }
+
+    // Tests for extractFilteredEquipmentIds
+    @Test
+    void testExtractFilteredEquipmentIdsWithEmptyFilters() {
+        // Given
+        when(filterService.extractFilteredEquipmentIds(any(), any(), any(), any())).thenCallRealMethod();
+        when(filterService.buildExpertFilter(any(), any())).thenReturn(null);
+        when(filterService.combineFilterResults(any(), anyBoolean())).thenCallRealMethod();
+
+        GlobalFilter globalFilter = mock(GlobalFilter.class);
+        List<AbstractFilter> genericFilters = Collections.emptyList();
+
+        // When
+        List<String> result = filterService.extractFilteredEquipmentIds(
+                network, globalFilter, genericFilters, EquipmentType.LINE);
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void testExtractFilteredEquipmentIdsWithExpertFilter() {
+        // Given
+        when(filterService.extractFilteredEquipmentIds(any(), any(), any(), any())).thenCallRealMethod();
+        when(filterService.buildExpertFilter(any(), any())).thenReturn(mock(ExpertFilter.class));
+        when(filterService.filterNetwork(any(), any())).thenReturn(Arrays.asList("line1", "line2"));
+        when(filterService.combineFilterResults(any(), anyBoolean())).thenCallRealMethod();
+
+        GlobalFilter globalFilter = mock(GlobalFilter.class);
+        List<AbstractFilter> genericFilters = Collections.emptyList();
+
+        // When
+        List<String> result = filterService.extractFilteredEquipmentIds(
+                network, globalFilter, genericFilters, EquipmentType.LINE);
+
+        // Then
+        assertNotNull(result);
+        assertEquals(Arrays.asList("line1", "line2"), result);
+    }
+
+    @Test
+    void testExtractFilteredEquipmentIdsWithGenericFilters() {
+        // Given
+        when(filterService.extractFilteredEquipmentIds(any(), any(), any(), any())).thenCallRealMethod();
+        when(filterService.buildExpertFilter(any(), any())).thenReturn(null);
+        when(filterService.extractEquipmentIdsFromGenericFilter(any(), any(), any()))
+                .thenReturn(Arrays.asList("line3", "line4"));
+        when(filterService.combineFilterResults(any(), anyBoolean())).thenCallRealMethod();
+
+        GlobalFilter globalFilter = mock(GlobalFilter.class);
+        AbstractFilter genericFilter = mock(AbstractFilter.class);
+        List<AbstractFilter> genericFilters = Collections.singletonList(genericFilter);
+
+        // When
+        List<String> result = filterService.extractFilteredEquipmentIds(
+                network, globalFilter, genericFilters, EquipmentType.LINE);
+
+        // Then
+        assertNotNull(result);
+        assertEquals(Arrays.asList("line3", "line4"), result);
+    }
+
+    @Test
+    void testExtractFilteredEquipmentIdsWithBothFilters() {
+        // Given
+        when(filterService.extractFilteredEquipmentIds(any(), any(), any(), any())).thenCallRealMethod();
+        when(filterService.buildExpertFilter(any(), any())).thenReturn(mock(ExpertFilter.class));
+        when(filterService.filterNetwork(any(), any())).thenReturn(Arrays.asList("line1", "line2"));
+        when(filterService.extractEquipmentIdsFromGenericFilter(any(), any(), any()))
+                .thenReturn(Arrays.asList("line2", "line3"));
+        when(filterService.combineFilterResults(any(), anyBoolean())).thenCallRealMethod();
+
+        GlobalFilter globalFilter = mock(GlobalFilter.class);
+        AbstractFilter genericFilter = mock(AbstractFilter.class);
+        List<AbstractFilter> genericFilters = Collections.singletonList(genericFilter);
+
+        // When
+        List<String> result = filterService.extractFilteredEquipmentIds(
+                network, globalFilter, genericFilters, EquipmentType.LINE);
+
+        // Then
+        assertNotNull(result);
+        assertEquals(List.of("line2"), result); // Intersection of both filter results
+    }
+
+    @Test
+    void testExtractFilteredEquipmentIdsWithMultipleGenericFilters() {
+        AbstractFilter genericFilter1 = mock(AbstractFilter.class);
+        AbstractFilter genericFilter2 = mock(AbstractFilter.class);
+        GlobalFilter globalFilter = mock(GlobalFilter.class);
+        // Given
+        when(filterService.extractFilteredEquipmentIds(any(), any(), any(), any())).thenCallRealMethod();
+        when(filterService.buildExpertFilter(any(), any())).thenReturn(null);
+        when(filterService.extractEquipmentIdsFromGenericFilter(eq(genericFilter1), any(), any()))
+                .thenReturn(Arrays.asList("line1", "line2"));
+        when(filterService.extractEquipmentIdsFromGenericFilter(eq(genericFilter2), any(), any()))
+                .thenReturn(Arrays.asList("line2", "line3"));
+        when(filterService.combineFilterResults(any(), anyBoolean())).thenCallRealMethod();
+
+        List<AbstractFilter> genericFilters = Arrays.asList(genericFilter1, genericFilter2);
+
+        // When
+        List<String> result = filterService.extractFilteredEquipmentIds(
+                network, globalFilter, genericFilters, EquipmentType.LINE);
+
+        // Then
+        assertNotNull(result);
+        assertEquals(List.of("line2"), result); // AND logic for generic filters
+    }
+
+    // Tests for getResourceFilter
+    @Test
+    void testGetResourceFilterWithEmptyResults() {
+        // Given
+        when(filterService.getResourceFilter(any(), any(), any(), any(), any())).thenCallRealMethod();
+        when(filterService.getNetwork(any(), any())).thenReturn(network);
+        when(filterService.getFilters(any())).thenReturn(Collections.emptyList());
+        when(filterService.filterEquipmentsByType(any(), any(), any(), any()))
+                .thenReturn(Collections.emptyMap());
+
+        GlobalFilter globalFilter = mock(GlobalFilter.class);
+        when(globalFilter.getGenericFilter()).thenReturn(Collections.emptyList());
+        List<EquipmentType> equipmentTypes = List.of(EquipmentType.LINE);
+        String columnName = "functionId";
+
+        // When
+        Optional<ResourceFilterDTO> result = filterService.getResourceFilter(NETWORK_UUID, VARIANT_ID, globalFilter, equipmentTypes, columnName);
+
+        // Then
+        assertNotNull(result);
+        assertFalse(result.isPresent());
+    }
+
+    @Test
+    void testGetResourceFilterWithResults() {
+        // Given
+        when(filterService.getResourceFilter(any(), any(), any(), any(), any())).thenCallRealMethod();
+        when(filterService.getNetwork(any(), any())).thenReturn(network);
+        when(filterService.getFilters(any())).thenReturn(Collections.emptyList());
+
+        Map<EquipmentType, List<String>> equipmentResults = new EnumMap<>(EquipmentType.class);
+        equipmentResults.put(EquipmentType.LINE, Arrays.asList("line1", "line2"));
+        equipmentResults.put(EquipmentType.GENERATOR, List.of("gen1"));
+        when(filterService.filterEquipmentsByType(any(), any(), any(), any())).thenReturn(equipmentResults);
+
+        GlobalFilter globalFilter = mock(GlobalFilter.class);
+        when(globalFilter.getGenericFilter()).thenReturn(Collections.emptyList());
+        List<EquipmentType> equipmentTypes = Arrays.asList(EquipmentType.LINE, EquipmentType.GENERATOR);
+        String columnName = "functionId";
+
+        // When
+        Optional<ResourceFilterDTO> result = filterService.getResourceFilter(
+                NETWORK_UUID, VARIANT_ID, globalFilter, equipmentTypes, columnName);
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result.isPresent());
+
+        ResourceFilterDTO dto = result.get();
+        assertEquals(ResourceFilterDTO.DataType.TEXT, dto.dataType());
+        assertEquals(ResourceFilterDTO.Type.IN, dto.type());
+        assertEquals(columnName, dto.column());
+        assertEquals(dto.value(), List.of("line1", "line2", "gen1"));
+    }
+
+    @Test
+    void testGetResourceFilterWithNullValues() {
+        // Given
+        when(filterService.getResourceFilter(any(), any(), any(), any(), any())).thenCallRealMethod();
+        when(filterService.getNetwork(any(), any())).thenReturn(network);
+        when(filterService.getFilters(any())).thenReturn(Collections.emptyList());
+
+        Map<EquipmentType, List<String>> equipmentResults = new EnumMap<>(EquipmentType.class);
+        equipmentResults.put(EquipmentType.LINE, Arrays.asList("line1", "line2"));
+        equipmentResults.put(EquipmentType.GENERATOR, null); // null value should be filtered out
+        when(filterService.filterEquipmentsByType(any(), any(), any(), any())).thenReturn(equipmentResults);
+
+        GlobalFilter globalFilter = mock(GlobalFilter.class);
+        when(globalFilter.getGenericFilter()).thenReturn(Collections.emptyList());
+        List<EquipmentType> equipmentTypes = Arrays.asList(EquipmentType.LINE, EquipmentType.GENERATOR);
+        String columnName = "functionId";
+
+        // When
+        Optional<ResourceFilterDTO> result = filterService.getResourceFilter(
+                NETWORK_UUID, VARIANT_ID, globalFilter, equipmentTypes, columnName);
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result.isPresent());
+
+        ResourceFilterDTO dto = result.get();
+        assertEquals(dto.value(), List.of("line1", "line2")); // Only line1, line2 (null values filtered out)
+    }
+
+    @Test
+    void testGetResourceFilterWithGenericFilters() {
+        // Given
+        when(filterService.getResourceFilter(any(), any(), any(), any(), any())).thenCallRealMethod();
+        when(filterService.getNetwork(any(), any())).thenReturn(network);
+
+        AbstractFilter genericFilter = mock(AbstractFilter.class);
+        List<AbstractFilter> genericFilters = Collections.singletonList(genericFilter);
+        when(filterService.getFilters(any())).thenReturn(genericFilters);
+
+        Map<EquipmentType, List<String>> equipmentResults = new EnumMap<>(EquipmentType.class);
+        equipmentResults.put(EquipmentType.LINE, List.of("line1"));
+        when(filterService.filterEquipmentsByType(any(), any(), any(), any())).thenReturn(equipmentResults);
+
+        GlobalFilter globalFilter = mock(GlobalFilter.class);
+        List<UUID> filterUuids = List.of(UUID.randomUUID());
+        when(globalFilter.getGenericFilter()).thenReturn(filterUuids);
+        List<EquipmentType> equipmentTypes = List.of(EquipmentType.LINE);
+        String columnName = "functionId";
+
+        // When
+        Optional<ResourceFilterDTO> result = filterService.getResourceFilter(
+                NETWORK_UUID, VARIANT_ID, globalFilter, equipmentTypes, columnName);
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result.isPresent());
+        verify(filterService).getFilters(filterUuids);
+    }
+
+    @Test
+    void testGetResourceFilterCustomColumnName() {
+        // Given
+        when(filterService.getResourceFilter(any(), any(), any(), any(), any())).thenCallRealMethod();
+        when(filterService.getNetwork(any(), any())).thenReturn(network);
+        when(filterService.getFilters(any())).thenReturn(Collections.emptyList());
+
+        Map<EquipmentType, List<String>> equipmentResults = new EnumMap<>(EquipmentType.class);
+        equipmentResults.put(EquipmentType.LINE, List.of("line1"));
+        when(filterService.filterEquipmentsByType(any(), any(), any(), any())).thenReturn(equipmentResults);
+
+        GlobalFilter globalFilter = mock(GlobalFilter.class);
+        when(globalFilter.getGenericFilter()).thenReturn(Collections.emptyList());
+        List<EquipmentType> equipmentTypes = List.of(EquipmentType.LINE);
+        String customColumnName = "customColumn";
+
+        // When
+        Optional<ResourceFilterDTO> result = filterService.getResourceFilter(
+                NETWORK_UUID, VARIANT_ID, globalFilter, equipmentTypes, customColumnName);
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result.isPresent());
+        assertEquals(customColumnName, result.get().column());
     }
 
     private IdentifiableAttributes createIdentifiableAttributes(String id) {

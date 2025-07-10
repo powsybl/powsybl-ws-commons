@@ -102,9 +102,6 @@ public abstract class AbstractFilterService implements FilterLoader {
                 .toList();
     }
 
-    /**
-     * Common implementation of getResourceFilter that accepts equipment types as parameter
-     */
     public Optional<ResourceFilterDTO> getResourceFilter(@NonNull UUID networkUuid, @NonNull String variantId, @NonNull GlobalFilter globalFilter,
                                                          List<EquipmentType> equipmentTypes, String columnName) {
 

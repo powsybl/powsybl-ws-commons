@@ -10,15 +10,17 @@ package com.powsybl.ws.commons;
  * @author Etienne Lesot <etienne.lesot at rte-france.com>
  */
 public class SecuredInputStream {
+    // This attribute defines the maximum of entries count an archive can contain. This limit is defined to avoid zip/tar bombs.
     private final int maxEntries;
-    private final long maxSize;
+    // This attribute defines the maximum for the total of the sizes of the uncompressed entries. This limit is defined to avoid zip/tar bombs.
+    private final long maxUncompressedSize;
     private int entryCount = 0;
     private long totalReadBytes = 0;
 
-    protected SecuredInputStream(int maxEntries, long maxSize) {
+    protected SecuredInputStream(int maxEntries, long maxUncompressedSize) {
         super();
         this.maxEntries = maxEntries;
-        this.maxSize = maxSize;
+        this.maxUncompressedSize = maxUncompressedSize;
     }
 
     public void incrementAndValidateEntryLimit() {
@@ -27,11 +29,15 @@ public class SecuredInputStream {
         }
     }
 
-    public void incrementAndValidateMaxSize(int len) {
-        if (len > 0) {
-            totalReadBytes += len;
+    public void checkBeforeRead(int len) {
+        if (len + totalReadBytes > maxUncompressedSize) {
+            throw new IllegalStateException("Archive size is too big.");
         }
-        if (totalReadBytes > maxSize) {
+    }
+
+    public void incrementAndValidateMaxSize(int readBytes) {
+        totalReadBytes += readBytes;
+        if (totalReadBytes > maxUncompressedSize) {
             throw new IllegalStateException("Archive size is too big.");
         }
     }

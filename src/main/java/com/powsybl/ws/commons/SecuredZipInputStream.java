@@ -20,13 +20,13 @@ public class SecuredZipInputStream extends ZipInputStream {
 
     private final SecuredInputStream securedStream;
 
-    public SecuredZipInputStream(InputStream in, int maxZipEntries, long maxSize) {
-        this(in, StandardCharsets.UTF_8, maxZipEntries, maxSize);
+    public SecuredZipInputStream(InputStream in, int maxZipEntries, long maxUncompressedSize) {
+        this(in, StandardCharsets.UTF_8, maxZipEntries, maxUncompressedSize);
     }
 
-    public SecuredZipInputStream(InputStream in, Charset charset, int maxZipEntries, long maxSize) {
+    public SecuredZipInputStream(InputStream in, Charset charset, int maxZipEntries, long maxUncompressedSize) {
         super(in, charset);
-        securedStream = new SecuredInputStream(maxZipEntries, maxSize);
+        securedStream = new SecuredInputStream(maxZipEntries, maxUncompressedSize);
     }
 
     @Override
@@ -37,7 +37,9 @@ public class SecuredZipInputStream extends ZipInputStream {
 
     @Override
     public int read(byte[] b, int off, int len) throws IOException {
-        securedStream.incrementAndValidateMaxSize(len);
-        return super.read(b, off, len);
+        securedStream.checkBeforeRead(len);
+        int readBytes = super.read(b, off, len);
+        securedStream.incrementAndValidateMaxSize(readBytes);
+        return readBytes;
     }
 }

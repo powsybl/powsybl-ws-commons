@@ -18,9 +18,9 @@ import java.io.InputStream;
 public class SecuredTarInputStream extends TarArchiveInputStream {
     private final SecuredInputStream securedStream;
 
-    public SecuredTarInputStream(InputStream in, int maxTarEntries, long maxSize) {
+    public SecuredTarInputStream(InputStream in, int maxTarEntries, long maxUncompressedSize) {
         super(in);
-        this.securedStream = new SecuredInputStream(maxTarEntries, maxSize);
+        this.securedStream = new SecuredInputStream(maxTarEntries, maxUncompressedSize);
     }
 
     @Override
@@ -31,7 +31,9 @@ public class SecuredTarInputStream extends TarArchiveInputStream {
 
     @Override
     public int read(byte[] b, int off, int len) throws IOException {
-        securedStream.incrementAndValidateMaxSize(len);
-        return super.read(b, off, len);
+        securedStream.checkBeforeRead(len);
+        int readBytes = super.read(b, off, len);
+        securedStream.incrementAndValidateMaxSize(readBytes);
+        return readBytes;
     }
 }

@@ -126,12 +126,6 @@
             <artifactId>micrometer-core</artifactId>
             <optional>true</optional>
         </dependency>
-        <dependency>
-            <groupId>com.powsybl</groupId>
-            <artifactId>powsybl-network-store-client</artifactId>
-            <version>${powsybl-network-store-client.version}</version>
-            <optional>true</optional>
-        </dependency>
          <dependency>
             <groupId>com.powsybl</groupId>
             <artifactId>powsybl-security-analysis-api</artifactId>

@@ -40,8 +40,6 @@
     <properties>
         <powsybl-dependencies.version>2025.0.2</powsybl-dependencies.version>
         <springboot.version>3.3.3</springboot.version>
-        <powsybl-network-store-client.version>1.27.2</powsybl-network-store-client.version>
-        <spring-cloud.version>2023.0.1</spring-cloud.version>
     </properties>
 
     <dependencyManagement>
@@ -53,14 +51,6 @@
                 <version>${springboot.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-dependencies</artifactId>
-                <version>${spring-cloud.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-                <optional>true</optional>
             </dependency>
             <dependency>
                 <groupId>com.powsybl</groupId>
@@ -87,11 +77,6 @@
              autoconfiguration. Because an autoconfiguration is automatically activated or ignored without doing anything
              depending on the context. -->
         <dependency>
-            <groupId>jakarta.persistence</groupId>
-            <artifactId>jakarta.persistence-api</artifactId>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot</artifactId>
             <optional>true</optional>
@@ -104,16 +89,6 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-tomcat</artifactId>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-stream</artifactId>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.data</groupId>
-            <artifactId>spring-data-jpa</artifactId>
             <optional>true</optional>
         </dependency>
         <dependency>
@@ -160,13 +135,6 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
             <scope>test</scope>
-            <!-- excluded because there already is slf4j-simple (an slf4j implementation) in the classpath -->
-            <exclusions>
-                <exclusion>
-                    <groupId>ch.qos.logback</groupId>
-                    <artifactId>logback-classic</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -64,10 +64,6 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-        </dependency>
-        <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
         </dependency>
@@ -96,11 +92,6 @@
             <artifactId>aspectjweaver</artifactId>
             <optional>true</optional>
         </dependency>
-        <dependency>
-            <groupId>io.micrometer</groupId>
-            <artifactId>micrometer-core</artifactId>
-            <optional>true</optional>
-        </dependency>
          <dependency>
             <groupId>com.powsybl</groupId>
             <artifactId>powsybl-security-analysis-api</artifactId>
@@ -113,23 +104,8 @@
             <artifactId>lombok</artifactId>
             <scope>provided</scope>
         </dependency>
-        <dependency><!-- generate Spring file META-INF/spring-configuration-metadata.json -->
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-configuration-processor</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency><!-- generate Spring file META-INF/spring-autoconfigure-metadata.properties -->
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-autoconfigure-processor</artifactId>
-            <scope>provided</scope>
-        </dependency>
 
         <!-- test -->
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-simple</artifactId>
-            <scope>test</scope>
-        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>

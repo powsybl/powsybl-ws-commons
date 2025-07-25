@@ -1,3 +1,2 @@
 # AutoConfigureCache auto-configuration imports
 com.powsybl.ws.commons.springboot.PowsyblWsCommonAutoConfiguration
-com.powsybl.ws.commons.s3.S3AutoConfiguration

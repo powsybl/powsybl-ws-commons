@@ -12,7 +12,6 @@ import com.powsybl.ws.commons.computation.dto.ReportInfos;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.nio.file.Path;
 import java.util.UUID;
 
 /**
@@ -31,16 +30,9 @@ public abstract class AbstractComputationRunContext<P> {
     private P parameters;
     private ReportNode reportNode;
     private Network network;
-    private Boolean debug;
-    private Path debugDir;
 
     protected AbstractComputationRunContext(UUID networkUuid, String variantId, String receiver, ReportInfos reportInfos,
                                             String userId, String provider, P parameters) {
-        this(networkUuid, variantId, receiver, reportInfos, userId, provider, parameters, null);
-    }
-
-    protected AbstractComputationRunContext(UUID networkUuid, String variantId, String receiver, ReportInfos reportInfos,
-                                            String userId, String provider, P parameters, Boolean debug) {
         this.networkUuid = networkUuid;
         this.variantId = variantId;
         this.receiver = receiver;
@@ -50,6 +42,5 @@ public abstract class AbstractComputationRunContext<P> {
         this.parameters = parameters;
         this.reportNode = ReportNode.NO_OP;
         this.network = null;
-        this.debug = debug;
     }
 }

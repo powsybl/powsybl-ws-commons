@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
@@ -73,5 +74,25 @@ class ZipUtilsTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Provided path is not a directory.");
     }
+
+    @Test
+    void testZipThrowsUncheckedIOExceptionWhenOutputPathIsInvalid(@TempDir Path tempDir) throws IOException {
+        // setup
+        Path sourceDir = tempDir.resolve("sourceDir");
+        Files.createDirectories(sourceDir);
+
+        Path file1 = sourceDir.resolve("file1.txt");
+        Files.writeString(file1, "content 1");
+
+        // Create an invalid output path (pointing to a non-existent directory)
+        Path invalidZipFile = tempDir.resolve("nonExistentDir").resolve("output.zip");
+
+        // perform test and check
+        assertThatThrownBy(() -> ZipUtils.zip(sourceDir, invalidZipFile))
+                .isInstanceOf(UncheckedIOException.class)
+                .hasMessageContaining("Error occurred while zipping the directory: " + sourceDir)
+                .hasCauseInstanceOf(IOException.class);
+    }
+
 }
 

@@ -9,6 +9,8 @@ package com.powsybl.ws.commons.error;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.powsybl.ws.commons.error.PowsyblWsProblemDetail.ChainEntry;
+import com.powsybl.ws.commons.error.PowsyblWsProblemDetail.HttpMethodValue;
 import com.powsybl.ws.commons.error.PowsyblWsProblemDetail.ServerName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -25,77 +27,89 @@ class PowsyblWsProblemDetailTest {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().registerModule(new JavaTimeModule());
 
     @Test
-    void serializeTypedPropertiesTest() throws Exception {
+    void serializesTypedProperties() throws Exception {
         Instant now = Instant.parse("2025-01-01T00:00:00Z");
         PowsyblWsProblemDetail problem = PowsyblWsProblemDetail.builder(HttpStatus.BAD_REQUEST)
             .title("Bad Request")
             .server("directory-server")
-            .businessErrorCode("directory.ERROR_C0DE_01")
+            .businessErrorCode("directory.ERROR")
             .detail("invalid payload")
             .timestamp(now)
-            .path("directory-server/api")
+            .path("/directory-server/api")
             .traceId("trace-1")
-            .appendChain(PowsyblWsProblemDetail.CallContext.of(
-                "directory-server",
-                "POST",
-                "/api",
-                HttpStatus.BAD_REQUEST.value(),
-                "directory.ERROR",
-                "invalid payload",
-                now
-            ))
             .build();
 
         String json = OBJECT_MAPPER.writeValueAsString(problem);
         JsonNode node = OBJECT_MAPPER.readTree(json);
         assertThat(node.get("server").asText()).isEqualTo("directory-server");
-        assertThat(node.get("businessErrorCode").asText()).isEqualTo("directory.ERROR_C0DE_01");
+        assertThat(node.get("businessErrorCode").asText()).isEqualTo("directory.ERROR");
         assertThat(node.get("detail").asText()).isEqualTo("invalid payload");
         assertThat(node.get("timestamp").asText()).isEqualTo("2025-01-01T00:00:00Z");
-        assertThat(node.get("path").asText()).isEqualTo("directory-server/api");
+        assertThat(node.get("path").asText()).isEqualTo("/directory-server/api");
         assertThat(node.get("traceId").asText()).isEqualTo("trace-1");
         assertThat(node.get("chain")).isNotNull();
-        com.fasterxml.jackson.databind.node.ArrayNode chain = (com.fasterxml.jackson.databind.node.ArrayNode) node.get("chain");
-        assertThat(chain).hasSize(1);
-        JsonNode context = chain.get(0);
-        assertThat(context.get("server").asText()).isEqualTo("directory-server");
-        assertThat(context.get("method").asText()).isEqualTo("POST");
-        assertThat(context.get("path").asText()).isEqualTo("/api");
-        assertThat(context.get("status").asInt()).isEqualTo(HttpStatus.BAD_REQUEST.value());
-        assertThat(context.get("code").asText()).isEqualTo("directory.ERROR");
-        assertThat(context.get("message").asText()).isEqualTo("invalid payload");
-        assertThat(context.get("timestamp").asText()).isEqualTo("2025-01-01T00:00:00Z");
+        assertThat(node.get("chain")).isEmpty();
     }
 
     @Test
-    void deserializeJsonIntoTypedProblemDetailTest() throws Exception {
+    void builderFromKeepsExistingChainWithoutDuplicating() {
+        Instant now = Instant.parse("2025-03-02T10:15:30Z");
+        PowsyblWsProblemDetail remote = PowsyblWsProblemDetail.builder(HttpStatus.FORBIDDEN)
+            .server("c-server")
+            .businessErrorCode("REMOTE_DENIED")
+            .detail("upstream failure")
+            .timestamp(now)
+            .path("/c/resources")
+            .build();
+
+        PowsyblWsProblemDetail wrapped = PowsyblWsProblemDetail.builderFrom(remote)
+            .hop("b-server", "GET", "/c/resources", HttpStatus.FORBIDDEN.value(), now)
+            .build();
+
+        PowsyblWsProblemDetail copy = PowsyblWsProblemDetail.builderFrom(wrapped)
+            .hop("a-server", "GET", "/b/resources", HttpStatus.FORBIDDEN.value(), now)
+            .build();
+
+        assertThat(copy.chainEntries()).hasSize(2);
+        ChainEntry first = copy.chainEntries().get(0);
+        ChainEntry second = copy.chainEntries().get(1);
+        assertThat(first.fromServer()).isEqualTo(new ServerName("a-server"));
+        assertThat(first.toServer()).isEqualTo(new ServerName("b-server"));
+        assertThat(first.method()).isEqualTo(HttpMethodValue.of("GET"));
+        assertThat(first.path()).isEqualTo(PowsyblWsProblemDetail.ErrorPath.of("/b/resources"));
+        assertThat(second.fromServer()).isEqualTo(new ServerName("b-server"));
+        assertThat(second.toServer()).isEqualTo(new ServerName("c-server"));
+        assertThat(second.method()).isEqualTo(HttpMethodValue.of("GET"));
+        assertThat(second.path()).isEqualTo(PowsyblWsProblemDetail.ErrorPath.of("/c/resources"));
+    }
+
+    @Test
+    void deserializesIntoTypedAccessors() throws Exception {
         String json = """
             {
               "status": 403,
               "title": "Forbidden",
               "detail": "Access denied",
-              "server": "directory-server",
-              "businessErrorCode": "DIRECTORY_PERMISSION_DENIED",
-              "timestamp": "2025-02-10T12:34:56Z",
-              "path": "directory-server/resources",
-              "traceId": "trace-id-01",
+              "server": "C",
+              "businessErrorCode": "PERMISSION_DENIED",
+              "timestamp": "2025-02-10T12:35:00Z",
+              "path": "/c/resources",
+              "traceId": "cid-77",
               "chain": [
                 {
-                  "server": "directory-server",
+                  "from-server": "A",
+                  "to-server": "B",
                   "method": "GET",
-                  "path": "/resources",
+                  "path": "/b/resources",
                   "status": 403,
-                  "code": "DIRECTORY_PERMISSION_DENIED",
-                  "message": "Access denied",
                   "timestamp": "2025-02-10T12:34:56Z"
                 },
                 {
-                  "server": "explore-server",
+                  "from-server": "B",
+                  "to-server": "C",
                   "method": "GET",
-                  "path": "/cases",
+                  "path": "/c/resources",
                   "status": 403,
-                  "code": "REMOTE_ERROR",
-                  "message": "directory server answered with 403",
                   "timestamp": "2025-02-10T12:35:00Z"
                 }
               ]
@@ -107,16 +121,25 @@ class PowsyblWsProblemDetailTest {
         assertThat(problem.getStatus()).isEqualTo(403);
         assertThat(problem.getTitle()).isEqualTo("Forbidden");
         assertThat(problem.getDetail()).isEqualTo("Access denied");
-        assertThat(problem.getServer()).isEqualTo(new ServerName("directory-server"));
-        assertThat(problem.getBusinessErrorCode()).isEqualTo(new PowsyblWsProblemDetail.BusinessErrorCode("DIRECTORY_PERMISSION_DENIED"));
-        assertThat(problem.timestamp()).contains(Instant.parse("2025-02-10T12:34:56Z"));
-        assertThat(problem.path()).map(PowsyblWsProblemDetail.ErrorPath::value).contains("directory-server/resources");
-        assertThat(problem.traceId()).map(PowsyblWsProblemDetail.TraceId::value).contains("trace-id-01");
+        assertThat(problem.getServer()).isEqualTo(new ServerName("C"));
+        assertThat(problem.getBusinessErrorCode()).isEqualTo(new PowsyblWsProblemDetail.BusinessErrorCode("PERMISSION_DENIED"));
+        assertThat(problem.timestamp()).contains(Instant.parse("2025-02-10T12:35:00Z"));
+        assertThat(problem.path()).map(PowsyblWsProblemDetail.ErrorPath::value).contains("/c/resources");
+        assertThat(problem.traceId()).map(PowsyblWsProblemDetail.TraceId::value).contains("cid-77");
         assertThat(problem.chainEntries()).hasSize(2);
-        assertThat(problem.chainEntries().get(0).server()).isEqualTo(new ServerName("directory-server"));
-        assertThat(problem.chainEntries().get(0).path()).isEqualTo(PowsyblWsProblemDetail.ErrorPath.of("/resources"));
-        assertThat(problem.chainEntries().get(1).server()).isEqualTo(new ServerName("explore-server"));
-        assertThat(problem.chainEntries().get(1).path()).isEqualTo(PowsyblWsProblemDetail.ErrorPath.of("/cases"));
+        ChainEntry first = problem.chainEntries().get(0);
+        ChainEntry second = problem.chainEntries().get(1);
 
+        assertThat(first.fromServer()).isEqualTo(new ServerName("A"));
+        assertThat(first.toServer()).isEqualTo(new ServerName("B"));
+        assertThat(first.method()).isEqualTo(HttpMethodValue.of("GET"));
+        assertThat(first.path()).isEqualTo(PowsyblWsProblemDetail.ErrorPath.of("/b/resources"));
+        assertThat(first.timestamp()).isEqualTo(Instant.parse("2025-02-10T12:34:56Z"));
+
+        assertThat(second.fromServer()).isEqualTo(new ServerName("B"));
+        assertThat(second.toServer()).isEqualTo(new ServerName("C"));
+        assertThat(second.method()).isEqualTo(HttpMethodValue.of("GET"));
+        assertThat(second.path()).isEqualTo(PowsyblWsProblemDetail.ErrorPath.of("/c/resources"));
+        assertThat(second.timestamp()).isEqualTo(Instant.parse("2025-02-10T12:35:00Z"));
     }
 }

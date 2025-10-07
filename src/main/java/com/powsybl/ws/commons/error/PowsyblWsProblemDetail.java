@@ -17,7 +17,6 @@ import org.springframework.http.ProblemDetail;
 import java.net.URI;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -33,26 +32,28 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
     private Instant timestamp;
     private ErrorPath path;
     private TraceId traceId;
-    private List<CallContext> chain;
+    private List<ChainEntry> chain;
 
     @JsonCreator
     public PowsyblWsProblemDetail(
-            @JsonProperty("title") String title,
-            @JsonProperty("status") Integer status,
-            @JsonProperty("detail") String detail,
-            @JsonProperty("instance") URI instance,
-            @JsonProperty("server") ServerName server,
-            @JsonProperty("businessErrorCode") BusinessErrorCode businessErrorCode,
-            @JsonProperty("timestamp") Instant timestamp,
-            @JsonProperty("path") ErrorPath path,
-            @JsonProperty("traceId") TraceId traceId,
-            @JsonProperty("chain") List<CallContext> chain
+        @JsonProperty(value = "type", required = false) URI type,
+        @JsonProperty("title") String title,
+        @JsonProperty("status") Integer status,
+        @JsonProperty("detail") String detail,
+        @JsonProperty("instance") URI instance,
+        @JsonProperty("server") ServerName server,
+        @JsonProperty("businessErrorCode") BusinessErrorCode businessErrorCode,
+        @JsonProperty("timestamp") Instant timestamp,
+        @JsonProperty("path") ErrorPath path,
+        @JsonProperty("traceId") TraceId traceId,
+        @JsonProperty("chain") List<ChainEntry> chain
     ) {
         super(status != null ? status : HttpStatus.INTERNAL_SERVER_ERROR.value());
         HttpStatusCode resolvedStatus = status != null
-                ? HttpStatusCode.valueOf(status)
-                : HttpStatus.INTERNAL_SERVER_ERROR;
-        setStatus((HttpStatus) resolvedStatus);
+            ? HttpStatusCode.valueOf(status)
+            : HttpStatus.INTERNAL_SERVER_ERROR;
+        applyStatus(resolvedStatus);
+        setType(type != null ? type : URI.create("about:blank"));
         setTitle(title);
         setDetail(detail);
         setInstance(instance);
@@ -61,18 +62,28 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
         this.timestamp = timestamp;
         this.path = path;
         this.traceId = traceId;
-        this.chain = copyChain(chain);
+        this.chain = chain != null ? new ArrayList<>(chain) : new ArrayList<>();
         ensureDetail();
     }
 
     private PowsyblWsProblemDetail(HttpStatusCode status) {
         super(status != null ? status.value() : HttpStatus.INTERNAL_SERVER_ERROR.value());
-        assert status != null;
-        setStatus((HttpStatus) status);
-        this.timestamp = Instant.now();
+        applyStatus(status != null ? status : HttpStatus.INTERNAL_SERVER_ERROR);
+        HttpStatus resolved = status instanceof HttpStatus httpStatus
+            ? httpStatus
+            : HttpStatus.resolve(getStatus());
+        if (resolved != null) {
+            setTitle(resolved.getReasonPhrase());
+        }
         this.chain = new ArrayList<>();
-        HttpStatus resolved = (HttpStatus) status;
-        setTitle(resolved.getReasonPhrase());
+    }
+
+    private void applyStatus(HttpStatusCode status) {
+        if (status instanceof HttpStatus httpStatus) {
+            setStatus(httpStatus);
+        } else if (status != null) {
+            setStatus(status.value());
+        }
     }
 
     public static Builder builder(HttpStatus status) {
@@ -114,8 +125,11 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
     }
 
     @JsonProperty("chain")
-    public List<CallContext> getChain() {
-        return chain == null ? List.of() : chain;
+    public List<ChainEntry> getChain() {
+        if (chain == null || chain.isEmpty()) {
+            return List.of();
+        }
+        return List.copyOf(chain);
     }
 
     public Optional<ServerName> server() {
@@ -138,8 +152,8 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
         return Optional.ofNullable(traceId);
     }
 
-    public List<CallContext> chainEntries() {
-        return Collections.unmodifiableList(getChain());
+    public List<ChainEntry> chainEntries() {
+        return getChain();
     }
 
     private void ensureDetail() {
@@ -151,8 +165,10 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
             return;
         }
         Integer status = getStatus();
-        HttpStatus resolved = HttpStatus.resolve(status);
-        setDetail(resolved != null ? resolved.getReasonPhrase() : String.valueOf(status));
+        if (status != null) {
+            HttpStatus resolved = HttpStatus.resolve(status);
+            setDetail(resolved != null ? resolved.getReasonPhrase() : String.valueOf(status));
+        }
     }
 
     private static boolean hasText(String value) {
@@ -161,7 +177,13 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
 
     public static final class Builder {
         private final PowsyblWsProblemDetail target;
-        private final List<CallContext> chainEntries;
+        private final List<ChainEntry> chainEntries;
+
+        private ServerName hopFrom;
+        private HttpMethodValue hopMethod;
+        private ErrorPath hopPath;
+        private Integer hopStatus;
+        private Instant hopTimestamp;
 
         private Builder(HttpStatusCode status) {
             this.target = new PowsyblWsProblemDetail(Objects.requireNonNull(status, "status"));
@@ -169,8 +191,10 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
         }
 
         private Builder(PowsyblWsProblemDetail template) {
-            int status = template.getStatus();
-            HttpStatusCode statusCode = HttpStatusCode.valueOf(status);
+            Integer status = template.getStatus();
+            HttpStatusCode statusCode = status != null
+                ? HttpStatusCode.valueOf(status)
+                : HttpStatus.INTERNAL_SERVER_ERROR;
             this.target = new PowsyblWsProblemDetail(statusCode);
             this.target.setType(template.getType());
             this.target.setTitle(template.getTitle());
@@ -181,7 +205,9 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
             this.target.timestamp = template.timestamp;
             this.target.path = template.path;
             this.target.traceId = template.traceId;
-            this.chainEntries = new ArrayList<>(template.getChain());
+            this.chainEntries = template.chain != null
+                ? new ArrayList<>(template.chain)
+                : new ArrayList<>();
         }
 
         public Builder type(URI type) {
@@ -200,7 +226,7 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
         }
 
         public Builder status(HttpStatusCode status) {
-            target.setStatus((HttpStatus) status);
+            target.applyStatus(status);
             return this;
         }
 
@@ -254,40 +280,62 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
             return this;
         }
 
-        public Builder chain(List<CallContext> entries) {
-            this.chainEntries.clear();
-            if (entries != null) {
-                this.chainEntries.addAll(entries);
-            }
+        public Builder hop(ServerName fromServer, HttpMethodValue method, ErrorPath path, Integer status, Instant timestamp) {
+            this.hopFrom = fromServer;
+            this.hopMethod = method;
+            this.hopPath = path;
+            this.hopStatus = status;
+            this.hopTimestamp = timestamp;
             return this;
         }
 
-        public Builder appendChain(CallContext entry) {
-            if (entry != null) {
-                this.chainEntries.add(entry);
-            }
+        public Builder hop(String fromServer, String method, String path, Integer status, Instant timestamp) {
+            this.hopFrom = ServerName.of(fromServer);
+            this.hopMethod = HttpMethodValue.of(method);
+            this.hopPath = ErrorPath.of(path);
+            this.hopStatus = status;
+            this.hopTimestamp = timestamp;
             return this;
-        }
-
-        public Builder appendChain(
-            String server,
-            String method,
-            String path,
-            Integer status,
-            String code,
-            String message,
-            Instant timestamp
-        ) {
-            return appendChain(CallContext.of(server, method, path, status, code, message, timestamp));
         }
 
         public PowsyblWsProblemDetail build() {
             if (target.timestamp == null) {
                 target.timestamp = Instant.now();
             }
-            target.chain = chainEntries.isEmpty() ? List.of() : List.copyOf(chainEntries);
             target.ensureDetail();
+            List<ChainEntry> updatedChain = new ArrayList<>(chainEntries);
+            ChainEntry hopEntry = createHopEntry(updatedChain);
+            if (hopEntry != null) {
+                updatedChain.add(0, hopEntry);
+            }
+            target.chain = List.copyOf(updatedChain);
             return target;
+        }
+
+        private ChainEntry createHopEntry(List<ChainEntry> existing) {
+            if (hopFrom == null) {
+                return null;
+            }
+            ServerName hopTo = determineHopTarget(existing);
+            if (hopTo == null) {
+                return null;
+            }
+            Instant hopInstant = hopTimestamp != null ? hopTimestamp : target.timestamp;
+            Integer hopStatusValue = hopStatus != null ? hopStatus : target.getStatus();
+            return new ChainEntry(hopFrom, hopTo, hopMethod, hopPath, hopStatusValue, hopInstant);
+        }
+
+        private ServerName determineHopTarget(List<ChainEntry> existing) {
+            if (!existing.isEmpty()) {
+                ChainEntry first = existing.get(0);
+                if (first.fromServer() != null) {
+                    return first.fromServer();
+                }
+                if (first.toServer() != null) {
+                    return first.toServer();
+                }
+            }
+            return target.server;
         }
     }
 
@@ -325,60 +373,19 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
         }
     }
 
-    public record DetailMessage(@JsonValue String value) {
-        public static DetailMessage of(String value) {
-            return value != null ? new DetailMessage(value) : null;
-        }
-    }
-
-    public record CallContext(
-        @JsonProperty("server") ServerName server,
+    public record ChainEntry(
+        @JsonProperty("from-server") ServerName fromServer,
+        @JsonProperty("to-server") ServerName toServer,
         @JsonProperty("method") HttpMethodValue method,
         @JsonProperty("path") ErrorPath path,
         @JsonProperty("status") Integer status,
-        @JsonProperty("code") BusinessErrorCode code,
-        @JsonProperty("message") DetailMessage message,
         @JsonProperty("timestamp") @JsonFormat(shape = JsonFormat.Shape.STRING) Instant timestamp
     ) {
-
         @JsonCreator
-        public CallContext {
-            Objects.requireNonNull(server, "server");
+        public ChainEntry {
+            Objects.requireNonNull(fromServer, "from-server");
+            Objects.requireNonNull(toServer, "to-server");
+            Objects.requireNonNull(timestamp, "timestamp");
         }
-
-        public static CallContext of(
-            String server,
-            String method,
-            String path,
-            Integer status,
-            String code,
-            String message,
-            Instant timestamp
-        ) {
-            return new CallContext(
-                ServerName.of(server),
-                HttpMethodValue.of(method),
-                ErrorPath.of(path),
-                status,
-                BusinessErrorCode.of(code),
-                DetailMessage.of(message),
-                timestamp
-            );
-        }
-
-        public Optional<BusinessErrorCode> businessErrorCode() {
-            return Optional.ofNullable(code);
-        }
-
-        public Optional<DetailMessage> detailMessage() {
-            return Optional.ofNullable(message);
-        }
-    }
-
-    private static List<CallContext> copyChain(List<CallContext> chain) {
-        if (chain == null || chain.isEmpty()) {
-            return new ArrayList<>();
-        }
-        return new ArrayList<>(chain);
     }
 }

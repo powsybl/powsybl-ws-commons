@@ -36,7 +36,7 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
 
     @JsonCreator
     public PowsyblWsProblemDetail(
-        @JsonProperty(value = "type", required = false) URI type,
+        @JsonProperty(value = "type") URI type,
         @JsonProperty("title") String title,
         @JsonProperty("status") Integer status,
         @JsonProperty("detail") String detail,
@@ -132,14 +132,6 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
         return List.copyOf(chain);
     }
 
-    public Optional<ServerName> server() {
-        return Optional.ofNullable(server);
-    }
-
-    public Optional<BusinessErrorCode> businessErrorCode() {
-        return Optional.ofNullable(businessErrorCode);
-    }
-
     public Optional<Instant> timestamp() {
         return Optional.ofNullable(timestamp);
     }
@@ -165,10 +157,8 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
             return;
         }
         Integer status = getStatus();
-        if (status != null) {
-            HttpStatus resolved = HttpStatus.resolve(status);
-            setDetail(resolved != null ? resolved.getReasonPhrase() : String.valueOf(status));
-        }
+        HttpStatus resolved = HttpStatus.resolve(status);
+        setDetail(resolved != null ? resolved.getReasonPhrase() : String.valueOf(status));
     }
 
     private static boolean hasText(String value) {
@@ -179,11 +169,11 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
         private final PowsyblWsProblemDetail target;
         private final List<ChainEntry> chainEntries;
 
-        private ServerName hopFrom;
-        private HttpMethodValue hopMethod;
-        private ErrorPath hopPath;
-        private Integer hopStatus;
-        private Instant hopTimestamp;
+        private ServerName fromServer;
+        private HttpMethodValue method;
+        private ErrorPath path;
+        Integer status;
+        private Instant timestamp;
 
         private Builder(HttpStatusCode status) {
             this.target = new PowsyblWsProblemDetail(Objects.requireNonNull(status, "status"));
@@ -191,10 +181,8 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
         }
 
         private Builder(PowsyblWsProblemDetail template) {
-            Integer status = template.getStatus();
-            HttpStatusCode statusCode = status != null
-                ? HttpStatusCode.valueOf(status)
-                : HttpStatus.INTERNAL_SERVER_ERROR;
+            int status = template.getStatus();
+            HttpStatusCode statusCode = HttpStatusCode.valueOf(status);
             this.target = new PowsyblWsProblemDetail(statusCode);
             this.target.setType(template.getType());
             this.target.setTitle(template.getTitle());
@@ -210,11 +198,6 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
                 : new ArrayList<>();
         }
 
-        public Builder type(URI type) {
-            target.setType(type);
-            return this;
-        }
-
         public Builder title(String title) {
             target.setTitle(title);
             return this;
@@ -225,28 +208,8 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
             return this;
         }
 
-        public Builder status(HttpStatusCode status) {
-            target.applyStatus(status);
-            return this;
-        }
-
-        public Builder instance(URI instance) {
-            target.setInstance(instance);
-            return this;
-        }
-
-        public Builder server(ServerName server) {
-            target.server = server;
-            return this;
-        }
-
         public Builder server(String server) {
             target.server = ServerName.of(server);
-            return this;
-        }
-
-        public Builder businessErrorCode(BusinessErrorCode businessErrorCode) {
-            target.businessErrorCode = businessErrorCode;
             return this;
         }
 
@@ -260,18 +223,8 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
             return this;
         }
 
-        public Builder path(ErrorPath path) {
-            target.path = path;
-            return this;
-        }
-
         public Builder path(String path) {
             target.path = ErrorPath.of(path);
-            return this;
-        }
-
-        public Builder traceId(TraceId traceId) {
-            target.traceId = traceId;
             return this;
         }
 
@@ -280,21 +233,12 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
             return this;
         }
 
-        public Builder hop(ServerName fromServer, HttpMethodValue method, ErrorPath path, Integer status, Instant timestamp) {
-            this.hopFrom = fromServer;
-            this.hopMethod = method;
-            this.hopPath = path;
-            this.hopStatus = status;
-            this.hopTimestamp = timestamp;
-            return this;
-        }
-
-        public Builder hop(String fromServer, String method, String path, Integer status, Instant timestamp) {
-            this.hopFrom = ServerName.of(fromServer);
-            this.hopMethod = HttpMethodValue.of(method);
-            this.hopPath = ErrorPath.of(path);
-            this.hopStatus = status;
-            this.hopTimestamp = timestamp;
+        public Builder appendChain(String fromServer, String method, String path, Integer status, Instant timestamp) {
+            this.fromServer = ServerName.of(fromServer);
+            this.method = HttpMethodValue.of(method);
+            this.path = ErrorPath.of(path);
+            this.status = status;
+            this.timestamp = timestamp;
             return this;
         }
 
@@ -304,38 +248,32 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
             }
             target.ensureDetail();
             List<ChainEntry> updatedChain = new ArrayList<>(chainEntries);
-            ChainEntry hopEntry = createHopEntry(updatedChain);
-            if (hopEntry != null) {
-                updatedChain.add(0, hopEntry);
+            ChainEntry chainEntry = createNewChainEntry(updatedChain);
+            if (chainEntry != null) {
+                updatedChain.addFirst(chainEntry);
             }
             target.chain = List.copyOf(updatedChain);
             return target;
         }
 
-        private ChainEntry createHopEntry(List<ChainEntry> existing) {
-            if (hopFrom == null) {
+        private ChainEntry createNewChainEntry(List<ChainEntry> existing) {
+            if (fromServer == null) {
                 return null;
             }
-            ServerName hopTo = determineHopTarget(existing);
-            if (hopTo == null) {
+            ServerName toServer = determineTarget(existing);
+            if (toServer == null) {
                 return null;
             }
-            Instant hopInstant = hopTimestamp != null ? hopTimestamp : target.timestamp;
-            Integer hopStatusValue = hopStatus != null ? hopStatus : target.getStatus();
-            return new ChainEntry(hopFrom, hopTo, hopMethod, hopPath, hopStatusValue, hopInstant);
+            Instant instant = timestamp != null ? timestamp : target.timestamp;
+            Integer statusValue = status != null ? status : target.getStatus();
+            return new ChainEntry(fromServer, toServer, method, path, statusValue, instant);
         }
 
-        private ServerName determineHopTarget(List<ChainEntry> existing) {
-            if (!existing.isEmpty()) {
-                ChainEntry first = existing.get(0);
-                if (first.fromServer() != null) {
-                    return first.fromServer();
-                }
-                if (first.toServer() != null) {
-                    return first.toServer();
-                }
-            }
-            return target.server;
+        private ServerName determineTarget(List<ChainEntry> existing) {
+            return existing.isEmpty()
+                ? target.server
+                : Optional.ofNullable(existing.getFirst().fromServer())
+                .orElse(target.server);
         }
     }
 

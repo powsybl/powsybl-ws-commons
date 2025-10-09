@@ -63,11 +63,11 @@ class PowsyblWsProblemDetailTest {
             .build();
 
         PowsyblWsProblemDetail wrapped = PowsyblWsProblemDetail.builderFrom(remote)
-            .hop("b-server", "GET", "/c/resources", HttpStatus.FORBIDDEN.value(), now)
+            .appendChain("b-server", "GET", "/c/resources", HttpStatus.FORBIDDEN.value(), now)
             .build();
 
         PowsyblWsProblemDetail copy = PowsyblWsProblemDetail.builderFrom(wrapped)
-            .hop("a-server", "GET", "/b/resources", HttpStatus.FORBIDDEN.value(), now)
+            .appendChain("a-server", "GET", "/b/resources", HttpStatus.FORBIDDEN.value(), now)
             .build();
 
         assertThat(copy.chainEntries()).hasSize(2);

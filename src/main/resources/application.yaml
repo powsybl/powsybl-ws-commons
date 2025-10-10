@@ -43,6 +43,11 @@ spring:
   codec:
     max-in-memory-size: 100MB
 
+  mvc:
+    async:
+      # To have the same behavior of no timeouts as regular endpoints for servlet 3.0+ asynccontext endpoints
+      request-timeout: -1
+
   # rabbitmq default host/port
   rabbitmq:
     addresses: rabbitmq

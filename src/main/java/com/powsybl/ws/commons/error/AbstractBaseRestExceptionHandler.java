@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2025, RTE (http://www.rte-france.com)
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 package com.powsybl.ws.commons.error;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,18 +18,22 @@ import java.time.Instant;
 import java.util.Optional;
 
 /**
- * Reusable, typed base for translating exceptions to PowsyblWsProblemDetail.
+ * @author Mohamed Ben-rejeb {@literal <mohamed.ben-rejeb at rte-france.com>}
  *
- * @param <E> domain exception type
- * @param <C> business error code enum
+ * Reusable, typed base for mapping and wrapping exceptions to PowsyblWsProblemDetail.
+ *
+ * @param <E> domain exception type (must extend AbstractPowsyblWsException)
+ * @param <C> business error code type (must implement BusinessErrorCode)
  */
-public abstract class AbstractBaseRestExceptionHandler<E extends Exception, C> {
+public abstract class AbstractBaseRestExceptionHandler<E extends AbstractPowsyblWsException, C extends BusinessErrorCode> {
 
     private final ServerNameProvider serverNameProvider;
 
-    private static final String DEFAULT_REMOTE_ERROR_MESSAGE = "An unexpected error occurred while calling a remote server";
+    private static final String DEFAULT_REMOTE_ERROR_MESSAGE =
+        "An unexpected error occurred while calling a remote server";
 
-    protected final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+    protected final ObjectMapper objectMapper =
+        new ObjectMapper().registerModule(new JavaTimeModule());
 
     protected AbstractBaseRestExceptionHandler(ServerNameProvider serverNameProvider) {
         this.serverNameProvider = serverNameProvider;
@@ -33,25 +43,27 @@ public abstract class AbstractBaseRestExceptionHandler<E extends Exception, C> {
         return serverNameProvider.serverName();
     }
 
-    protected abstract Optional<PowsyblWsProblemDetail> getRemoteError(AbstractPowsyblWsException ex);
+    protected abstract Optional<PowsyblWsProblemDetail> getRemoteError(E ex);
 
-    protected abstract Optional<BusinessErrorCode> getBusinessCode(AbstractPowsyblWsException ex);
+    protected abstract Optional<C> getBusinessCode(E ex);
 
-    protected abstract HttpStatus mapStatus(BusinessErrorCode code);
+    protected abstract HttpStatus mapStatus(C code);
 
-    protected abstract AbstractPowsyblWsException wrapRemote(PowsyblWsProblemDetail remoteError);
+    protected abstract E wrapRemote(PowsyblWsProblemDetail remoteError);
+
+    protected abstract C defaultRemoteErrorCode();
 
     @ExceptionHandler(HttpStatusCodeException.class)
     protected ResponseEntity<PowsyblWsProblemDetail> handleRemoteException(
         HttpStatusCodeException exception, HttpServletRequest request) {
 
-        AbstractPowsyblWsException wrapped = mapRemoteException(exception);
+        E wrapped = mapRemoteException(exception);
         return handleDomainException(wrapped, request);
     }
 
     @ExceptionHandler
     protected ResponseEntity<PowsyblWsProblemDetail> handleDomainException(
-        AbstractPowsyblWsException exception, HttpServletRequest request) {
+        E exception, HttpServletRequest request) {
 
         HttpStatus status = resolveStatus(exception);
         return ResponseEntity.status(status)
@@ -68,18 +80,23 @@ public abstract class AbstractBaseRestExceptionHandler<E extends Exception, C> {
             .body(buildErrorResponse(request, status, null, message));
     }
 
-    private PowsyblWsProblemDetail buildErrorResponse(HttpServletRequest request, HttpStatus status, AbstractPowsyblWsException exception) {
-        BusinessErrorCode currentBusinessCode = exception.getBusinessErrorCode().orElse(null);
-        PowsyblWsProblemDetail remoteError = exception.getRemoteError().orElse(null);
+    private PowsyblWsProblemDetail buildErrorResponse(
+        HttpServletRequest request, HttpStatus status, E exception) {
 
-        String businessErrorCode = remoteError != null
-            ? remoteError.getBusinessErrorCode().value()
-            : currentBusinessCode != null ? currentBusinessCode.value() : null;
+        C currentBusinessCode = getBusinessCode(exception).orElse(null);
+        PowsyblWsProblemDetail remoteError = getRemoteError(exception).orElse(null);
+
+        String businessErrorCode =
+            (remoteError != null && remoteError.getBusinessErrorCode() != null)
+                ? remoteError.getBusinessErrorCode().value()
+                : (currentBusinessCode != null ? currentBusinessCode.value() : null);
+
         String message = firstNonBlank(
             remoteError != null ? remoteError.getDetail() : null,
             exception.getMessage(),
             status.getReasonPhrase()
         );
+
         Instant now = Instant.now();
         String localPath = request.getRequestURI();
         String method = request.getMethod();
@@ -89,14 +106,16 @@ public abstract class AbstractBaseRestExceptionHandler<E extends Exception, C> {
             String path = remoteError.path()
                 .map(PowsyblWsProblemDetail.ErrorPath::value)
                 .orElse(localPath);
+
             builder = PowsyblWsProblemDetail.builderFrom(remoteError)
                 .title(status.getReasonPhrase())
                 .detail(message)
                 .appendChain(serverName(), method, path, status.value(), now);
+
+            // If the remote error has no business code, propagate the local one if available
             if (remoteError.getBusinessErrorCode() == null && businessErrorCode != null) {
                 builder.businessErrorCode(businessErrorCode);
             }
-
         } else {
             builder = PowsyblWsProblemDetail.builder(status)
                 .title(status.getReasonPhrase())
@@ -109,19 +128,23 @@ public abstract class AbstractBaseRestExceptionHandler<E extends Exception, C> {
         return builder.build();
     }
 
-    private PowsyblWsProblemDetail buildErrorResponse(HttpServletRequest request, HttpStatus status, String businessErrorCode, String message) {
-        Instant timestamp = Instant.now();
+    private PowsyblWsProblemDetail buildErrorResponse(
+        HttpServletRequest request, HttpStatus status, String businessErrorCode, String message) {
+
+        Instant now = Instant.now();
+        String effectiveMessage = firstNonBlank(message, status.getReasonPhrase());
+
         return PowsyblWsProblemDetail.builder(status)
             .title(status.getReasonPhrase())
             .server(serverName())
             .businessErrorCode(businessErrorCode)
-            .detail(message)
-            .timestamp(timestamp)
+            .detail(effectiveMessage)
+            .timestamp(now)
             .path(request.getRequestURI())
             .build();
     }
 
-    private HttpStatus resolveStatus(AbstractPowsyblWsException exception) {
+    private HttpStatus resolveStatus(E exception) {
         return getRemoteError(exception)
             .map(PowsyblWsProblemDetail::getStatus)
             .map(this::resolveStatus)
@@ -131,7 +154,15 @@ public abstract class AbstractBaseRestExceptionHandler<E extends Exception, C> {
     }
 
     private HttpStatus resolveStatus(Integer code) {
-        return HttpStatus.valueOf(code);
+        if (code == null) {
+            return null;
+        }
+        try {
+            return Optional.ofNullable(HttpStatus.resolve(code))
+                .orElseGet(() -> HttpStatus.valueOf(code));
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     private String firstNonBlank(String... values) {
@@ -144,17 +175,14 @@ public abstract class AbstractBaseRestExceptionHandler<E extends Exception, C> {
     }
 
     protected String codeValue(C code) {
-        try {
-            return (String) code.getClass().getMethod("value").invoke(code);
-        } catch (Exception ignored) {
-            return code.toString();
-        }
+        return code.value();
     }
 
-    protected AbstractPowsyblWsException mapRemoteException(HttpStatusCodeException ex) {
+    protected E mapRemoteException(HttpStatusCodeException ex) {
         try {
             byte[] body = ex.getResponseBodyAsByteArray();
-            PowsyblWsProblemDetail remote = objectMapper.readValue(body, PowsyblWsProblemDetail.class);
+            PowsyblWsProblemDetail remote =
+                objectMapper.readValue(body, PowsyblWsProblemDetail.class);
             return wrapRemote(remote);
         } catch (Exception ignored) {
             return wrapRemote(fallbackRemoteError());
@@ -171,6 +199,4 @@ public abstract class AbstractBaseRestExceptionHandler<E extends Exception, C> {
             .path(serverName())
             .build();
     }
-
-    protected abstract C defaultRemoteErrorCode();
 }

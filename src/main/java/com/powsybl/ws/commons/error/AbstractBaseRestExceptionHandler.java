@@ -11,19 +11,21 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.Instant;
 import java.util.Optional;
 
 /**
- * @author Mohamed Ben-rejeb {@literal <mohamed.ben-rejeb at rte-france.com>}
- *
- * Reusable, typed base for mapping and wrapping exceptions to PowsyblWsProblemDetail.
- *
  * @param <E> domain exception type (must extend AbstractPowsyblWsException)
  * @param <C> business error code type (must implement BusinessErrorCode)
+ * @author Mohamed Ben-rejeb {@literal <mohamed.ben-rejeb at rte-france.com>}
+ * <p>
+ * Reusable, typed base for mapping and wrapping exceptions to PowsyblWsProblemDetail.
  */
 public abstract class AbstractBaseRestExceptionHandler<E extends AbstractPowsyblWsException, C extends BusinessErrorCode> {
 
@@ -74,10 +76,26 @@ public abstract class AbstractBaseRestExceptionHandler<E extends AbstractPowsybl
     protected ResponseEntity<PowsyblWsProblemDetail> handleAllExceptions(
         Exception exception, HttpServletRequest request) {
 
-        HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
+        HttpStatus status = resolveStatus(exception);
         String message = firstNonBlank(exception.getMessage(), status.getReasonPhrase());
         return ResponseEntity.status(status)
             .body(buildErrorResponse(request, status, null, message));
+    }
+
+    private HttpStatus resolveStatus(Exception exception) {
+        if (exception instanceof ResponseStatusException responseStatusException) {
+            return HttpStatus.valueOf(responseStatusException.getStatusCode().value());
+        }
+        if (exception instanceof HttpStatusCodeException httpStatusCodeException) {
+            return HttpStatus.valueOf(httpStatusCodeException.getStatusCode().value());
+        }
+        if (exception instanceof ServletRequestBindingException) {
+            return HttpStatus.BAD_REQUEST;
+        }
+        if (exception instanceof NoResourceFoundException) {
+            return HttpStatus.NOT_FOUND;
+        }
+        return HttpStatus.INTERNAL_SERVER_ERROR;
     }
 
     private PowsyblWsProblemDetail buildErrorResponse(

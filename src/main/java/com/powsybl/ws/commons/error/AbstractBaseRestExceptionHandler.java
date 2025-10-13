@@ -102,12 +102,14 @@ public abstract class AbstractBaseRestExceptionHandler<E extends AbstractPowsybl
         HttpServletRequest request, HttpStatus status, E exception) {
 
         C currentBusinessCode = getBusinessCode(exception).orElse(null);
+        String currentBusinessCodeValue = currentBusinessCode != null ? currentBusinessCode.value() : null;
+
         PowsyblWsProblemDetail remoteError = getRemoteError(exception).orElse(null);
 
         String businessErrorCode =
             (remoteError != null && remoteError.getBusinessErrorCode() != null)
                 ? remoteError.getBusinessErrorCode().value()
-                : (currentBusinessCode != null ? currentBusinessCode.value() : null);
+                : currentBusinessCodeValue;
 
         String message = firstNonBlank(
             remoteError != null ? remoteError.getDetail() : null,

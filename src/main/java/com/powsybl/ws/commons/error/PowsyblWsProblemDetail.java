@@ -181,8 +181,7 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
         }
 
         private Builder(PowsyblWsProblemDetail template) {
-            int status = template.getStatus();
-            HttpStatusCode statusCode = HttpStatusCode.valueOf(status);
+            HttpStatusCode statusCode = HttpStatusCode.valueOf(template.getStatus());
             this.target = new PowsyblWsProblemDetail(statusCode);
             this.target.setType(template.getType());
             this.target.setTitle(template.getTitle());

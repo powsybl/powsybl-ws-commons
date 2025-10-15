@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -63,7 +64,7 @@ public abstract class AbstractBaseRestExceptionHandler<E extends AbstractPowsybl
         return handleDomainException(wrapped, request);
     }
 
-    @ExceptionHandler
+    @ExceptionHandler(AbstractPowsyblWsException.class)
     protected ResponseEntity<PowsyblWsProblemDetail> handleDomainException(
         E exception, HttpServletRequest request) {
 
@@ -92,6 +93,9 @@ public abstract class AbstractBaseRestExceptionHandler<E extends AbstractPowsybl
         if (exception instanceof ServletRequestBindingException) {
             return HttpStatus.BAD_REQUEST;
         }
+        if (exception instanceof MethodArgumentTypeMismatchException) {
+            return HttpStatus.BAD_REQUEST;
+        }
         if (exception instanceof NoResourceFoundException) {
             return HttpStatus.NOT_FOUND;
         }
@@ -108,7 +112,7 @@ public abstract class AbstractBaseRestExceptionHandler<E extends AbstractPowsybl
 
         String businessErrorCode =
             (remoteError != null && remoteError.getBusinessErrorCode() != null)
-                ? remoteError.getBusinessErrorCode().value()
+                ? remoteError.getBusinessErrorCode()
                 : currentBusinessCodeValue;
 
         String message = firstNonBlank(
@@ -123,10 +127,7 @@ public abstract class AbstractBaseRestExceptionHandler<E extends AbstractPowsybl
 
         PowsyblWsProblemDetail.Builder builder;
         if (remoteError != null) {
-            String path = remoteError.path()
-                .map(PowsyblWsProblemDetail.ErrorPath::value)
-                .orElse(localPath);
-
+            String path = remoteError.getPath();
             builder = PowsyblWsProblemDetail.builderFrom(remoteError)
                 .title(status.getReasonPhrase())
                 .detail(message)

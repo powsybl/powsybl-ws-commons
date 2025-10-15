@@ -9,29 +9,28 @@ package com.powsybl.ws.commons.error;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonValue;
+import lombok.Getter;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 
 import java.net.URI;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * @author Mohamed Ben-rejeb {@literal <mohamed.ben-rejeb at rte-france.com>}
  * Shared {@link ProblemDetail} subclass that carries typed metadata used across Powsybl services.
  */
+@Getter
 public final class PowsyblWsProblemDetail extends ProblemDetail {
 
-    private ServerName server;
-    private BusinessErrorCode businessErrorCode;
+    private String server;
+    private String businessErrorCode;
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
     private Instant timestamp;
-    private ErrorPath path;
-    private TraceId traceId;
+    private String path;
+    private String traceId;
     private List<ChainEntry> chain;
 
     @JsonCreator
@@ -41,11 +40,11 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
         @JsonProperty("status") Integer status,
         @JsonProperty("detail") String detail,
         @JsonProperty("instance") URI instance,
-        @JsonProperty("server") ServerName server,
-        @JsonProperty("businessErrorCode") BusinessErrorCode businessErrorCode,
+        @JsonProperty("server") String server,
+        @JsonProperty("businessErrorCode") String businessErrorCode,
         @JsonProperty("timestamp") Instant timestamp,
-        @JsonProperty("path") ErrorPath path,
-        @JsonProperty("traceId") TraceId traceId,
+        @JsonProperty("path") String path,
+        @JsonProperty("traceId") String traceId,
         @JsonProperty("chain") List<ChainEntry> chain
     ) {
         super(status != null ? status : HttpStatus.INTERNAL_SERVER_ERROR.value());
@@ -98,56 +97,6 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
         return new Builder(Objects.requireNonNull(template, "template"));
     }
 
-    @JsonProperty("server")
-    public ServerName getServer() {
-        return server;
-    }
-
-    @JsonProperty("businessErrorCode")
-    public BusinessErrorCode getBusinessErrorCode() {
-        return businessErrorCode;
-    }
-
-    @JsonProperty("timestamp")
-    @JsonFormat(shape = JsonFormat.Shape.STRING)
-    public Instant getTimestamp() {
-        return timestamp;
-    }
-
-    @JsonProperty("path")
-    public ErrorPath getPath() {
-        return path;
-    }
-
-    @JsonProperty("traceId")
-    public TraceId getTraceId() {
-        return traceId;
-    }
-
-    @JsonProperty("chain")
-    public List<ChainEntry> getChain() {
-        if (chain == null || chain.isEmpty()) {
-            return List.of();
-        }
-        return List.copyOf(chain);
-    }
-
-    public Optional<Instant> timestamp() {
-        return Optional.ofNullable(timestamp);
-    }
-
-    public Optional<ErrorPath> path() {
-        return Optional.ofNullable(path);
-    }
-
-    public Optional<TraceId> traceId() {
-        return Optional.ofNullable(traceId);
-    }
-
-    public List<ChainEntry> chainEntries() {
-        return getChain();
-    }
-
     private void ensureDetail() {
         if (hasText(getDetail())) {
             return;
@@ -165,13 +114,14 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
         return value != null && !value.isBlank();
     }
 
+    @Getter
     public static final class Builder {
         private final PowsyblWsProblemDetail target;
         private final List<ChainEntry> chainEntries;
 
-        private ServerName fromServer;
-        private HttpMethodValue method;
-        private ErrorPath path;
+        private String fromServer;
+        private String method;
+        private String path;
         Integer status;
         private Instant timestamp;
 
@@ -208,12 +158,12 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
         }
 
         public Builder server(String server) {
-            target.server = ServerName.of(server);
+            target.server = server;
             return this;
         }
 
         public Builder businessErrorCode(String businessErrorCode) {
-            target.businessErrorCode = BusinessErrorCode.of(businessErrorCode);
+            target.businessErrorCode = businessErrorCode;
             return this;
         }
 
@@ -223,19 +173,19 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
         }
 
         public Builder path(String path) {
-            target.path = ErrorPath.of(path);
+            target.path = path;
             return this;
         }
 
         public Builder traceId(String traceId) {
-            target.traceId = TraceId.of(traceId);
+            target.traceId = traceId;
             return this;
         }
 
         public Builder appendChain(String fromServer, String method, String path, Integer status, Instant timestamp) {
-            this.fromServer = ServerName.of(fromServer);
-            this.method = HttpMethodValue.of(method);
-            this.path = ErrorPath.of(path);
+            this.fromServer = fromServer;
+            this.method = method;
+            this.path = path;
             this.status = status;
             this.timestamp = timestamp;
             return this;
@@ -259,7 +209,7 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
             if (fromServer == null) {
                 return null;
             }
-            ServerName toServer = determineTarget(existing);
+            String toServer = determineTarget(existing);
             if (toServer == null) {
                 return null;
             }
@@ -268,61 +218,52 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
             return new ChainEntry(fromServer, toServer, method, path, statusValue, instant);
         }
 
-        private ServerName determineTarget(List<ChainEntry> existing) {
+        private String determineTarget(List<ChainEntry> existing) {
             return existing.isEmpty()
                 ? target.server
-                : Optional.ofNullable(existing.getFirst().fromServer())
-                .orElse(target.server);
+                : Optional.ofNullable(existing.getFirst().getFromServer()).orElse(target.server);
         }
     }
 
-    public record ServerName(@JsonValue String value) {
-        public ServerName {
-            Objects.requireNonNull(value, "server name");
-        }
+    @Getter
+    public static final class ChainEntry {
+        @JsonProperty("from-server")
+        private final String fromServer;
 
-        public static ServerName of(String value) {
-            return value != null ? new ServerName(value) : null;
-        }
-    }
+        @JsonProperty("to-server")
+        private final String toServer;
 
-    public record BusinessErrorCode(@JsonValue String value) {
-        public static BusinessErrorCode of(String value) {
-            return value != null ? new BusinessErrorCode(value) : null;
-        }
-    }
+        @JsonProperty("method")
+        private final String method;
 
-    public record ErrorPath(@JsonValue String value) {
-        public static ErrorPath of(String value) {
-            return value != null ? new ErrorPath(value) : null;
-        }
-    }
+        @JsonProperty("path")
+        private final String path;
 
-    public record TraceId(@JsonValue String value) {
-        public static TraceId of(String value) {
-            return value != null ? new TraceId(value) : null;
-        }
-    }
+        @JsonProperty("status")
+        private final Integer status;
 
-    public record HttpMethodValue(@JsonValue String value) {
-        public static HttpMethodValue of(String value) {
-            return value != null ? new HttpMethodValue(value) : null;
-        }
-    }
+        @JsonProperty("timestamp")
+        @JsonFormat(shape = JsonFormat.Shape.STRING)
+        private final Instant timestamp;
 
-    public record ChainEntry(
-        @JsonProperty("from-server") ServerName fromServer,
-        @JsonProperty("to-server") ServerName toServer,
-        @JsonProperty("method") HttpMethodValue method,
-        @JsonProperty("path") ErrorPath path,
-        @JsonProperty("status") Integer status,
-        @JsonProperty("timestamp") @JsonFormat(shape = JsonFormat.Shape.STRING) Instant timestamp
-    ) {
         @JsonCreator
-        public ChainEntry {
+        public ChainEntry(
+            @JsonProperty("from-server") String fromServer,
+            @JsonProperty("to-server") String toServer,
+            @JsonProperty("method") String method,
+            @JsonProperty("path") String path,
+            @JsonProperty("status") Integer status,
+            @JsonProperty("timestamp") Instant timestamp
+        ) {
             Objects.requireNonNull(fromServer, "from-server");
             Objects.requireNonNull(toServer, "to-server");
             Objects.requireNonNull(timestamp, "timestamp");
+            this.fromServer = fromServer;
+            this.toServer = toServer;
+            this.method = method;
+            this.path = path;
+            this.status = status;
+            this.timestamp = timestamp;
         }
     }
 }

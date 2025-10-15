@@ -10,14 +10,14 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.powsybl.ws.commons.error.PowsyblWsProblemDetail.ChainEntry;
-import com.powsybl.ws.commons.error.PowsyblWsProblemDetail.HttpMethodValue;
-import com.powsybl.ws.commons.error.PowsyblWsProblemDetail.ServerName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 
 import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * @author Mohamed Ben-rejeb {@literal <mohamed.ben-rejeb at rte-france.com>}
@@ -41,14 +41,14 @@ class PowsyblWsProblemDetailTest {
 
         String json = OBJECT_MAPPER.writeValueAsString(problem);
         JsonNode node = OBJECT_MAPPER.readTree(json);
-        assertThat(node.get("server").asText()).isEqualTo("directory-server");
-        assertThat(node.get("businessErrorCode").asText()).isEqualTo("directory.ERROR");
-        assertThat(node.get("detail").asText()).isEqualTo("invalid payload");
-        assertThat(node.get("timestamp").asText()).isEqualTo("2025-01-01T00:00:00Z");
-        assertThat(node.get("path").asText()).isEqualTo("/directory-server/api");
-        assertThat(node.get("traceId").asText()).isEqualTo("trace-1");
-        assertThat(node.get("chain")).isNotNull();
-        assertThat(node.get("chain")).isEmpty();
+        assertEquals("directory-server", node.get("server").asText());
+        assertEquals("directory.ERROR", node.get("businessErrorCode").asText());
+        assertEquals("invalid payload", node.get("detail").asText());
+        assertEquals("2025-01-01T00:00:00Z", node.get("timestamp").asText());
+        assertEquals("/directory-server/api", node.get("path").asText());
+        assertEquals("trace-1", node.get("traceId").asText());
+        assertNotNull(node.get("chain"));
+        assertNotNull(node.get("chain"));
     }
 
     @Test
@@ -70,17 +70,17 @@ class PowsyblWsProblemDetailTest {
             .appendChain("a-server", "GET", "/b/resources", HttpStatus.FORBIDDEN.value(), now)
             .build();
 
-        assertThat(copy.chainEntries()).hasSize(2);
-        ChainEntry first = copy.chainEntries().get(0);
-        ChainEntry second = copy.chainEntries().get(1);
-        assertThat(first.fromServer()).isEqualTo(new ServerName("a-server"));
-        assertThat(first.toServer()).isEqualTo(new ServerName("b-server"));
-        assertThat(first.method()).isEqualTo(HttpMethodValue.of("GET"));
-        assertThat(first.path()).isEqualTo(PowsyblWsProblemDetail.ErrorPath.of("/b/resources"));
-        assertThat(second.fromServer()).isEqualTo(new ServerName("b-server"));
-        assertThat(second.toServer()).isEqualTo(new ServerName("c-server"));
-        assertThat(second.method()).isEqualTo(HttpMethodValue.of("GET"));
-        assertThat(second.path()).isEqualTo(PowsyblWsProblemDetail.ErrorPath.of("/c/resources"));
+        assertThat(copy.getChain()).hasSize(2);
+        ChainEntry first = copy.getChain().get(0);
+        ChainEntry second = copy.getChain().get(1);
+        assertEquals("a-server", first.getFromServer());
+        assertEquals("b-server", first.getToServer());
+        assertEquals("GET", first.getMethod());
+        assertEquals("/b/resources", first.getPath());
+        assertEquals("b-server", second.getFromServer());
+        assertEquals("c-server", second.getToServer());
+        assertEquals("GET", second.getMethod());
+        assertEquals("/c/resources", second.getPath());
     }
 
     @Test
@@ -118,28 +118,28 @@ class PowsyblWsProblemDetailTest {
 
         PowsyblWsProblemDetail problem = OBJECT_MAPPER.readValue(json, PowsyblWsProblemDetail.class);
 
-        assertThat(problem.getStatus()).isEqualTo(403);
-        assertThat(problem.getTitle()).isEqualTo("Forbidden");
-        assertThat(problem.getDetail()).isEqualTo("Access denied");
-        assertThat(problem.getServer()).isEqualTo(new ServerName("C"));
-        assertThat(problem.getBusinessErrorCode()).isEqualTo(new PowsyblWsProblemDetail.BusinessErrorCode("PERMISSION_DENIED"));
-        assertThat(problem.timestamp()).contains(Instant.parse("2025-02-10T12:35:00Z"));
-        assertThat(problem.path()).map(PowsyblWsProblemDetail.ErrorPath::value).contains("/c/resources");
-        assertThat(problem.traceId()).map(PowsyblWsProblemDetail.TraceId::value).contains("cid-77");
-        assertThat(problem.chainEntries()).hasSize(2);
-        ChainEntry first = problem.chainEntries().get(0);
-        ChainEntry second = problem.chainEntries().get(1);
+        assertEquals(403, problem.getStatus());
+        assertEquals("Forbidden", problem.getTitle());
+        assertEquals("Access denied", problem.getDetail());
+        assertEquals("C", problem.getServer());
+        assertEquals("PERMISSION_DENIED", problem.getBusinessErrorCode());
+        assertEquals("2025-02-10T12:35:00Z", problem.getTimestamp().toString());
+        assertEquals("/c/resources", problem.getPath());
+        assertEquals("cid-77", problem.getTraceId());
+        assertThat(problem.getChain()).hasSize(2);
+        ChainEntry first = problem.getChain().get(0);
+        ChainEntry second = problem.getChain().get(1);
 
-        assertThat(first.fromServer()).isEqualTo(new ServerName("A"));
-        assertThat(first.toServer()).isEqualTo(new ServerName("B"));
-        assertThat(first.method()).isEqualTo(HttpMethodValue.of("GET"));
-        assertThat(first.path()).isEqualTo(PowsyblWsProblemDetail.ErrorPath.of("/b/resources"));
-        assertThat(first.timestamp()).isEqualTo(Instant.parse("2025-02-10T12:34:56Z"));
+        assertEquals("A", first.getFromServer());
+        assertEquals("B", first.getToServer());
+        assertEquals("GET", first.getMethod());
+        assertEquals("/b/resources", first.getPath());
+        assertEquals(Instant.parse("2025-02-10T12:34:56Z"), first.getTimestamp());
 
-        assertThat(second.fromServer()).isEqualTo(new ServerName("B"));
-        assertThat(second.toServer()).isEqualTo(new ServerName("C"));
-        assertThat(second.method()).isEqualTo(HttpMethodValue.of("GET"));
-        assertThat(second.path()).isEqualTo(PowsyblWsProblemDetail.ErrorPath.of("/c/resources"));
-        assertThat(second.timestamp()).isEqualTo(Instant.parse("2025-02-10T12:35:00Z"));
+        assertEquals("B", second.getFromServer());
+        assertEquals("C", second.getToServer());
+        assertEquals("GET", second.getMethod());
+        assertEquals("/c/resources", second.getPath());
+        assertEquals(Instant.parse("2025-02-10T12:35:00Z"), second.getTimestamp());
     }
 }

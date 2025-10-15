@@ -21,6 +21,7 @@ import java.time.Instant;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * @author Mohamed Ben-rejeb {@literal <mohamed.ben-rejeb at rte-france.com>}
@@ -46,10 +47,10 @@ class BaseRestExceptionHandlerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         PowsyblWsProblemDetail body = response.getBody();
         assertThat(body).isNotNull();
-        assertThat(body.getBusinessErrorCode()).isEqualTo(new PowsyblWsProblemDetail.BusinessErrorCode("test.local"));
-        assertThat(body.getServer()).isEqualTo(PowsyblWsProblemDetail.ServerName.of("test-server"));
-        assertThat(body.getDetail()).isEqualTo("Local failure");
-        assertThat(body.getPath()).isEqualTo(PowsyblWsProblemDetail.ErrorPath.of("/test/path"));
+        assertEquals("test.local", body.getBusinessErrorCode());
+        assertEquals("test-server", body.getServer());
+        assertEquals("Local failure", body.getDetail());
+        assertEquals("/test/path", body.getPath());
         assertThat(body.getTimestamp()).isNotNull();
         assertThat(body.getChain()).isEmpty();
     }
@@ -73,14 +74,14 @@ class BaseRestExceptionHandlerTest {
         assertThat(body).isNotNull();
         assertThat(body.getDetail()).isEqualTo("Remote failure");
         // remote error had no business code so the local one should be propagated
-        assertThat(body.getBusinessErrorCode()).isEqualTo(new PowsyblWsProblemDetail.BusinessErrorCode("test.local"));
-        assertThat(body.getServer()).isEqualTo(PowsyblWsProblemDetail.ServerName.of("remote-server"));
+        assertEquals("test.local", body.getBusinessErrorCode());
+        assertEquals("remote-server", body.getServer());
         assertThat(body.getChain()).hasSize(1);
-        PowsyblWsProblemDetail.ChainEntry chainEntry = body.getChain().get(0);
-        assertThat(chainEntry.fromServer()).isEqualTo(PowsyblWsProblemDetail.ServerName.of("test-server"));
-        assertThat(chainEntry.toServer()).isEqualTo(PowsyblWsProblemDetail.ServerName.of("remote-server"));
-        assertThat(chainEntry.method()).isEqualTo(PowsyblWsProblemDetail.HttpMethodValue.of("GET"));
-        assertThat(chainEntry.path()).isEqualTo(PowsyblWsProblemDetail.ErrorPath.of("/remote/path"));
+        PowsyblWsProblemDetail.ChainEntry chainEntry = body.getChain().getFirst();
+        assertEquals("test-server", chainEntry.getFromServer());
+        assertEquals("remote-server", chainEntry.getToServer());
+        assertEquals("GET", chainEntry.getMethod());
+        assertEquals("/remote/path", chainEntry.getPath());
     }
 
     @Test
@@ -117,9 +118,9 @@ class BaseRestExceptionHandlerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         PowsyblWsProblemDetail body = response.getBody();
         assertThat(body).isNotNull();
-        assertThat(body.getBusinessErrorCode()).isEqualTo(new PowsyblWsProblemDetail.BusinessErrorCode("test.remote"));
-        assertThat(body.getDetail()).isEqualTo("An unexpected error occurred while calling a remote server");
-        assertThat(body.getPath()).isEqualTo(PowsyblWsProblemDetail.ErrorPath.of("test-server"));
+        assertEquals("test.remote", body.getBusinessErrorCode());
+        assertEquals("An unexpected error occurred while calling a remote server", body.getDetail());
+        assertEquals("test-server", body.getPath());
     }
 
     @Test
@@ -147,9 +148,9 @@ class BaseRestExceptionHandlerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         PowsyblWsProblemDetail problem = response.getBody();
         assertThat(problem).isNotNull();
-        assertThat(problem.getBusinessErrorCode()).isEqualTo(new PowsyblWsProblemDetail.BusinessErrorCode("remote.failure"));
+        assertEquals("remote.failure", problem.getBusinessErrorCode());
         assertThat(problem.getChain()).hasSize(1);
-        assertThat(problem.getChain().get(0).toServer()).isEqualTo(PowsyblWsProblemDetail.ServerName.of("downstream"));
+        assertEquals("downstream", problem.getChain().getFirst().getToServer());
     }
 
     @Test

@@ -9,14 +9,12 @@ package com.powsybl.ws.commons.error;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.client.HttpStatusCodeException;
-import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
-import org.springframework.web.server.ResponseStatusException;
-import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -30,10 +28,8 @@ import java.util.Optional;
  */
 public abstract class AbstractBaseRestExceptionHandler<E extends AbstractPowsyblWsException, C extends BusinessErrorCode> {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(AbstractBaseRestExceptionHandler.class);
     private final ServerNameProvider serverNameProvider;
-
-    private static final String DEFAULT_REMOTE_ERROR_MESSAGE =
-        "An unexpected error occurred while calling a remote server";
 
     protected final ObjectMapper objectMapper =
         new ObjectMapper().registerModule(new JavaTimeModule());
@@ -69,121 +65,88 @@ public abstract class AbstractBaseRestExceptionHandler<E extends AbstractPowsybl
         E exception, HttpServletRequest request) {
 
         HttpStatus status = resolveStatus(exception);
-        return ResponseEntity.status(status)
-            .body(buildErrorResponse(request, status, exception));
+        PowsyblWsProblemDetail body = getRemoteError(exception)
+            .map(remote -> buildFromRemoteException(request, status, exception, remote))
+            .orElseGet(() -> buildFromLocalException(request, status, exception));
+
+        return ResponseEntity.status(status).body(body);
     }
 
     @ExceptionHandler(Exception.class)
     protected ResponseEntity<PowsyblWsProblemDetail> handleAllExceptions(
         Exception exception, HttpServletRequest request) {
-
-        HttpStatus status = resolveStatus(exception);
+        LOGGER.error(exception.getMessage(), exception);
+        HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
         String message = firstNonBlank(exception.getMessage(), status.getReasonPhrase());
         return ResponseEntity.status(status)
-            .body(buildErrorResponse(request, status, null, message));
+            .body(buildFromGenericException(request, status, message));
     }
 
-    private HttpStatus resolveStatus(Exception exception) {
-        if (exception instanceof ResponseStatusException responseStatusException) {
-            return HttpStatus.valueOf(responseStatusException.getStatusCode().value());
-        }
-        if (exception instanceof HttpStatusCodeException httpStatusCodeException) {
-            return HttpStatus.valueOf(httpStatusCodeException.getStatusCode().value());
-        }
-        if (exception instanceof ServletRequestBindingException) {
-            return HttpStatus.BAD_REQUEST;
-        }
-        if (exception instanceof MethodArgumentTypeMismatchException) {
-            return HttpStatus.BAD_REQUEST;
-        }
-        if (exception instanceof NoResourceFoundException) {
-            return HttpStatus.NOT_FOUND;
-        }
-        return HttpStatus.INTERNAL_SERVER_ERROR;
-    }
+    private PowsyblWsProblemDetail buildFromRemoteException(
+        HttpServletRequest request,
+        HttpStatus status,
+        E exception,
+        PowsyblWsProblemDetail remoteError) {
 
-    private PowsyblWsProblemDetail buildErrorResponse(
-        HttpServletRequest request, HttpStatus status, E exception) {
+        String localBusiness = getBusinessCode(exception).map(BusinessErrorCode::value).orElse(null);
+        String business = firstNonBlank(remoteError.getBusinessErrorCode(), localBusiness);
 
-        C currentBusinessCode = getBusinessCode(exception).orElse(null);
-        String currentBusinessCodeValue = currentBusinessCode != null ? currentBusinessCode.value() : null;
-
-        PowsyblWsProblemDetail remoteError = getRemoteError(exception).orElse(null);
-
-        String businessErrorCode =
-            (remoteError != null && remoteError.getBusinessErrorCode() != null)
-                ? remoteError.getBusinessErrorCode()
-                : currentBusinessCodeValue;
-
-        String message = firstNonBlank(
-            remoteError != null ? remoteError.getDetail() : null,
-            exception.getMessage(),
-            status.getReasonPhrase()
-        );
+        String message = firstNonBlank(remoteError.getDetail(), exception.getMessage(), status.getReasonPhrase());
 
         Instant now = Instant.now();
-        String localPath = request.getRequestURI();
         String method = request.getMethod();
+        String path = Optional.ofNullable(remoteError.getPath()).orElse(serverName());
 
-        PowsyblWsProblemDetail.Builder builder;
-        if (remoteError != null) {
-            String path = remoteError.getPath();
-            builder = PowsyblWsProblemDetail.builderFrom(remoteError)
-                .title(status.getReasonPhrase())
-                .detail(message)
-                .appendChain(serverName(), method, path, status.value(), now);
+        PowsyblWsProblemDetail.Builder b = PowsyblWsProblemDetail.builderFrom(remoteError)
+            .title(status.getReasonPhrase())
+            .detail(message)
+            .appendChain(serverName(), method, path, status.value(), now);
 
-            // If the remote error has no business code, propagate the local one if available
-            if (remoteError.getBusinessErrorCode() == null && businessErrorCode != null) {
-                builder.businessErrorCode(businessErrorCode);
-            }
-        } else {
-            builder = PowsyblWsProblemDetail.builder(status)
-                .title(status.getReasonPhrase())
-                .server(serverName())
-                .businessErrorCode(businessErrorCode)
-                .detail(message)
-                .timestamp(now)
-                .path(localPath);
+        if (remoteError.getBusinessErrorCode() == null && business != null) {
+            b.businessErrorCode(business);
         }
-        return builder.build();
+        return b.build();
     }
 
-    private PowsyblWsProblemDetail buildErrorResponse(
-        HttpServletRequest request, HttpStatus status, String businessErrorCode, String message) {
+    private PowsyblWsProblemDetail buildFromLocalException(
+        HttpServletRequest request,
+        HttpStatus status,
+        E exception) {
 
-        Instant now = Instant.now();
+        String business = getBusinessCode(exception).map(BusinessErrorCode::value).orElse(null);
+        String message = firstNonBlank(exception.getMessage(), status.getReasonPhrase());
+
+        return baseBuilder(request, status)
+            .businessErrorCode(business)
+            .detail(message)
+            .build();
+    }
+
+    private PowsyblWsProblemDetail buildFromGenericException(
+        HttpServletRequest request, HttpStatus status, String message) {
+
         String effectiveMessage = firstNonBlank(message, status.getReasonPhrase());
+        return baseBuilder(request, status)
+            .businessErrorCode(null)
+            .detail(effectiveMessage)
+            .build();
+    }
 
+    private PowsyblWsProblemDetail.Builder baseBuilder(HttpServletRequest request, HttpStatus status) {
         return PowsyblWsProblemDetail.builder(status)
             .title(status.getReasonPhrase())
             .server(serverName())
-            .businessErrorCode(businessErrorCode)
-            .detail(effectiveMessage)
-            .timestamp(now)
-            .path(request.getRequestURI())
-            .build();
+            .timestamp(Instant.now())
+            .path(request.getRequestURI());
     }
 
     private HttpStatus resolveStatus(E exception) {
         return getRemoteError(exception)
             .map(PowsyblWsProblemDetail::getStatus)
-            .map(this::resolveStatus)
+            .map(HttpStatus::resolve) // remote provided an int code
             .orElseGet(() -> getBusinessCode(exception)
                 .map(this::mapStatus)
                 .orElse(HttpStatus.INTERNAL_SERVER_ERROR));
-    }
-
-    private HttpStatus resolveStatus(Integer code) {
-        if (code == null) {
-            return null;
-        }
-        try {
-            return Optional.ofNullable(HttpStatus.resolve(code))
-                .orElseGet(() -> HttpStatus.valueOf(code));
-        } catch (Exception ignored) {
-            return null;
-        }
     }
 
     private String firstNonBlank(String... values) {
@@ -195,10 +158,6 @@ public abstract class AbstractBaseRestExceptionHandler<E extends AbstractPowsybl
         return null;
     }
 
-    protected String codeValue(C code) {
-        return code.value();
-    }
-
     protected E mapRemoteException(HttpStatusCodeException ex) {
         try {
             byte[] body = ex.getResponseBodyAsByteArray();
@@ -206,16 +165,16 @@ public abstract class AbstractBaseRestExceptionHandler<E extends AbstractPowsybl
                 objectMapper.readValue(body, PowsyblWsProblemDetail.class);
             return wrapRemote(remote);
         } catch (Exception ignored) {
-            return wrapRemote(fallbackRemoteError());
+            return wrapRemote(fallbackRemoteError(ex));
         }
     }
 
-    private PowsyblWsProblemDetail fallbackRemoteError() {
+    private PowsyblWsProblemDetail fallbackRemoteError(HttpStatusCodeException ex) {
         Instant now = Instant.now();
-        return PowsyblWsProblemDetail.builder(HttpStatus.INTERNAL_SERVER_ERROR)
+        return PowsyblWsProblemDetail.builder(ex.getStatusCode())
             .server(serverName())
-            .businessErrorCode(codeValue(defaultRemoteErrorCode()))
-            .detail(DEFAULT_REMOTE_ERROR_MESSAGE)
+            .businessErrorCode(defaultRemoteErrorCode().value())
+            .detail(ex.getMessage())
             .timestamp(now)
             .path(serverName())
             .build();

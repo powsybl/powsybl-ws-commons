@@ -115,11 +115,11 @@ class BaseRestExceptionHandlerTest {
 
         ResponseEntity<PowsyblWsProblemDetail> response = handler.handleRemoteException(exception, request);
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_GATEWAY);
         PowsyblWsProblemDetail body = response.getBody();
         assertThat(body).isNotNull();
         assertEquals("test.remote", body.getBusinessErrorCode());
-        assertEquals("An unexpected error occurred while calling a remote server", body.getDetail());
+        assertEquals("502 Bad gateway", body.getDetail());
         assertEquals("test-server", body.getPath());
     }
 

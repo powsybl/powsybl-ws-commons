@@ -120,7 +120,6 @@ class BaseRestExceptionHandlerTest {
         assertThat(body).isNotNull();
         assertEquals("test.remote", body.getBusinessErrorCode());
         assertEquals("502 Bad gateway", body.getDetail());
-        assertEquals("test-server", body.getPath());
     }
 
     @Test

@@ -227,23 +227,16 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
 
     @Getter
     public static final class ChainEntry {
-        @JsonProperty("from-server")
         private final String fromServer;
 
-        @JsonProperty("to-server")
         private final String toServer;
 
-        @JsonProperty("method")
         private final String method;
 
-        @JsonProperty("path")
         private final String path;
 
-        @JsonProperty("status")
         private final Integer status;
 
-        @JsonProperty("timestamp")
-        @JsonFormat(shape = JsonFormat.Shape.STRING)
         private final Instant timestamp;
 
         @JsonCreator
@@ -253,7 +246,7 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
             @JsonProperty("method") String method,
             @JsonProperty("path") String path,
             @JsonProperty("status") Integer status,
-            @JsonProperty("timestamp") Instant timestamp
+            @JsonProperty("timestamp") @JsonFormat(shape = JsonFormat.Shape.STRING) Instant timestamp
         ) {
             Objects.requireNonNull(fromServer, "from-server");
             Objects.requireNonNull(toServer, "to-server");

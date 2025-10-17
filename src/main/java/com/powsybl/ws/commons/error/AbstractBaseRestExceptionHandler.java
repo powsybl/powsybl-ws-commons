@@ -29,10 +29,8 @@ import java.util.Optional;
 public abstract class AbstractBaseRestExceptionHandler<E extends AbstractPowsyblWsException, C extends BusinessErrorCode> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractBaseRestExceptionHandler.class);
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().registerModule(new JavaTimeModule());
     private final ServerNameProvider serverNameProvider;
-
-    protected final ObjectMapper objectMapper =
-        new ObjectMapper().registerModule(new JavaTimeModule());
 
     protected AbstractBaseRestExceptionHandler(ServerNameProvider serverNameProvider) {
         this.serverNameProvider = serverNameProvider;
@@ -162,7 +160,7 @@ public abstract class AbstractBaseRestExceptionHandler<E extends AbstractPowsybl
         try {
             byte[] body = ex.getResponseBodyAsByteArray();
             PowsyblWsProblemDetail remote =
-                objectMapper.readValue(body, PowsyblWsProblemDetail.class);
+                OBJECT_MAPPER.readValue(body, PowsyblWsProblemDetail.class);
             return wrapRemote(remote);
         } catch (Exception ignored) {
             return wrapRemote(fallbackRemoteError(ex));
@@ -176,7 +174,6 @@ public abstract class AbstractBaseRestExceptionHandler<E extends AbstractPowsybl
             .businessErrorCode(defaultRemoteErrorCode().value())
             .detail(ex.getMessage())
             .timestamp(now)
-            .path(serverName())
             .build();
     }
 }

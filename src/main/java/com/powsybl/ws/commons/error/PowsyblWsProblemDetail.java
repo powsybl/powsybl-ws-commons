@@ -8,13 +8,13 @@ package com.powsybl.ws.commons.error;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 
-import java.net.URI;
 import java.time.Instant;
 import java.util.*;
 
@@ -23,6 +23,7 @@ import java.util.*;
  * Shared {@link ProblemDetail} subclass that carries typed metadata used across Powsybl services.
  */
 @Getter
+@JsonIgnoreProperties({"instance", "type"})
 public final class PowsyblWsProblemDetail extends ProblemDetail {
 
     private String server;
@@ -35,11 +36,9 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
 
     @JsonCreator
     public PowsyblWsProblemDetail(
-        @JsonProperty(value = "type") URI type,
         @JsonProperty("title") String title,
         @JsonProperty("status") Integer status,
         @JsonProperty("detail") String detail,
-        @JsonProperty("instance") URI instance,
         @JsonProperty("server") String server,
         @JsonProperty("businessErrorCode") String businessErrorCode,
         @JsonProperty("timestamp") Instant timestamp,
@@ -52,10 +51,8 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
             ? HttpStatusCode.valueOf(status)
             : HttpStatus.INTERNAL_SERVER_ERROR;
         applyStatus(resolvedStatus);
-        setType(type != null ? type : URI.create("about:blank"));
         setTitle(title);
         setDetail(detail);
-        setInstance(instance);
         this.server = server;
         this.businessErrorCode = businessErrorCode;
         this.timestamp = timestamp;
@@ -133,10 +130,8 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
         private Builder(PowsyblWsProblemDetail template) {
             HttpStatusCode statusCode = HttpStatusCode.valueOf(template.getStatus());
             this.target = new PowsyblWsProblemDetail(statusCode);
-            this.target.setType(template.getType());
             this.target.setTitle(template.getTitle());
             this.target.setDetail(template.getDetail());
-            this.target.setInstance(template.getInstance());
             this.target.server = template.server;
             this.target.businessErrorCode = template.businessErrorCode;
             this.target.timestamp = template.timestamp;

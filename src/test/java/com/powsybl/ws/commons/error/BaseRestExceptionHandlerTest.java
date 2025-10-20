@@ -182,7 +182,7 @@ class BaseRestExceptionHandlerTest {
         }
     }
 
-    private static final class TestException extends AbstractPowsyblWsException {
+    private static final class TestException extends AbstractBusinessException {
 
         private final TestBusinessErrorCode errorCode;
         private final PowsyblWsProblemDetail remoteError;
@@ -194,8 +194,8 @@ class BaseRestExceptionHandlerTest {
         }
 
         @Override
-        public Optional<BusinessErrorCode> getBusinessErrorCode() {
-            return Optional.ofNullable(errorCode);
+        public BusinessErrorCode getBusinessErrorCode() {
+            return errorCode;
         }
 
         @Override
@@ -217,8 +217,8 @@ class BaseRestExceptionHandlerTest {
         }
 
         @Override
-        protected Optional<TestBusinessErrorCode> getBusinessCode(TestException ex) {
-            return ex.getBusinessErrorCode().map(TestBusinessErrorCode.class::cast);
+        protected TestBusinessErrorCode getBusinessCode(TestException ex) {
+            return (TestBusinessErrorCode) ex.getBusinessErrorCode();
         }
 
         @Override

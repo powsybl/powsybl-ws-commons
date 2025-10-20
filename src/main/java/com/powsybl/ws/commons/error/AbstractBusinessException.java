@@ -14,20 +14,20 @@ import java.util.Optional;
  * Base runtime exception for Powsybl-ws services enriched with a business error code and,
  * optionally, a remote {@link PowsyblWsProblemDetail}.
  */
-public abstract class AbstractPowsyblWsException extends RuntimeException {
+public abstract class AbstractBusinessException extends RuntimeException {
 
-    protected AbstractPowsyblWsException(String message) {
+    protected AbstractBusinessException(String message) {
         super(message);
     }
 
-    protected AbstractPowsyblWsException(String message, Throwable cause) {
+    protected AbstractBusinessException(String message, Throwable cause) {
         super(message, cause);
     }
 
     /**
      * @return the business error code associated with the exception when available.
      */
-    public abstract Optional<BusinessErrorCode> getBusinessErrorCode();
+    public abstract BusinessErrorCode getBusinessErrorCode();
 
     /**
      * @return an optional remote {@link PowsyblWsProblemDetail} when the exception wraps a downstream error.

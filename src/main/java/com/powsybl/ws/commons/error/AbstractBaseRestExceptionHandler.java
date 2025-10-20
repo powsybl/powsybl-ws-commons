@@ -26,7 +26,7 @@ import java.util.Optional;
  * <p>
  * Reusable, typed base for mapping and wrapping exceptions to PowsyblWsProblemDetail.
  */
-public abstract class AbstractBaseRestExceptionHandler<E extends AbstractPowsyblWsException, C extends BusinessErrorCode> {
+public abstract class AbstractBaseRestExceptionHandler<E extends AbstractBusinessException, C extends BusinessErrorCode> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractBaseRestExceptionHandler.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().registerModule(new JavaTimeModule());
@@ -42,7 +42,7 @@ public abstract class AbstractBaseRestExceptionHandler<E extends AbstractPowsybl
 
     protected abstract Optional<PowsyblWsProblemDetail> getRemoteError(E ex);
 
-    protected abstract Optional<C> getBusinessCode(E ex);
+    protected abstract C getBusinessCode(E ex);
 
     protected abstract HttpStatus mapStatus(C code);
 
@@ -58,7 +58,7 @@ public abstract class AbstractBaseRestExceptionHandler<E extends AbstractPowsybl
         return handleDomainException(wrapped, request);
     }
 
-    @ExceptionHandler(AbstractPowsyblWsException.class)
+    @ExceptionHandler(AbstractBusinessException.class)
     protected ResponseEntity<PowsyblWsProblemDetail> handleDomainException(
         E exception, HttpServletRequest request) {
 
@@ -86,7 +86,7 @@ public abstract class AbstractBaseRestExceptionHandler<E extends AbstractPowsybl
         E exception,
         PowsyblWsProblemDetail remoteError) {
 
-        String localBusiness = getBusinessCode(exception).map(BusinessErrorCode::value).orElse(null);
+        String localBusiness = getBusinessCode(exception).value();
         String business = firstNonBlank(remoteError.getBusinessErrorCode(), localBusiness);
 
         String message = firstNonBlank(remoteError.getDetail(), exception.getMessage(), status.getReasonPhrase());
@@ -111,7 +111,7 @@ public abstract class AbstractBaseRestExceptionHandler<E extends AbstractPowsybl
         HttpStatus status,
         E exception) {
 
-        String business = getBusinessCode(exception).map(BusinessErrorCode::value).orElse(null);
+        String business = getBusinessCode(exception).value();
         String message = firstNonBlank(exception.getMessage(), status.getReasonPhrase());
 
         return baseBuilder(request, status)
@@ -142,9 +142,7 @@ public abstract class AbstractBaseRestExceptionHandler<E extends AbstractPowsybl
         return getRemoteError(exception)
             .map(PowsyblWsProblemDetail::getStatus)
             .map(HttpStatus::resolve) // remote provided an int code
-            .orElseGet(() -> getBusinessCode(exception)
-                .map(this::mapStatus)
-                .orElse(HttpStatus.INTERNAL_SERVER_ERROR));
+            .orElseGet(() -> mapStatus(getBusinessCode(exception)));
     }
 
     private String firstNonBlank(String... values) {

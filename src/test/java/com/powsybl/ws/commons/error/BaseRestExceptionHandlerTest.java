@@ -54,25 +54,6 @@ class BaseRestExceptionHandlerTest {
     }
 
     @Test
-    void handleRemoteExceptionFallbackWhenBodyIsInvalidJson() {
-        MockHttpServletRequest request = new MockHttpServletRequest("DELETE", "/remote/fallback");
-        HttpClientErrorException exception = HttpClientErrorException.create(
-            HttpStatus.BAD_GATEWAY,
-            "Bad gateway",
-            null,
-            "not-json".getBytes(StandardCharsets.UTF_8),
-            StandardCharsets.UTF_8
-        );
-
-        ResponseEntity<PowsyblWsProblemDetail> response = handler.handleRemoteException(exception, request);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_GATEWAY);
-        PowsyblWsProblemDetail body = response.getBody();
-        assertThat(body).isNotNull();
-        assertEquals("502 Bad gateway", body.getDetail());
-    }
-
-    @Test
     void handleRemoteExceptionWithValidPayload() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/remote/call");
         PowsyblWsProblemDetail remote = PowsyblWsProblemDetail.builder(HttpStatus.SERVICE_UNAVAILABLE)

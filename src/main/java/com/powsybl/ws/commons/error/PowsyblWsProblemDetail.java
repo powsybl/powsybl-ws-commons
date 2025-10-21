@@ -10,6 +10,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NonNull;
 import org.springframework.http.HttpStatus;
@@ -25,6 +26,7 @@ import java.util.*;
  */
 @Getter
 @JsonIgnoreProperties({"instance", "type"})
+@EqualsAndHashCode(callSuper = true)
 public final class PowsyblWsProblemDetail extends ProblemDetail {
 
     private String server;

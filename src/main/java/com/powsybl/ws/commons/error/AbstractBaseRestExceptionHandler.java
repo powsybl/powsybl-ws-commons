@@ -32,7 +32,7 @@ public abstract class AbstractBaseRestExceptionHandler<E extends AbstractBusines
 
     private final ServerNameProvider serverNameProvider;
 
-    public AbstractBaseRestExceptionHandler(ServerNameProvider serverNameProvider) {
+    protected AbstractBaseRestExceptionHandler(ServerNameProvider serverNameProvider) {
         this.serverNameProvider = serverNameProvider;
     }
 

@@ -6,7 +6,7 @@
  */
 package com.powsybl.ws.commons.error;
 
-import java.util.Optional;
+import lombok.NonNull;
 
 /**
  * @author Mohamed Ben-rejeb {@literal <mohamed.ben-rejeb at rte-france.com>}
@@ -27,12 +27,5 @@ public abstract class AbstractBusinessException extends RuntimeException {
     /**
      * @return the business error code associated with the exception when available.
      */
-    public abstract BusinessErrorCode getBusinessErrorCode();
-
-    /**
-     * @return an optional remote {@link PowsyblWsProblemDetail} when the exception wraps a downstream error.
-     */
-    public Optional<PowsyblWsProblemDetail> getRemoteError() {
-        return Optional.empty();
-    }
+    public abstract @NonNull BusinessErrorCode getBusinessErrorCode();
 }

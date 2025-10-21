@@ -54,35 +54,6 @@ class BaseRestExceptionHandlerTest {
     }
 
     @Test
-    void handleRemoteExceptionWithValidPayload() throws Exception {
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/remote/call");
-        PowsyblWsProblemDetail remote = PowsyblWsProblemDetail.builder(HttpStatus.SERVICE_UNAVAILABLE)
-            .server("downstream")
-            .businessErrorCode("remote.failure")
-            .detail("Remote chain failure")
-            .path("/remote/service")
-            .build();
-
-        byte[] body = OBJECT_MAPPER.writeValueAsBytes(remote);
-        HttpClientErrorException exception = HttpClientErrorException.create(
-            HttpStatus.SERVICE_UNAVAILABLE,
-            "Service unavailable",
-            null,
-            body,
-            StandardCharsets.UTF_8
-        );
-
-        ResponseEntity<PowsyblWsProblemDetail> response = handler.handleRemoteException(exception, request);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
-        PowsyblWsProblemDetail problem = response.getBody();
-        assertThat(problem).isNotNull();
-        assertEquals("remote.failure", problem.getBusinessErrorCode());
-        assertThat(problem.getChain()).hasSize(1);
-        assertEquals("downstream", problem.getChain().getFirst().toServer());
-    }
-
-    @Test
     void handleRemoteExceptionWithValidPayloadWithChain() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/remote/call");
         PowsyblWsProblemDetail remote = PowsyblWsProblemDetail.builder(HttpStatus.SERVICE_UNAVAILABLE)

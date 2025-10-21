@@ -32,7 +32,7 @@ class BaseRestExceptionHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new TestRestExceptionHandler();
+        handler = new TestRestExceptionHandler(() -> "test-server");
     }
 
     @Test
@@ -133,14 +133,14 @@ class BaseRestExceptionHandlerTest {
     @Test
     void handleAllExceptionsUsesReasonPhraseWhenMessageMissing() {
         MockHttpServletRequest request = new MockHttpServletRequest("PUT", "/generic/error");
-        Exception exception = new Exception((String) null);
+        Exception exception = new Exception((String) "coucou");
 
         ResponseEntity<PowsyblWsProblemDetail> response = handler.handleAllExceptions(exception, request);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         PowsyblWsProblemDetail body = response.getBody();
         assertThat(body).isNotNull();
-        assertThat(body.getDetail()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase());
+        assertThat(body.getDetail()).isEqualTo("coucou");
         assertThat(body.getBusinessErrorCode()).isNull();
     }
 
@@ -160,7 +160,7 @@ class BaseRestExceptionHandlerTest {
         }
     }
 
-    private static final class TestException extends AbstractPowsyblWsException {
+    private static final class TestException extends AbstractBusinessException {
 
         private final TestBusinessErrorCode errorCode;
 
@@ -177,6 +177,10 @@ class BaseRestExceptionHandlerTest {
 
     private static final class TestRestExceptionHandler
         extends AbstractBaseRestExceptionHandler<TestException, TestBusinessErrorCode> {
+
+        public TestRestExceptionHandler(ServerNameProvider serverNameProvider) {
+            super(serverNameProvider);
+        }
 
         @Override
         protected @NonNull TestBusinessErrorCode getBusinessCode(TestException ex) {

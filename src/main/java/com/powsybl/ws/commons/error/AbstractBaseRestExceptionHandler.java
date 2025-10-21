@@ -12,7 +12,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
@@ -26,13 +25,16 @@ import org.springframework.web.client.HttpStatusCodeException;
  * <p>
  * Reusable, typed base for mapping and wrapping exceptions to PowsyblWsProblemDetail.
  */
-public abstract class AbstractBaseRestExceptionHandler<E extends AbstractPowsyblWsException, C extends BusinessErrorCode> {
+public abstract class AbstractBaseRestExceptionHandler<E extends AbstractBusinessException, C extends BusinessErrorCode> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractBaseRestExceptionHandler.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().registerModule(new JavaTimeModule());
 
-    @Value("${server.name:unknown-server}")
-    private String serverName;
+    private final ServerNameProvider serverNameProvider;
+
+    public AbstractBaseRestExceptionHandler(ServerNameProvider serverNameProvider) {
+        this.serverNameProvider = serverNameProvider;
+    }
 
     protected abstract @NonNull C getBusinessCode(E ex);
 
@@ -43,11 +45,11 @@ public abstract class AbstractBaseRestExceptionHandler<E extends AbstractPowsybl
         HttpStatusCodeException exception, HttpServletRequest request) {
 
         PowsyblWsProblemDetail problemDetail = extractProblemDetail(exception, request);
-        problemDetail.wrap(serverName, request.getMethod(), request.getRequestURI());
+        problemDetail.wrap(serverNameProvider.serverName(), request.getMethod(), request.getRequestURI());
         return ResponseEntity.status(exception.getStatusCode()).body(problemDetail);
     }
 
-    @ExceptionHandler(AbstractPowsyblWsException.class)
+    @ExceptionHandler(AbstractBusinessException.class)
     protected ResponseEntity<PowsyblWsProblemDetail> handleDomainException(
         E exception, HttpServletRequest request) {
 
@@ -72,7 +74,7 @@ public abstract class AbstractBaseRestExceptionHandler<E extends AbstractPowsybl
     private PowsyblWsProblemDetail.Builder baseBuilder(
         HttpStatusCode status, HttpServletRequest request) {
 
-        return PowsyblWsProblemDetail.builder(status).server(serverName).path(request.getRequestURI());
+        return PowsyblWsProblemDetail.builder(status).server(serverNameProvider.serverName()).path(request.getRequestURI());
     }
 
     protected PowsyblWsProblemDetail extractProblemDetail(

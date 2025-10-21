@@ -14,13 +14,13 @@ import lombok.NonNull;
  * Base runtime exception for Powsybl-ws services enriched with a business error code and,
  * optionally, a remote {@link PowsyblWsProblemDetail}.
  */
-public abstract class AbstractPowsyblWsException extends RuntimeException {
+public abstract class AbstractBusinessException extends RuntimeException {
 
-    protected AbstractPowsyblWsException(String message) {
+    protected AbstractBusinessException(String message) {
         super(message);
     }
 
-    protected AbstractPowsyblWsException(String message, Throwable cause) {
+    protected AbstractBusinessException(String message, Throwable cause) {
         super(message, cause);
     }
 

@@ -54,6 +54,7 @@ public abstract class AbstractBaseRestExceptionHandler<E extends AbstractBusines
         E exception, HttpServletRequest request) {
 
         LOGGER.warn(exception.getMessage(), exception);
+
         HttpStatusCode status = mapStatus(getBusinessCode(exception));
         PowsyblWsProblemDetail problemDetail = baseBuilder(status, request)
             .businessErrorCode(exception.getBusinessErrorCode().value())

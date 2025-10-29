@@ -18,7 +18,7 @@
     </parent>
 
     <artifactId>powsybl-ws-commons</artifactId>
-    <version>1.31.0-SNAPSHOT</version>
+    <version>1.32.0-SNAPSHOT</version>
     <name>powsybl ws commons</name>
     <description>Powsybl WS commons</description>
 
@@ -39,7 +39,7 @@
 
     <properties>
         <powsybl-dependencies.version>2025.2.0</powsybl-dependencies.version>
-        <springboot.version>3.3.3</springboot.version>
+        <springboot.version>3.4.9</springboot.version>
     </properties>
 
     <dependencyManagement>

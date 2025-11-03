@@ -14,6 +14,10 @@ server:
   tomcat:
     mbeanregistry:
       enabled: true
+    # this configuration disables HTTP keep-alive: Tomcat closes the TCP connection after each request.
+    # this ensures requests are evenly distributed across backend instances (improving load balancing),
+    # though it increases connection overhead.
+    max-keep-alive-requests: 1
 
 logging:
   level:

@@ -35,6 +35,11 @@ spring:
   profiles:
     active: default,local
 
+  # to configure the restTemplates with SimpleClientHttpRequestFactory
+  http:
+    client:
+      factory: simple
+
   # to allow to upload big networks
   servlet:
     multipart:

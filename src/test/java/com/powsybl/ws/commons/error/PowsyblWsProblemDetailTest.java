@@ -12,6 +12,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.powsybl.ws.commons.error.PowsyblWsProblemDetail.ChainEntry;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
+import org.slf4j.MDC;
 
 import java.time.Instant;
 
@@ -43,6 +44,23 @@ class PowsyblWsProblemDetailTest {
         assertEquals("/directory-server/api", node.get("path").asText());
         assertNotNull(node.get("chain"));
         assertNotNull(node.get("chain"));
+    }
+
+    @Test
+    void builderAddsTraceIdFromMdc() {
+        MDC.put("traceId", "traceId");
+        try {
+            PowsyblWsProblemDetail problem = PowsyblWsProblemDetail.builder(HttpStatus.BAD_REQUEST)
+                .server("directory-server")
+                .businessErrorCode("directory.ERROR")
+                .detail("invalid payload")
+                .path("/directory-server/api")
+                .build();
+
+            assertEquals("traceId", problem.getTraceId());
+        } finally {
+            MDC.remove("traceId");
+        }
     }
 
     @Test

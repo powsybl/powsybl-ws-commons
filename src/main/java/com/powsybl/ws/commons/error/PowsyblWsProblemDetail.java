@@ -13,6 +13,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NonNull;
+import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
@@ -103,8 +104,16 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
             return this;
         }
 
+        public Builder traceId(String traceId) {
+            target.traceId = traceId;
+            return this;
+        }
+
         public PowsyblWsProblemDetail build() {
             target.timestamp = Instant.now();
+            if (target.traceId == null) {
+                target.traceId = MDC.get("traceId");
+            }
             Objects.requireNonNull(target.server);
             Objects.requireNonNull(target.getDetail());
             Objects.requireNonNull(target.path);

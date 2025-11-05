@@ -39,7 +39,7 @@
 
     <properties>
         <powsybl-dependencies.version>2025.1.0</powsybl-dependencies.version>
-        <springboot.version>3.4.9</springboot.version>
+        <springboot.version>3.5.6</springboot.version>
     </properties>
 
     <dependencyManagement>

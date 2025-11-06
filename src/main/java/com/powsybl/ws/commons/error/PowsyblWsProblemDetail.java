@@ -106,9 +106,7 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
 
         public PowsyblWsProblemDetail build() {
             target.timestamp = Instant.now();
-            if (target.traceId == null) {
-                target.traceId = MDC.get("traceId");
-            }
+            target.traceId = MDC.get("traceId");
             Objects.requireNonNull(target.server);
             Objects.requireNonNull(target.getDetail());
             Objects.requireNonNull(target.path);

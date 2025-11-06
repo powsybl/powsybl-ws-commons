@@ -104,11 +104,6 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
             return this;
         }
 
-        public Builder traceId(String traceId) {
-            target.traceId = traceId;
-            return this;
-        }
-
         public PowsyblWsProblemDetail build() {
             target.timestamp = Instant.now();
             if (target.traceId == null) {

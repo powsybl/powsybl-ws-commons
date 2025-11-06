@@ -188,13 +188,15 @@ powsybl-ws:
     # these allow to customize the url construction a bit for weird connection strings
     hostPort: ://${powsybl-ws.database.host}:${powsybl-ws.database.port}/
 
+    # allow identifying connected service in database logs
+    applicationName: ApplicationName=${spring.application.name}
     prefix: ${powsybl-ws.database.databaseOrSchema.prefix:}
     protocolHost: ${powsybl-ws.database.vendor}${powsybl-ws.database.hostPort}
     fullName: ${powsybl-ws.database.prefix}${powsybl-ws.database.name}
     finalQuery: ${powsybl-ws.database.customQuery}${powsybl-ws.database.query}
-    manyBasesPath: ${powsybl-ws.database.fullName}${powsybl-ws.database.finalQuery}
+    manyBasesPath: ${powsybl-ws.database.fullName}?${powsybl-ws.database.applicationName}${powsybl-ws.database.finalQuery}
     commonName:
-    manySchemasPath: ${powsybl-ws.database.commonName}?currentSchema=${powsybl-ws.database.fullName}${powsybl-ws.database.finalQuery}
+    manySchemasPath: ${powsybl-ws.database.commonName}?currentSchema=${powsybl-ws.database.fullName}&${powsybl-ws.database.applicationName}${powsybl-ws.database.finalQuery}
 
     urlManyBases: ${powsybl-ws.database.protocolHost}${powsybl-ws.database.manyBasesPath}
     urlManySchemas: ${powsybl-ws.database.protocolHost}${powsybl-ws.database.manySchemasPath}

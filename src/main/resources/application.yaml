@@ -22,8 +22,6 @@ logging:
     org.springframework.jdbc.datasource.SimpleDriverDataSource: DEBUG
 
 management:
-  tracing:
-    enabled: true
   endpoints:
     web:
       exposure:

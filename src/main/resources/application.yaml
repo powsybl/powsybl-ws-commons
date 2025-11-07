@@ -61,14 +61,14 @@ spring:
   # for now, for both r2dbc and jdbc. Also for now with the same user
   # as the app, but this should be changed
   liquibase:
-    url: jdbc:${powsybl-ws.database.url}
+    url: jdbc:${powsybl-ws.database.vendor}${powsybl-ws.database.url}
     user: ${powsybl-ws.database.login}
     password: ${powsybl-ws.database.password}
 
 
   # for microservices with r2dbc
   r2dbc:
-    url: r2dbc:${powsybl-ws.database.r2dbcUrl}
+    url: r2dbc:${powsybl-ws.database.vendor}${powsybl-ws.database.r2dbcprefix}${powsybl-ws.database.url}
     username: ${powsybl-ws.database.login}
     password: ${powsybl-ws.database.password}
     pool:
@@ -79,7 +79,7 @@ spring:
 
   # for microservices with jpa/hibernate
   datasource:
-    url: jdbc:${powsybl-ws.database.url}
+    url: jdbc:${powsybl-ws.database.vendor}${powsybl-ws.database.url}
     username: ${powsybl-ws.database.login}
     password: ${powsybl-ws.database.password}
 
@@ -191,22 +191,17 @@ powsybl-ws:
     prefix: ${powsybl-ws.database.databaseOrSchema.prefix:}
     # use this to set a hostPort prefix property for r2dbc (e.g., ":failover" for connection fail-over)
     r2dbcPrefix:
-    protocolHost: ${powsybl-ws.database.vendor}${powsybl-ws.database.hostPort}
-    r2dbcProtocolHost: ${powsybl-ws.database.vendor}${powsybl-ws.database.r2dbcPrefix}${powsybl-ws.database.hostPort}
     fullName: ${powsybl-ws.database.prefix}${powsybl-ws.database.name}
     finalQuery: ${powsybl-ws.database.customQuery}${powsybl-ws.database.query}
     manyBasesPath: ${powsybl-ws.database.fullName}${powsybl-ws.database.finalQuery}
     commonName:
     manySchemasPath: ${powsybl-ws.database.commonName}?currentSchema=${powsybl-ws.database.fullName}${powsybl-ws.database.finalQuery}
 
-    urlManyBases: ${powsybl-ws.database.protocolHost}${powsybl-ws.database.manyBasesPath}
-    r2dbcUrlManyBases: ${powsybl-ws.database.r2dbcProtocolHost}${powsybl-ws.database.manyBasesPath}
-    urlManySchemas: ${powsybl-ws.database.protocolHost}${powsybl-ws.database.manySchemasPath}
-    r2dbcUrlManySchemas: ${powsybl-ws.database.r2dbcProtocolHost}${powsybl-ws.database.manySchemasPath}
+    urlManyBases: ${powsybl-ws.database.hostPort}${powsybl-ws.database.manyBasesPath}
+    urlManySchemas: ${powsybl-ws.database.hostPort}${powsybl-ws.database.manySchemasPath}
 
     # leave this if you want 1 database per microservice
     url: ${powsybl-ws.database.urlManyBases}
-    r2dbcUrl: ${powsybl-ws.database.r2dbcUrlManyBases}
 
     # use this if you want 1 database for all microservice, each in a schema
     # and set commonName in application.yaml, and set queryBegin: '&' and customQueryBegin: '&' in application.yaml

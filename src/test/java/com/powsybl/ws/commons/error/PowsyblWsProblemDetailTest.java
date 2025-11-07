@@ -185,6 +185,11 @@ class PowsyblWsProblemDetailTest {
         assertEquals(Instant.parse("2025-02-10T12:35:00Z"), second.timestamp());
     }
 
+    /**
+     * IDE execute these tests with SLF4J's no-op implementation, which comes without an MDCAdapter.
+     * This minimal ThreadLocal substitute keeps MDC-based traceId lookups working without pulling a
+     * heavyweight logging backend into test scope.
+     */
     private static final class ThreadLocalMdcAdapter implements MDCAdapter {
 
         private final ThreadLocal<Map<String, String>> context = ThreadLocal.withInitial(HashMap::new);

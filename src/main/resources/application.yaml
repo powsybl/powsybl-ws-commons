@@ -61,14 +61,14 @@ spring:
   # for now, for both r2dbc and jdbc. Also for now with the same user
   # as the app, but this should be changed
   liquibase:
-    url: jdbc:${powsybl-ws.database.vendor}${powsybl-ws.database.url}
+    url: jdbc:${powsybl-ws.database.jdbcVendor}${powsybl-ws.database.url}
     user: ${powsybl-ws.database.login}
     password: ${powsybl-ws.database.password}
 
 
   # for microservices with r2dbc
   r2dbc:
-    url: r2dbc:${powsybl-ws.database.vendor}${powsybl-ws.database.r2dbcprefix}${powsybl-ws.database.url}
+    url: r2dbc:${powsybl-ws.database.r2dbcVendor}${powsybl-ws.database.url}
     username: ${powsybl-ws.database.login}
     password: ${powsybl-ws.database.password}
     pool:
@@ -79,7 +79,7 @@ spring:
 
   # for microservices with jpa/hibernate
   datasource:
-    url: jdbc:${powsybl-ws.database.vendor}${powsybl-ws.database.url}
+    url: jdbc:${powsybl-ws.database.jdbcVendor}${powsybl-ws.database.url}
     username: ${powsybl-ws.database.login}
     password: ${powsybl-ws.database.password}
 
@@ -188,9 +188,12 @@ powsybl-ws:
     # these allow to customize the url construction a bit for weird connection strings
     hostPort: ://${powsybl-ws.database.host}:${powsybl-ws.database.port}/
 
+    # database vendor name for R2DBC connections (can include suffix for specific options)
+    r2dbcVendor: ${powsybl-ws.database.vendor}
+    # database vendor name for JDBC connections (can include suffix for specific options)
+    jdbcVendor: ${powsybl-ws.database.vendor}
+
     prefix: ${powsybl-ws.database.databaseOrSchema.prefix:}
-    # use this to set a hostPort prefix property for r2dbc (e.g., ":failover" for connection fail-over)
-    r2dbcPrefix:
     fullName: ${powsybl-ws.database.prefix}${powsybl-ws.database.name}
     finalQuery: ${powsybl-ws.database.customQuery}${powsybl-ws.database.query}
     manyBasesPath: ${powsybl-ws.database.fullName}${powsybl-ws.database.finalQuery}

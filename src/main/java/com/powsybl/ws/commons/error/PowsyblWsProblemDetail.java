@@ -7,6 +7,7 @@
 package com.powsybl.ws.commons.error;
 
 import com.fasterxml.jackson.annotation.*;
+import jakarta.annotation.Nullable;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NonNull;
@@ -88,6 +89,7 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
      * from expanding the map as top-level JSON properties.
      */
     @Override
+    @Nullable
     @JsonIgnore
     public Map<String, Object> getProperties() {
         return super.getProperties();
@@ -97,7 +99,7 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
      * Expose our custom properties map as a nested "properties" JSON object.
      */
     @JsonProperty("properties")
-    public Map<String, Object> getJsonProperties() {
+    public @NonNull Map<String, Object> getJsonProperties() {
         return properties;
     }
 

@@ -6,10 +6,7 @@
  */
 package com.powsybl.ws.commons.error;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.*;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NonNull;
@@ -37,6 +34,13 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
     private String traceId;
     private final List<ChainEntry> chain;
 
+    /**
+     * Custom properties map that must be rendered as a nested JSON object: "properties": { ... }
+     * We intentionally do NOT use the ProblemDetail internal properties map for JSON,
+     * because it is expanded at top level via ProblemDetailJacksonMixin (@JsonAnyGetter), therefore, it's content cannot be deserialized systematically
+     */
+    private final Map<String, Object> properties = new LinkedHashMap<>();
+
     @JsonCreator
     public PowsyblWsProblemDetail(
         @JsonProperty("title") String title,
@@ -44,6 +48,7 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
         @JsonProperty("detail") String detail,
         @JsonProperty("server") String server,
         @JsonProperty("businessErrorCode") String businessErrorCode,
+        @JsonProperty("properties") Map<String, Object> properties,
         @JsonProperty("timestamp") Instant timestamp,
         @JsonProperty("path") String path,
         @JsonProperty("traceId") String traceId,
@@ -52,6 +57,9 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
         super(status != null ? status : HttpStatus.INTERNAL_SERVER_ERROR.value());
         setTitle(title);
         setDetail(detail);
+        if (properties != null) {
+            this.properties.putAll(properties);
+        }
         this.server = server;
         this.businessErrorCode = businessErrorCode;
         this.timestamp = timestamp;
@@ -75,6 +83,24 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
         chain.addFirst(newChainEntry);
     }
 
+    /**
+     * Override ProblemDetail.getProperties() to prevent Jackson mixin (@JsonAnyGetter)
+     * from expanding the map as top-level JSON properties.
+     */
+    @Override
+    @JsonIgnore
+    public Map<String, Object> getProperties() {
+        return super.getProperties();
+    }
+
+    /**
+     * Expose our custom properties map as a nested "properties" JSON object.
+     */
+    @JsonProperty("properties")
+    public Map<String, Object> getJsonProperties() {
+        return properties;
+    }
+
     @Getter
     public static final class Builder {
         private final PowsyblWsProblemDetail target;
@@ -95,6 +121,14 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
 
         public Builder businessErrorCode(String businessErrorCode) {
             target.businessErrorCode = businessErrorCode;
+            return this;
+        }
+
+        public Builder properties(Map<String, Object> properties) {
+            target.properties.clear();
+            if (properties != null) {
+                target.properties.putAll(properties);
+            }
             return this;
         }
 

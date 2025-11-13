@@ -8,6 +8,8 @@ package com.powsybl.ws.commons.error;
 
 import lombok.NonNull;
 
+import java.util.Map;
+
 /**
  * @author Mohamed Ben-rejeb {@literal <mohamed.ben-rejeb at rte-france.com>}
  *
@@ -28,4 +30,11 @@ public abstract class AbstractBusinessException extends RuntimeException {
      * @return the business error code associated with the exception when available.
      */
     public abstract @NonNull BusinessErrorCode getBusinessErrorCode();
+
+    /**
+     * @return additional properties that should be propagated with the problem detail.
+     */
+    public @NonNull Map<String, Object> getProperties() {
+        return Map.of();
+    }
 }

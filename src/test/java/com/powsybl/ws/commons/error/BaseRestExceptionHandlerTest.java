@@ -17,6 +17,8 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.web.client.HttpClientErrorException;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -38,8 +40,11 @@ class BaseRestExceptionHandlerTest {
     @Test
     void handleDomainExceptionWithoutRemoteError() {
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/test/path");
-        TestException exception = new TestException(TestBusinessErrorCode.LOCAL_FAILURE, "Local failure");
-
+        TestException exception = new TestException(
+            TestBusinessErrorCode.LOCAL_FAILURE,
+            "Local failure",
+            Map.of("fields", List.of("A", "B"))
+        );
         ResponseEntity<PowsyblWsProblemDetail> response = handler.handleDomainException(exception, request);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
@@ -51,6 +56,7 @@ class BaseRestExceptionHandlerTest {
         assertEquals("/test/path", body.getPath());
         assertThat(body.getTimestamp()).isNotNull();
         assertThat(body.getChain()).isEmpty();
+        assertThat(body.getJsonProperties()).containsEntry("fields", List.of("A", "B"));
     }
 
     @Test
@@ -115,15 +121,22 @@ class BaseRestExceptionHandlerTest {
     private static final class TestException extends AbstractBusinessException {
 
         private final TestBusinessErrorCode errorCode;
+        private final Map<String, Object> properties;
 
-        private TestException(@NonNull TestBusinessErrorCode errorCode, String message) {
+        private TestException(@NonNull TestBusinessErrorCode errorCode, String message, Map<String, Object> properties) {
             super(message);
             this.errorCode = errorCode;
+            this.properties = properties;
         }
 
         @Override
         public @NonNull BusinessErrorCode getBusinessErrorCode() {
             return errorCode;
+        }
+
+        @Override
+        public @NonNull Map<String, Object> getProperties() {
+            return properties;
         }
     }
 

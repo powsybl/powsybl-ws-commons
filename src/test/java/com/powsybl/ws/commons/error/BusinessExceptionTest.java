@@ -6,6 +6,7 @@
  */
 package com.powsybl.ws.commons.error;
 
+import lombok.NonNull;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -13,13 +14,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * @author Mohamed Ben-rejeb {@literal <mohamed.ben-rejeb at rte-france.com>}
  */
-class AbstractBusinessExceptionTest {
+class BusinessExceptionTest {
 
     @Test
     void defaultPropertiesAreEmpty() {
         AbstractBusinessException exception = new AbstractBusinessException("Default properties") {
             @Override
-            public BusinessErrorCode getBusinessErrorCode() {
+            public @NonNull BusinessErrorCode getBusinessErrorCode() {
                 return () -> "test.default";
             }
         };

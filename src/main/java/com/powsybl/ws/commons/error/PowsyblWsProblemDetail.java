@@ -7,13 +7,13 @@
 package com.powsybl.ws.commons.error;
 
 import com.fasterxml.jackson.annotation.*;
-import jakarta.annotation.Nullable;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NonNull;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
+import org.springframework.lang.Nullable;
 
 import java.time.Instant;
 import java.util.*;
@@ -89,7 +89,7 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
      * from expanding the map as top-level JSON properties.
      */
     @Override
-    @Nullable // must keep because super method is nullable
+    @Nullable
     @JsonIgnore
     public Map<String, Object> getProperties() {
         return super.getProperties();

@@ -89,7 +89,7 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
      * from expanding the map as top-level JSON properties.
      */
     @Override
-    @Nullable
+    @Nullable // must keep because super method is nullable
     @JsonIgnore
     public Map<String, Object> getProperties() {
         return super.getProperties();

@@ -10,6 +10,7 @@ import com.fasterxml.jackson.annotation.*;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NonNull;
+import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
@@ -69,6 +70,14 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
         this.chain = chain != null ? new ArrayList<>(chain) : new ArrayList<>();
     }
 
+    public PowsyblWsProblemDetail(ProblemDetail problemDetail, String server, String path) {
+        super(problemDetail);
+        this.server = server;
+        this.timestamp = Instant.now();
+        this.path = path;
+        this.chain = new ArrayList<>();
+    }
+
     private PowsyblWsProblemDetail(@NonNull HttpStatusCode status) {
         super(status.value());
         this.chain = new ArrayList<>();
@@ -122,6 +131,7 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
 
         public PowsyblWsProblemDetail build() {
             target.timestamp = Instant.now();
+            target.traceId = MDC.get("traceId");
             Objects.requireNonNull(target.server);
             Objects.requireNonNull(target.getDetail());
             Objects.requireNonNull(target.path);

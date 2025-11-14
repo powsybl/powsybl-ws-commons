@@ -10,12 +10,17 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.powsybl.ws.commons.error.PowsyblWsProblemDetail.ChainEntry;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
+import org.slf4j.MDC;
+import org.slf4j.helpers.NOPMDCAdapter;
+import org.slf4j.spi.MDCAdapter;
 
+import java.lang.reflect.Field;
 import java.time.Instant;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -27,6 +32,36 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 class PowsyblWsProblemDetailTest {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().registerModule(new JavaTimeModule());
+    private static MDCAdapter originalMdcAdapter;
+    private static Field mdcAdapterField;
+    private static boolean replacedMdcAdapter;
+
+    @BeforeAll
+    static void ensureMdcAdapter() throws Exception {
+        mdcAdapterField = findMdcAdapterField();
+        originalMdcAdapter = (MDCAdapter) mdcAdapterField.get(null);
+        if (originalMdcAdapter instanceof NOPMDCAdapter) {
+            mdcAdapterField.set(null, new ThreadLocalMdcAdapter());
+            replacedMdcAdapter = true;
+        }
+    }
+
+    @AfterAll
+    static void restoreMdcAdapter() throws Exception {
+        if (replacedMdcAdapter) {
+            mdcAdapterField.set(null, originalMdcAdapter);
+        }
+    }
+
+    private static Field findMdcAdapterField() throws Exception {
+        for (Field field : MDC.class.getDeclaredFields()) {
+            if (MDCAdapter.class.isAssignableFrom(field.getType())) {
+                field.setAccessible(true);
+                return field;
+            }
+        }
+        throw new NoSuchFieldException("No MDCAdapter field found on MDC");
+    }
 
     @Test
     void serializesTypedProperties() throws Exception {
@@ -48,6 +83,23 @@ class PowsyblWsProblemDetailTest {
         assertNotNull(node.get("businessErrorValues"));
         assertEquals(2, node.get("businessErrorValues").get("fields").size());
         assertThat(node.get("businessErrorValues").get("fields")).isNotNull();
+    }
+
+    @Test
+    void builderAddsTraceIdFromMdc() {
+        MDC.put("traceId", "unique-trace-id");
+        try {
+            PowsyblWsProblemDetail problem = PowsyblWsProblemDetail.builder(HttpStatus.BAD_REQUEST)
+                .server("directory-server")
+                .businessErrorCode("directory.ERROR")
+                .detail("invalid payload")
+                .path("/directory-server/api")
+                .build();
+
+            assertEquals("unique-trace-id", problem.getTraceId());
+        } finally {
+            MDC.remove("unique-trace-id");
+        }
     }
 
     @Test
@@ -135,5 +187,87 @@ class PowsyblWsProblemDetailTest {
         assertEquals("GET", second.method());
         assertEquals("/c/resources", second.path());
         assertEquals(Instant.parse("2025-02-10T12:35:00Z"), second.timestamp());
+    }
+
+    /**
+     * IDE execute these tests with SLF4J's no-op implementation, which comes without an MDCAdapter.
+     * This minimal ThreadLocal substitute keeps MDC-based traceId lookups working without pulling a
+     * heavyweight logging backend into test scope.
+     */
+    private static final class ThreadLocalMdcAdapter implements MDCAdapter {
+
+        private final ThreadLocal<Map<String, String>> context = ThreadLocal.withInitial(HashMap::new);
+        private final ThreadLocal<Map<String, Deque<String>>> stacks = ThreadLocal.withInitial(HashMap::new);
+
+        @Override
+        public void put(String key, String val) {
+            if (val == null) {
+                remove(key);
+            } else {
+                context.get().put(key, val);
+            }
+        }
+
+        @Override
+        public String get(String key) {
+            return context.get().get(key);
+        }
+
+        @Override
+        public void remove(String key) {
+            context.get().remove(key);
+        }
+
+        @Override
+        public void clear() {
+            context.get().clear();
+            stacks.get().clear();
+        }
+
+        @Override
+        public Map<String, String> getCopyOfContextMap() {
+            Map<String, String> map = context.get();
+            return map.isEmpty() ? null : new HashMap<>(map);
+        }
+
+        @Override
+        public void setContextMap(Map<String, String> contextMap) {
+            Map<String, String> map = context.get();
+            map.clear();
+            if (contextMap != null) {
+                map.putAll(contextMap);
+            }
+        }
+
+        @Override
+        public void pushByKey(String key, String value) {
+            if (value != null) {
+                stacks.get().computeIfAbsent(key, ignored -> new ArrayDeque<>()).push(value);
+            }
+        }
+
+        @Override
+        public String popByKey(String key) {
+            Deque<String> deque = stacks.get().get(key);
+            if (deque == null) {
+                return null;
+            }
+            String value = deque.poll();
+            if (deque.isEmpty()) {
+                stacks.get().remove(key);
+            }
+            return value;
+        }
+
+        @Override
+        public void clearDequeByKey(String key) {
+            stacks.get().remove(key);
+        }
+
+        @Override
+        public Deque<String> getCopyOfDequeByKey(String key) {
+            Deque<String> deque = stacks.get().get(key);
+            return (deque == null || deque.isEmpty()) ? null : new ArrayDeque<>(deque);
+        }
     }
 }

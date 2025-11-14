@@ -20,10 +20,7 @@ import org.slf4j.spi.MDCAdapter;
 
 import java.lang.reflect.Field;
 import java.time.Instant;
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -73,6 +70,7 @@ class PowsyblWsProblemDetailTest {
             .businessErrorCode("directory.ERROR")
             .detail("invalid payload")
             .path("/directory-server/api")
+            .businessErrorValues(Map.of("fields", List.of("A", "B")))
             .build();
 
         String json = OBJECT_MAPPER.writeValueAsString(problem);
@@ -82,7 +80,9 @@ class PowsyblWsProblemDetailTest {
         assertEquals("invalid payload", node.get("detail").asText());
         assertEquals("/directory-server/api", node.get("path").asText());
         assertNotNull(node.get("chain"));
-        assertNotNull(node.get("chain"));
+        assertNotNull(node.get("businessErrorValues"));
+        assertEquals(2, node.get("businessErrorValues").get("fields").size());
+        assertThat(node.get("businessErrorValues").get("fields")).isNotNull();
     }
 
     @Test
@@ -139,6 +139,9 @@ class PowsyblWsProblemDetailTest {
               "timestamp": "2025-02-10T12:35:00Z",
               "path": "/c/resources",
               "traceId": "cid-77",
+              "businessErrorValues": {
+                "fields": ["A", "B", "C"]
+              },
               "chain": [
                 {
                   "from-server": "A",
@@ -168,6 +171,7 @@ class PowsyblWsProblemDetailTest {
         assertEquals("2025-02-10T12:35:00Z", problem.getTimestamp().toString());
         assertEquals("/c/resources", problem.getPath());
         assertEquals("cid-77", problem.getTraceId());
+        assertThat(problem.getBusinessErrorValues()).containsEntry("fields", List.of("A", "B", "C"));
         assertThat(problem.getChain()).hasSize(2);
         ChainEntry first = problem.getChain().get(0);
         ChainEntry second = problem.getChain().get(1);

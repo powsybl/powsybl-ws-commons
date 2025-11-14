@@ -19,6 +19,8 @@ import org.springframework.web.ErrorResponseException;
 import org.springframework.web.client.HttpClientErrorException;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -40,8 +42,11 @@ class BaseRestExceptionHandlerTest {
     @Test
     void handleDomainExceptionWithoutRemoteError() {
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/test/path");
-        TestException exception = new TestException(TestBusinessErrorCode.LOCAL_FAILURE, "Local failure");
-
+        TestException exception = new TestException(
+            TestBusinessErrorCode.LOCAL_FAILURE,
+            "Local failure",
+            Map.of("fields", List.of("A", "B"))
+        );
         ResponseEntity<PowsyblWsProblemDetail> response = handler.handleDomainException(exception, request);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
@@ -53,6 +58,7 @@ class BaseRestExceptionHandlerTest {
         assertEquals("/test/path", body.getPath());
         assertThat(body.getTimestamp()).isNotNull();
         assertThat(body.getChain()).isEmpty();
+        assertThat(body.getBusinessErrorValues()).containsEntry("fields", List.of("A", "B"));
     }
 
     @Test
@@ -140,15 +146,22 @@ class BaseRestExceptionHandlerTest {
     private static final class TestException extends AbstractBusinessException {
 
         private final TestBusinessErrorCode errorCode;
+        private final Map<String, Object> businessErrorValues;
 
-        private TestException(@NonNull TestBusinessErrorCode errorCode, String message) {
+        private TestException(@NonNull TestBusinessErrorCode errorCode, String message, Map<String, Object> businessErrorValues) {
             super(message);
             this.errorCode = errorCode;
+            this.businessErrorValues = businessErrorValues;
         }
 
         @Override
-        public @NonNull BusinessErrorCode getBusinessErrorCode() {
+        public @NonNull TestBusinessErrorCode getBusinessErrorCode() {
             return errorCode;
+        }
+
+        @Override
+        public @NonNull Map<String, Object> getBusinessErrorValues() {
+            return businessErrorValues;
         }
     }
 
@@ -161,7 +174,7 @@ class BaseRestExceptionHandlerTest {
 
         @Override
         protected @NonNull TestBusinessErrorCode getBusinessCode(TestException ex) {
-            return (TestBusinessErrorCode) ex.getBusinessErrorCode();
+            return ex.getBusinessErrorCode();
         }
 
         @Override

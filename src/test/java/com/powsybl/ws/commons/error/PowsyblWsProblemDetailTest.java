@@ -35,7 +35,7 @@ class PowsyblWsProblemDetailTest {
             .businessErrorCode("directory.ERROR")
             .detail("invalid payload")
             .path("/directory-server/api")
-            .properties(Map.of("fields", List.of("A", "B")))
+            .businessErrorValues(Map.of("fields", List.of("A", "B")))
             .build();
 
         String json = OBJECT_MAPPER.writeValueAsString(problem);
@@ -45,9 +45,9 @@ class PowsyblWsProblemDetailTest {
         assertEquals("invalid payload", node.get("detail").asText());
         assertEquals("/directory-server/api", node.get("path").asText());
         assertNotNull(node.get("chain"));
-        assertNotNull(node.get("properties"));
-        assertEquals(2, node.get("properties").get("fields").size());
-        assertThat(node.get("properties").get("fields")).isNotNull();
+        assertNotNull(node.get("businessErrorValues"));
+        assertEquals(2, node.get("businessErrorValues").get("fields").size());
+        assertThat(node.get("businessErrorValues").get("fields")).isNotNull();
     }
 
     @Test
@@ -87,7 +87,7 @@ class PowsyblWsProblemDetailTest {
               "timestamp": "2025-02-10T12:35:00Z",
               "path": "/c/resources",
               "traceId": "cid-77",
-              "properties": {
+              "businessErrorValues": {
                 "fields": ["A", "B", "C"]
               },
               "chain": [
@@ -119,7 +119,7 @@ class PowsyblWsProblemDetailTest {
         assertEquals("2025-02-10T12:35:00Z", problem.getTimestamp().toString());
         assertEquals("/c/resources", problem.getPath());
         assertEquals("cid-77", problem.getTraceId());
-        assertThat(problem.getJsonProperties()).containsEntry("fields", List.of("A", "B", "C"));
+        assertThat(problem.getBusinessErrorValues()).containsEntry("fields", List.of("A", "B", "C"));
         assertThat(problem.getChain()).hasSize(2);
         ChainEntry first = problem.getChain().get(0);
         ChainEntry second = problem.getChain().get(1);

@@ -17,14 +17,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 class BusinessExceptionTest {
 
     @Test
-    void defaultPropertiesAreEmpty() {
-        AbstractBusinessException exception = new AbstractBusinessException("Default properties") {
+    void businessErrorValuesAreEmpty() {
+        AbstractBusinessException exception = new AbstractBusinessException("no business error values") {
             @Override
             public @NonNull BusinessErrorCode getBusinessErrorCode() {
                 return () -> "test.default";
             }
         };
 
-        assertThat(exception.getProperties()).isEmpty();
+        assertThat(exception.getBusinessErrorValues()).isEmpty();
     }
 }

@@ -32,9 +32,9 @@ public abstract class AbstractBusinessException extends RuntimeException {
     public abstract @NonNull BusinessErrorCode getBusinessErrorCode();
 
     /**
-     * @return additional properties that should be propagated with the problem detail.
+     * @return additional values that can be propagated with the problem detail.
      */
-    public @NonNull Map<String, Object> getProperties() {
+    public @NonNull Map<String, Object> getBusinessErrorValues() {
         return Map.of();
     }
 }

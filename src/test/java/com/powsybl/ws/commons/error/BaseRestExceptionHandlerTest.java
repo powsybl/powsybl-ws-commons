@@ -56,7 +56,7 @@ class BaseRestExceptionHandlerTest {
         assertEquals("/test/path", body.getPath());
         assertThat(body.getTimestamp()).isNotNull();
         assertThat(body.getChain()).isEmpty();
-        assertThat(body.getJsonProperties()).containsEntry("fields", List.of("A", "B"));
+        assertThat(body.getBusinessErrorValues()).containsEntry("fields", List.of("A", "B"));
     }
 
     @Test
@@ -91,7 +91,7 @@ class BaseRestExceptionHandlerTest {
     @Test
     void handleAllExceptionsUsesReasonPhraseWhenMessageMissing() {
         MockHttpServletRequest request = new MockHttpServletRequest("PUT", "/generic/error");
-        Exception exception = new Exception((String) "coucou");
+        Exception exception = new Exception("coucou");
 
         ResponseEntity<PowsyblWsProblemDetail> response = handler.handleAllExceptions(exception, request);
 
@@ -121,22 +121,22 @@ class BaseRestExceptionHandlerTest {
     private static final class TestException extends AbstractBusinessException {
 
         private final TestBusinessErrorCode errorCode;
-        private final Map<String, Object> properties;
+        private final Map<String, Object> businessErrorValues;
 
-        private TestException(@NonNull TestBusinessErrorCode errorCode, String message, Map<String, Object> properties) {
+        private TestException(@NonNull TestBusinessErrorCode errorCode, String message, Map<String, Object> businessErrorValues) {
             super(message);
             this.errorCode = errorCode;
-            this.properties = properties;
+            this.businessErrorValues = businessErrorValues;
         }
 
         @Override
-        public @NonNull BusinessErrorCode getBusinessErrorCode() {
+        public @NonNull TestBusinessErrorCode getBusinessErrorCode() {
             return errorCode;
         }
 
         @Override
-        public @NonNull Map<String, Object> getProperties() {
-            return properties;
+        public @NonNull Map<String, Object> getBusinessErrorValues() {
+            return businessErrorValues;
         }
     }
 
@@ -149,7 +149,7 @@ class BaseRestExceptionHandlerTest {
 
         @Override
         protected @NonNull TestBusinessErrorCode getBusinessCode(TestException ex) {
-            return (TestBusinessErrorCode) ex.getBusinessErrorCode();
+            return ex.getBusinessErrorCode();
         }
 
         @Override

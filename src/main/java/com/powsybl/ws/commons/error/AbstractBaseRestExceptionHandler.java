@@ -57,7 +57,7 @@ public abstract class AbstractBaseRestExceptionHandler<E extends AbstractBusines
         HttpStatusCode status = mapStatus(getBusinessCode(exception));
         PowsyblWsProblemDetail problemDetail = baseBuilder(status, request)
             .businessErrorCode(exception.getBusinessErrorCode().value())
-            .properties(exception.getProperties())
+            .businessErrorValues(exception.getBusinessErrorValues())
             .detail(exception.getMessage())
             .build();
         return ResponseEntity.status(status).body(problemDetail);

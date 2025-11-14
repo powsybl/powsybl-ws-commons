@@ -12,11 +12,15 @@ import lombok.NonNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.web.ErrorResponseException;
 import org.springframework.web.client.HttpClientErrorException;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -38,8 +42,11 @@ class BaseRestExceptionHandlerTest {
     @Test
     void handleDomainExceptionWithoutRemoteError() {
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/test/path");
-        TestException exception = new TestException(TestBusinessErrorCode.LOCAL_FAILURE, "Local failure");
-
+        TestException exception = new TestException(
+            TestBusinessErrorCode.LOCAL_FAILURE,
+            "Local failure",
+            Map.of("fields", List.of("A", "B"))
+        );
         ResponseEntity<PowsyblWsProblemDetail> response = handler.handleDomainException(exception, request);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
@@ -51,6 +58,7 @@ class BaseRestExceptionHandlerTest {
         assertEquals("/test/path", body.getPath());
         assertThat(body.getTimestamp()).isNotNull();
         assertThat(body.getChain()).isEmpty();
+        assertThat(body.getBusinessErrorValues()).containsEntry("fields", List.of("A", "B"));
     }
 
     @Test
@@ -85,7 +93,7 @@ class BaseRestExceptionHandlerTest {
     @Test
     void handleAllExceptionsUsesReasonPhraseWhenMessageMissing() {
         MockHttpServletRequest request = new MockHttpServletRequest("PUT", "/generic/error");
-        Exception exception = new Exception((String) "coucou");
+        Exception exception = new Exception("coucou");
 
         ResponseEntity<PowsyblWsProblemDetail> response = handler.handleAllExceptions(exception, request);
 
@@ -94,6 +102,29 @@ class BaseRestExceptionHandlerTest {
         assertThat(body).isNotNull();
         assertThat(body.getDetail()).isEqualTo("coucou");
         assertThat(body.getBusinessErrorCode()).isNull();
+    }
+
+    @Test
+    void handleAllExceptionsWithAnErrorResponse() {
+        MockHttpServletRequest request = new MockHttpServletRequest("PUT", "/generic/error");
+        Exception exception = new Exception("root cause");
+        Exception errorResponse = new ErrorResponseException(HttpStatus.BAD_REQUEST, ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "probably a bad request"), exception);
+
+        ResponseEntity<PowsyblWsProblemDetail> response = handler.handleAllExceptions(errorResponse, request);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        PowsyblWsProblemDetail body = response.getBody();
+        assertThat(body).isNotNull();
+        assertThat(body.getServer()).isEqualTo("test-server");
+        assertThat(body.getPath()).isEqualTo("/generic/error");
+        assertThat(body.getDetail()).isEqualTo("probably a bad request");
+        assertThat(body.getBusinessErrorCode()).isNull();
+        assertThat(body.getChain()).hasSize(1);
+        var chainElement = body.getChain().getFirst();
+        assertThat(chainElement.fromServer()).isEqualTo("test-server");
+        assertThat(chainElement.toServer()).isEqualTo("test-server");
+        assertThat(chainElement.method()).isEqualTo("PUT");
+        assertThat(chainElement.path()).isEqualTo("/generic/error");
     }
 
     private enum TestBusinessErrorCode implements BusinessErrorCode {
@@ -115,15 +146,22 @@ class BaseRestExceptionHandlerTest {
     private static final class TestException extends AbstractBusinessException {
 
         private final TestBusinessErrorCode errorCode;
+        private final Map<String, Object> businessErrorValues;
 
-        private TestException(@NonNull TestBusinessErrorCode errorCode, String message) {
+        private TestException(@NonNull TestBusinessErrorCode errorCode, String message, Map<String, Object> businessErrorValues) {
             super(message);
             this.errorCode = errorCode;
+            this.businessErrorValues = businessErrorValues;
         }
 
         @Override
-        public @NonNull BusinessErrorCode getBusinessErrorCode() {
+        public @NonNull TestBusinessErrorCode getBusinessErrorCode() {
             return errorCode;
+        }
+
+        @Override
+        public @NonNull Map<String, Object> getBusinessErrorValues() {
+            return businessErrorValues;
         }
     }
 
@@ -136,7 +174,7 @@ class BaseRestExceptionHandlerTest {
 
         @Override
         protected @NonNull TestBusinessErrorCode getBusinessCode(TestException ex) {
-            return (TestBusinessErrorCode) ex.getBusinessErrorCode();
+            return ex.getBusinessErrorCode();
         }
 
         @Override

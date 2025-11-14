@@ -8,11 +8,12 @@ package com.powsybl.ws.commons.error;
 
 import lombok.NonNull;
 
+import java.util.Map;
+
 /**
  * @author Mohamed Ben-rejeb {@literal <mohamed.ben-rejeb at rte-france.com>}
  *
- * Base runtime exception for Powsybl-ws services enriched with a business error code and,
- * optionally, a remote {@link PowsyblWsProblemDetail}.
+ * Base runtime exception for Powsybl-ws services enriched with a business error code
  */
 public abstract class AbstractBusinessException extends RuntimeException {
 
@@ -28,4 +29,11 @@ public abstract class AbstractBusinessException extends RuntimeException {
      * @return the business error code associated with the exception when available.
      */
     public abstract @NonNull BusinessErrorCode getBusinessErrorCode();
+
+    /**
+     * @return additional values that can be propagated with the problem detail.
+     */
+    public @NonNull Map<String, Object> getBusinessErrorValues() {
+        return Map.of();
+    }
 }

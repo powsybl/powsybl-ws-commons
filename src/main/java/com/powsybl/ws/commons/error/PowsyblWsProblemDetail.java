@@ -61,6 +61,14 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
         this.chain = chain != null ? new ArrayList<>(chain) : new ArrayList<>();
     }
 
+    public PowsyblWsProblemDetail(ProblemDetail problemDetail, String server, String path) {
+        super(problemDetail);
+        this.server = server;
+        this.timestamp = Instant.now();
+        this.path = path;
+        this.chain = new ArrayList<>();
+    }
+
     private PowsyblWsProblemDetail(@NonNull HttpStatusCode status) {
         super(status.value());
         this.chain = new ArrayList<>();

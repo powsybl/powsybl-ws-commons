@@ -11,8 +11,7 @@ import lombok.NonNull;
 /**
  * @author Mohamed Ben-rejeb {@literal <mohamed.ben-rejeb at rte-france.com>}
  *
- * Base runtime exception for Powsybl-ws services enriched with a business error code and,
- * optionally, a remote {@link PowsyblWsProblemDetail}.
+ * Base runtime exception for Powsybl-ws services enriched with a business error code
  */
 public abstract class AbstractBusinessException extends RuntimeException {
 

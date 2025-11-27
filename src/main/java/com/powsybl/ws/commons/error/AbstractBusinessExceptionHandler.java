@@ -13,7 +13,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 
 /**
  * @param <E> domain exception type (must extend AbstractPowsyblWsException)
@@ -35,10 +34,7 @@ public abstract class AbstractBusinessExceptionHandler<E extends AbstractBusines
 
     protected abstract HttpStatus mapStatus(C code);
 
-    @ExceptionHandler(AbstractBusinessException.class)
-    protected ResponseEntity<PowsyblWsProblemDetail> handleDomainException(
-        E exception, HttpServletRequest request) {
-
+    protected ResponseEntity<PowsyblWsProblemDetail> handleDomainException(E exception, HttpServletRequest request) {
         LOGGER.warn(exception.getMessage(), exception);
         HttpStatusCode status = mapStatus(getBusinessCode(exception));
         PowsyblWsProblemDetail problemDetail = ErrorUtils.baseBuilder(serverNameProvider.serverName(), status, request)

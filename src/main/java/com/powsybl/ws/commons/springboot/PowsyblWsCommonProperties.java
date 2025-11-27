@@ -17,6 +17,11 @@ public class PowsyblWsCommonProperties {
      */
     private TomcatPowsyblProperties tomcatCustomize = new TomcatPowsyblProperties();
 
+    /**
+     * Configuration specific of base exception handler (if present).
+     */
+    private BaseExceptionHandlerProperties baseExceptionHandler = new BaseExceptionHandlerProperties();
+
     @Data
     public static class TomcatPowsyblProperties {
         /**
@@ -28,5 +33,13 @@ public class PowsyblWsCommonProperties {
          * Whether PowSyBl should auto-configure Tomcat connectors' attribute "encodedSolidusHandling"=PASS_THROUGH.
          */
         private boolean encodedSolidusHandling = true;
+    }
+
+    @Data
+    public static class BaseExceptionHandlerProperties {
+        /**
+         * Enable PowSyBl autoconfiguration of base exception handler
+         */
+        private boolean enable = true;
     }
 }

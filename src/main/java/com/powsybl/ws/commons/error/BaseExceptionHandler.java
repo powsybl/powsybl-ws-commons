@@ -26,12 +26,12 @@ public class BaseExceptionHandler {
 
     private final ServerNameProvider serverNameProvider;
 
-    protected BaseExceptionHandler(ServerNameProvider serverNameProvider) {
+    public BaseExceptionHandler(ServerNameProvider serverNameProvider) {
         this.serverNameProvider = serverNameProvider;
     }
 
     @ExceptionHandler(HttpStatusCodeException.class)
-    protected ResponseEntity<PowsyblWsProblemDetail> handleRemoteException(
+    public ResponseEntity<PowsyblWsProblemDetail> handleRemoteException(
         HttpStatusCodeException exception, HttpServletRequest request) {
 
         PowsyblWsProblemDetail problemDetail = ErrorUtils.extractProblemDetail(serverNameProvider.serverName(), exception, request);
@@ -40,7 +40,7 @@ public class BaseExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    protected ResponseEntity<PowsyblWsProblemDetail> handleAllExceptions(
+    public ResponseEntity<PowsyblWsProblemDetail> handleAllExceptions(
         Exception exception, HttpServletRequest request) {
 
         if (exception instanceof ErrorResponse errorResponse) {

@@ -6,13 +6,11 @@
  */
 package com.powsybl.ws.commons.error;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.*;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NonNull;
+import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
@@ -37,6 +35,14 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
     private String traceId;
     private final List<ChainEntry> chain;
 
+    /**
+     * Custom map that must be rendered as a nested JSON object: "businessErrorValues": { ... }
+     * We intentionally do NOT use the ProblemDetail internal properties map for JSON,
+     * because it is expanded at top level via ProblemDetailJacksonMixin (@JsonAnyGetter),
+     * therefore, it's content cannot be deserialized systematically
+     */
+    private final Map<String, Object> businessErrorValues = new LinkedHashMap<>();
+
     @JsonCreator
     public PowsyblWsProblemDetail(
         @JsonProperty("title") String title,
@@ -44,6 +50,7 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
         @JsonProperty("detail") String detail,
         @JsonProperty("server") String server,
         @JsonProperty("businessErrorCode") String businessErrorCode,
+        @JsonProperty("businessErrorValues") Map<String, Object> businessErrorValues,
         @JsonProperty("timestamp") Instant timestamp,
         @JsonProperty("path") String path,
         @JsonProperty("traceId") String traceId,
@@ -52,12 +59,23 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
         super(status != null ? status : HttpStatus.INTERNAL_SERVER_ERROR.value());
         setTitle(title);
         setDetail(detail);
+        if (businessErrorValues != null) {
+            this.businessErrorValues.putAll(businessErrorValues);
+        }
         this.server = server;
         this.businessErrorCode = businessErrorCode;
         this.timestamp = timestamp;
         this.path = path;
         this.traceId = traceId;
         this.chain = chain != null ? new ArrayList<>(chain) : new ArrayList<>();
+    }
+
+    public PowsyblWsProblemDetail(ProblemDetail problemDetail, String server, String path) {
+        super(problemDetail);
+        this.server = server;
+        this.timestamp = Instant.now();
+        this.path = path;
+        this.chain = new ArrayList<>();
     }
 
     private PowsyblWsProblemDetail(@NonNull HttpStatusCode status) {
@@ -98,6 +116,14 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
             return this;
         }
 
+        public Builder businessErrorValues(Map<String, Object> businessErrorValues) {
+            target.businessErrorValues.clear();
+            if (businessErrorValues != null) {
+                target.businessErrorValues.putAll(businessErrorValues);
+            }
+            return this;
+        }
+
         public Builder path(String path) {
             target.path = path;
             return this;
@@ -105,6 +131,7 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
 
         public PowsyblWsProblemDetail build() {
             target.timestamp = Instant.now();
+            target.traceId = MDC.get("traceId");
             Objects.requireNonNull(target.server);
             Objects.requireNonNull(target.getDetail());
             Objects.requireNonNull(target.path);

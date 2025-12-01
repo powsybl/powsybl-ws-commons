@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.client.HttpStatusCodeException;
 
@@ -57,6 +58,7 @@ public abstract class AbstractBaseRestExceptionHandler<E extends AbstractBusines
         HttpStatusCode status = mapStatus(getBusinessCode(exception));
         PowsyblWsProblemDetail problemDetail = baseBuilder(status, request)
             .businessErrorCode(exception.getBusinessErrorCode().value())
+            .businessErrorValues(exception.getBusinessErrorValues())
             .detail(exception.getMessage())
             .build();
         return ResponseEntity.status(status).body(problemDetail);
@@ -66,6 +68,15 @@ public abstract class AbstractBaseRestExceptionHandler<E extends AbstractBusines
     protected ResponseEntity<PowsyblWsProblemDetail> handleAllExceptions(
         Exception exception, HttpServletRequest request) {
 
+        if (exception instanceof ErrorResponse errorResponse) {
+            PowsyblWsProblemDetail problemDetail = new PowsyblWsProblemDetail(
+                errorResponse.getBody(),
+                serverNameProvider.serverName(),
+                request.getRequestURI()
+            );
+            problemDetail.wrap(serverNameProvider.serverName(), request.getMethod(), request.getRequestURI());
+            return ResponseEntity.status(errorResponse.getStatusCode()).body(problemDetail);
+        }
         LOGGER.error(exception.getMessage(), exception);
         HttpStatusCode status = HttpStatus.INTERNAL_SERVER_ERROR;
         PowsyblWsProblemDetail problemDetail = baseBuilder(status, request).detail(exception.getMessage()).build();

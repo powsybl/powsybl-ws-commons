@@ -26,6 +26,24 @@ management:
     web:
       exposure:
         include: health, info, prometheus
+  endpoint:
+    health:
+      group:
+        readiness:
+          # include all readiness probes.
+          # TODO Do we want everything or only a select few ?
+          # This is used mainly for rollout restarts to wait for the new pods
+          # to be ready before shutting down the previous pods, for example in
+          # case a new configuration has a bad host or password for rabbitmq
+          # NOTE: this also has the effect of stopping all the HTTP requests
+          # coming from the load-balancing service to the pod (! but not the
+          # rabbitmq messages deliveries !), so for example when elasticsearch is
+          # down, even endpoints which don't read or write from elasticsearch
+          # will not be available. It looks like an acceptable tradeoff?
+          # current actual probes:
+          # spring boot standards: "diskSpace", "ssl", "db", "r2dbc", "elasticsearch", "rabbit"
+          # spring cloud stream: binders (this one from spring cloud stream, wraps underlying brokers)
+          include: '*'
   info:
     git:
       mode: full

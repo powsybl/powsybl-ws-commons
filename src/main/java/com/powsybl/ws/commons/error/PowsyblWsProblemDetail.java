@@ -7,6 +7,9 @@
 package com.powsybl.ws.commons.error;
 
 import com.fasterxml.jackson.annotation.*;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NonNull;
@@ -14,7 +17,11 @@ import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
+import org.springframework.web.ErrorResponse;
+import org.springframework.web.client.HttpStatusCodeException;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.time.Instant;
 import java.util.*;
 
@@ -26,6 +33,7 @@ import java.util.*;
 @JsonIgnoreProperties({"instance", "type"})
 @EqualsAndHashCode(callSuper = true)
 public final class PowsyblWsProblemDetail extends ProblemDetail {
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().registerModule(new JavaTimeModule());
 
     private String server;
     private String businessErrorCode;
@@ -70,11 +78,9 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
         this.chain = chain != null ? new ArrayList<>(chain) : new ArrayList<>();
     }
 
-    public PowsyblWsProblemDetail(ProblemDetail problemDetail, String server, String path) {
+    public PowsyblWsProblemDetail(ProblemDetail problemDetail) {
         super(problemDetail);
-        this.server = server;
         this.timestamp = Instant.now();
-        this.path = path;
         this.chain = new ArrayList<>();
     }
 
@@ -83,8 +89,70 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
         this.chain = new ArrayList<>();
     }
 
+    private PowsyblWsProblemDetail() {
+        super();
+        this.chain = new ArrayList<>();
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
     public static Builder builder(HttpStatusCode status) {
         return new Builder(status);
+    }
+
+    public static Builder builder(ProblemDetail problemDetail) {
+        return new Builder(problemDetail);
+    }
+
+    public static PowsyblWsProblemDetail fromBytes(byte[] bytes) throws IOException {
+        return OBJECT_MAPPER.readValue(bytes, PowsyblWsProblemDetail.class);
+    }
+
+    public static PowsyblWsProblemDetail fromException(Exception exception, String serverName) {
+        if (exception instanceof AbstractBusinessException businessException) {
+            return PowsyblWsProblemDetail.builder()
+                .server(serverName)
+                .businessErrorCode(businessException.getBusinessErrorCode().value())
+                .businessErrorValues(businessException.getBusinessErrorValues())
+                .detail(businessException.getMessage())
+                .build();
+        }
+        if (exception instanceof HttpStatusCodeException httpStatusCodeException) {
+            PowsyblWsProblemDetail problemDetail;
+            try {
+                byte[] body = httpStatusCodeException.getResponseBodyAsByteArray();
+                problemDetail = fromBytes(body);
+            } catch (Exception ignored) {
+                problemDetail = PowsyblWsProblemDetail.builder()
+                    .server(serverName)
+                    .detail(exception.getMessage())
+                    .build();
+            }
+            problemDetail.wrap(serverName);
+        }
+        if (exception instanceof ErrorResponse errorResponse) {
+            PowsyblWsProblemDetail problemDetail = PowsyblWsProblemDetail.builder(errorResponse.getBody())
+                .server(serverName)
+                .build();
+            problemDetail.wrap(serverName);
+            return problemDetail;
+        }
+        return PowsyblWsProblemDetail.builder()
+            .server(serverName)
+            .detail(exception.getMessage())
+            .build();
+    }
+
+    @NonNull
+    @Override
+    public String toString() {
+        try {
+            return OBJECT_MAPPER.writeValueAsString(this);
+        } catch (JsonProcessingException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     public void wrap(String fromServer, String method, String path) {
@@ -93,12 +161,26 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
         chain.addFirst(newChainEntry);
     }
 
+    public void wrap(String fromServer) {
+        String toServer = chain.isEmpty() ? server : chain.getFirst().fromServer();
+        var newChainEntry = new ChainEntry(fromServer, toServer, Instant.now());
+        chain.addFirst(newChainEntry);
+    }
+
     @Getter
     public static final class Builder {
         private final PowsyblWsProblemDetail target;
 
+        private Builder() {
+            this.target = new PowsyblWsProblemDetail();
+        }
+
         private Builder(HttpStatusCode status) {
             this.target = new PowsyblWsProblemDetail(Objects.requireNonNull(status, "status"));
+        }
+
+        private Builder(ProblemDetail problemDetail) {
+            this.target = new PowsyblWsProblemDetail(problemDetail);
         }
 
         public Builder detail(String detail) {
@@ -134,7 +216,6 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
             target.traceId = MDC.get("traceId");
             Objects.requireNonNull(target.server);
             Objects.requireNonNull(target.getDetail());
-            Objects.requireNonNull(target.path);
             return target;
         }
     }
@@ -156,6 +237,10 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
             this.method = method;
             this.path = path;
             this.timestamp = timestamp;
+        }
+
+        public ChainEntry(String fromServer, String toServer, Instant timestamp) {
+            this(fromServer, toServer, null, null, timestamp);
         }
     }
 }

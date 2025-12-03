@@ -6,8 +6,6 @@
  */
 package com.powsybl.ws.commons.error;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -16,7 +14,6 @@ import org.springframework.web.client.HttpStatusCodeException;
  * @author Joris Mancini <joris.mancini_externe at rte-france.com>
  */
 public final class ErrorUtils {
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().registerModule(new JavaTimeModule());
 
     private ErrorUtils() {
         // Should not be instantiated
@@ -32,7 +29,7 @@ public final class ErrorUtils {
 
         try {
             byte[] body = exception.getResponseBodyAsByteArray();
-            return OBJECT_MAPPER.readValue(body, PowsyblWsProblemDetail.class);
+            return PowsyblWsProblemDetail.fromBytes(body);
         } catch (Exception ignored) {
             return baseBuilder(serverName, exception.getStatusCode(), request).detail(exception.getMessage()).build();
         }

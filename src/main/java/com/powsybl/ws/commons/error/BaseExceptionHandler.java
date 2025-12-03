@@ -44,11 +44,10 @@ public class BaseExceptionHandler {
         Exception exception, HttpServletRequest request) {
 
         if (exception instanceof ErrorResponse errorResponse) {
-            PowsyblWsProblemDetail problemDetail = new PowsyblWsProblemDetail(
-                errorResponse.getBody(),
-                serverNameProvider.serverName(),
-                request.getRequestURI()
-            );
+            PowsyblWsProblemDetail problemDetail = PowsyblWsProblemDetail.builder(errorResponse.getBody())
+                .server(serverNameProvider.serverName())
+                .path(request.getRequestURI())
+                .build();
             problemDetail.wrap(serverNameProvider.serverName(), request.getMethod(), request.getRequestURI());
             return ResponseEntity.status(errorResponse.getStatusCode()).body(problemDetail);
         }

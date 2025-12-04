@@ -35,6 +35,11 @@ spring:
   profiles:
     active: default,local
 
+  # to configure the restTemplates with SimpleClientHttpRequestFactory
+  http:
+    client:
+      factory: simple
+
   # to allow to upload big networks
   servlet:
     multipart:
@@ -42,6 +47,11 @@ spring:
       max-request-size: 103MB
   codec:
     max-in-memory-size: 100MB
+
+  mvc:
+    async:
+      # To have the same behavior of no timeouts as regular endpoints for servlet 3.0+ asynccontext endpoints
+      request-timeout: -1
 
   # rabbitmq default host/port
   rabbitmq:
@@ -51,14 +61,14 @@ spring:
   # for now, for both r2dbc and jdbc. Also for now with the same user
   # as the app, but this should be changed
   liquibase:
-    url: jdbc:${powsybl-ws.database.url}
+    url: jdbc:${powsybl-ws.database.jdbcVendor}${powsybl-ws.database.url}
     user: ${powsybl-ws.database.login}
     password: ${powsybl-ws.database.password}
 
 
   # for microservices with r2dbc
   r2dbc:
-    url: r2dbc:${powsybl-ws.database.url}
+    url: r2dbc:${powsybl-ws.database.r2dbcVendor}${powsybl-ws.database.url}
     username: ${powsybl-ws.database.login}
     password: ${powsybl-ws.database.password}
     pool:
@@ -69,7 +79,7 @@ spring:
 
   # for microservices with jpa/hibernate
   datasource:
-    url: jdbc:${powsybl-ws.database.url}
+    url: jdbc:${powsybl-ws.database.jdbcVendor}${powsybl-ws.database.url}
     username: ${powsybl-ws.database.login}
     password: ${powsybl-ws.database.password}
 
@@ -178,16 +188,20 @@ powsybl-ws:
     # these allow to customize the url construction a bit for weird connection strings
     hostPort: ://${powsybl-ws.database.host}:${powsybl-ws.database.port}/
 
+    # database vendor name for R2DBC connections (can include suffix for specific options)
+    r2dbcVendor: ${powsybl-ws.database.vendor}
+    # database vendor name for JDBC connections (can include suffix for specific options)
+    jdbcVendor: ${powsybl-ws.database.vendor}
+
     prefix: ${powsybl-ws.database.databaseOrSchema.prefix:}
-    protocolHost: ${powsybl-ws.database.vendor}${powsybl-ws.database.hostPort}
     fullName: ${powsybl-ws.database.prefix}${powsybl-ws.database.name}
     finalQuery: ${powsybl-ws.database.customQuery}${powsybl-ws.database.query}
     manyBasesPath: ${powsybl-ws.database.fullName}${powsybl-ws.database.finalQuery}
     commonName:
     manySchemasPath: ${powsybl-ws.database.commonName}?currentSchema=${powsybl-ws.database.fullName}${powsybl-ws.database.finalQuery}
 
-    urlManyBases: ${powsybl-ws.database.protocolHost}${powsybl-ws.database.manyBasesPath}
-    urlManySchemas: ${powsybl-ws.database.protocolHost}${powsybl-ws.database.manySchemasPath}
+    urlManyBases: ${powsybl-ws.database.hostPort}${powsybl-ws.database.manyBasesPath}
+    urlManySchemas: ${powsybl-ws.database.hostPort}${powsybl-ws.database.manySchemasPath}
 
     # leave this if you want 1 database per microservice
     url: ${powsybl-ws.database.urlManyBases}

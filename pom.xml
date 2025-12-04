@@ -18,7 +18,7 @@
     </parent>
 
     <artifactId>powsybl-ws-commons</artifactId>
-    <version>1.29.0-SNAPSHOT</version>
+    <version>1.35.0-SNAPSHOT</version>
     <name>powsybl ws commons</name>
     <description>Powsybl WS commons</description>
 
@@ -38,8 +38,8 @@
     </developers>
 
     <properties>
-        <powsybl-dependencies.version>2025.1.0</powsybl-dependencies.version>
-        <springboot.version>3.3.3</springboot.version>
+        <powsybl-dependencies.version>2025.2.0</powsybl-dependencies.version>
+        <springboot.version>3.5.6</springboot.version>
     </properties>
 
     <dependencyManagement>
@@ -77,6 +77,14 @@
             <artifactId>tomcat-embed-core</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <scope>provided</scope>
@@ -103,7 +111,14 @@
             <groupId>org.springframework</groupId>
             <artifactId>spring-context</artifactId>
         </dependency>
-
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-tracing-bridge-otel</artifactId>
+        </dependency>
         <!-- Test dependencies -->
         <dependency>
             <groupId>org.assertj</groupId>
@@ -116,13 +131,13 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-web</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-test</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-test</artifactId>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

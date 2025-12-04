@@ -125,12 +125,13 @@ public final class PowsyblWsProblemDetail extends ProblemDetail {
                 byte[] body = httpStatusCodeException.getResponseBodyAsByteArray();
                 problemDetail = fromBytes(body);
             } catch (Exception ignored) {
-                problemDetail = PowsyblWsProblemDetail.builder()
+                problemDetail = PowsyblWsProblemDetail.builder(httpStatusCodeException.getStatusCode())
                     .server(serverName)
                     .detail(exception.getMessage())
                     .build();
             }
             problemDetail.wrap(serverName);
+            return problemDetail;
         }
         if (exception instanceof ErrorResponse errorResponse) {
             PowsyblWsProblemDetail problemDetail = PowsyblWsProblemDetail.builder(errorResponse.getBody())

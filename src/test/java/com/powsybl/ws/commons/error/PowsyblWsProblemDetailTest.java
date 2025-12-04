@@ -13,24 +13,33 @@ import com.powsybl.ws.commons.error.PowsyblWsProblemDetail.ChainEntry;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.slf4j.MDC;
 import org.slf4j.helpers.NOPMDCAdapter;
 import org.slf4j.spi.MDCAdapter;
+import org.springframework.web.ErrorResponseException;
+import org.springframework.web.client.HttpStatusCodeException;
 
 import java.lang.reflect.Field;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.Mockito.when;
 
 /**
  * @author Mohamed Ben-rejeb {@literal <mohamed.ben-rejeb at rte-france.com>}
  */
+@ExtendWith(MockitoExtension.class)
 class PowsyblWsProblemDetailTest {
 
+    private static final String SERVER_NAME = "my-server";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().registerModule(new JavaTimeModule());
     private static MDCAdapter originalMdcAdapter;
     private static Field mdcAdapterField;
@@ -187,6 +196,111 @@ class PowsyblWsProblemDetailTest {
         assertEquals("GET", second.method());
         assertEquals("/c/resources", second.path());
         assertEquals(Instant.parse("2025-02-10T12:35:00Z"), second.timestamp());
+    }
+
+    @Test
+    void fromExceptionWithBusinessException(@Mock AbstractBusinessException businessException) {
+        when(businessException.getBusinessErrorCode()).thenReturn(() -> "ERR123");
+
+        Map<String, Object> values = Map.of(
+            "k1", "v1",
+            "k2", 42
+        );
+        when(businessException.getBusinessErrorValues()).thenReturn(values);
+        when(businessException.getMessage()).thenReturn("business failed");
+
+        var detail = PowsyblWsProblemDetail.fromException(businessException, SERVER_NAME);
+
+        assertThat(detail.getServer()).isEqualTo(SERVER_NAME);
+        assertThat(detail.getBusinessErrorCode()).isEqualTo("ERR123");
+        assertThat(detail.getBusinessErrorValues())
+            .containsExactlyInAnyOrderEntriesOf(values);
+        assertThat(detail.getDetail()).isEqualTo("business failed");
+        assertThat(detail.getChain()).isEmpty(); // no wrap() for business errors
+    }
+
+    @Test
+    void fromExceptionWithHttpStatusCodeExceptionParsesBody() {
+        String json = """
+            {
+                "server": "other-server",
+                "status": 403,
+                "detail": "parsed-body"
+            }
+            """;
+        byte[] bodyBytes = json.getBytes(StandardCharsets.UTF_8);
+
+        HttpStatusCodeException httpEx = createHttpStatusException(HttpStatus.UNAUTHORIZED, "erreur", bodyBytes);
+
+        var result = PowsyblWsProblemDetail.fromException(httpEx, SERVER_NAME);
+
+        assertThat(result.getServer()).isEqualTo("other-server");
+        assertThat(result.getStatus()).isEqualTo(403);
+        assertThat(result.getDetail()).isEqualTo("parsed-body");
+        assertThat(result.getChain()).isNotEmpty();
+        assertThat(result.getChain().getFirst().fromServer()).isEqualTo(SERVER_NAME);
+        assertThat(result.getChain().getFirst().toServer()).isEqualTo("other-server");
+    }
+
+    @Test
+    void fromExceptionWithHttpStatusCodeExceptionFallbackOnParsingFailure() {
+        byte[] invalid = "{bad json".getBytes(StandardCharsets.UTF_8);
+
+        HttpStatusCodeException httpEx = createHttpStatusException(HttpStatus.BAD_REQUEST, "erreur", invalid);
+
+        var result = PowsyblWsProblemDetail.fromException(httpEx, SERVER_NAME);
+
+        assertThat(result.getDetail()).isEqualTo("400 erreur");
+        assertThat(result.getChain()).isNotEmpty();
+        assertThat(result.getChain().getFirst().fromServer()).isEqualTo(SERVER_NAME);
+        assertThat(result.getChain().getFirst().toServer()).isEqualTo(SERVER_NAME);
+    }
+
+    @Test
+    void fromExceptionWithErrorResponse() {
+        PowsyblWsProblemDetail problemDetail = PowsyblWsProblemDetail.builder()
+            .server(SERVER_NAME)
+            .detail("from-body")
+            .build();
+
+        ErrorResponseException ex = new ErrorResponseException(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            problemDetail,
+            new RuntimeException("error")
+        );
+
+        var result = PowsyblWsProblemDetail.fromException(ex, SERVER_NAME);
+
+        assertThat(result.getDetail()).isEqualTo("from-body");
+        assertThat(result.getServer()).isEqualTo(SERVER_NAME);
+        assertThat(result.getChain()).isNotEmpty();
+        assertThat(result.getChain().getFirst().fromServer()).isEqualTo(SERVER_NAME);
+        assertThat(result.getChain().getFirst().toServer()).isEqualTo(SERVER_NAME);
+    }
+
+    @Test
+    void fromExceptionDefaultCase() {
+        Exception ex = new Exception("default");
+
+        var result = PowsyblWsProblemDetail.fromException(ex, SERVER_NAME);
+
+        assertThat(result.getDetail()).isEqualTo("default");
+        assertThat(result.getServer()).isEqualTo(SERVER_NAME);
+        assertThat(result.getChain()).isEmpty();
+    }
+
+    private HttpStatusCodeException createHttpStatusException(HttpStatus status, String message, byte[] body) {
+        return new HttpStatusCodeException(
+            status,
+            message,
+            body,
+            StandardCharsets.UTF_8
+        ) {
+            @Override
+            public byte[] getResponseBodyAsByteArray() {
+                return body;
+            }
+        };
     }
 
     /**

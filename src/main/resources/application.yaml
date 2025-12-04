@@ -26,6 +26,21 @@ management:
     web:
       exposure:
         include: health, info, prometheus
+  endpoint:
+    health:
+      group:
+        readiness:
+          # This will include all readiness probes, current indicators typically include:
+          # - Spring Boot: "diskSpace", "ssl", "db", "r2dbc", "elasticsearch", "rabbit"
+          # - Spring Cloud Stream: "binders" (this one from spring cloud stream, wraps underlying brokers)
+          # Tradeoff: this makes readiness a strict “all-or-nothing” gate.
+          # - Pros: safer rollouts (new pods must be fully healthy before replacing old ones), and protects against 
+          #   bad configuration (e.g. wrong RabbitMQ host/password) from receiving HTTP traffic.
+          # - Cons: if any dependency is down (e.g. Elasticsearch), the pod becomes Not Ready and the Service 
+          #  will stop routing *all* HTTP requests to it—even if not all endpoints use that dependency.
+          # Note: readiness only affects HTTP traffic routed via the Service; it does not stop RabbitMQ message 
+          # deliveries.
+          include: '*'
   info:
     git:
       mode: full

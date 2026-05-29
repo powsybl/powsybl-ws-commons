@@ -94,7 +94,7 @@ class BusinessExceptionHandlerTest {
     private static final class TestRestExceptionHandler
         extends AbstractBusinessExceptionHandler<TestException, TestBusinessErrorCode> {
 
-        public TestRestExceptionHandler(ServerNameProvider serverNameProvider) {
+        TestRestExceptionHandler(ServerNameProvider serverNameProvider) {
             super(serverNameProvider);
         }
 

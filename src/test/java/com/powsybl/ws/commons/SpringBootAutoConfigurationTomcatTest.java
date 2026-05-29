@@ -8,7 +8,7 @@ package com.powsybl.ws.commons;
 
 import com.powsybl.ws.commons.springboot.PowsyblWsCommonAutoConfiguration;
 import com.powsybl.ws.commons.springboot.TomcatCustomization;
-import com.powsybl.ws_common_spring_test.SpringBootApplicationForTest;
+import com.powsybl.wscommons.testspringbootapp.SpringBootApplicationForTest;
 import lombok.NonNull;
 import org.apache.catalina.startup.Tomcat;
 import org.assertj.core.api.WithAssertions;

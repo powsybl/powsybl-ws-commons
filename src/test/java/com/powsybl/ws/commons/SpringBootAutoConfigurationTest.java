@@ -7,7 +7,7 @@
 package com.powsybl.ws.commons;
 
 import com.powsybl.ws.commons.springboot.PowsyblWsCommonAutoConfiguration;
-import com.powsybl.ws_common_spring_test.SpringBootApplicationForTest;
+import com.powsybl.wscommons.testspringbootapp.SpringBootApplicationForTest;
 import org.assertj.core.api.WithAssertions;
 import org.junit.jupiter.api.DisplayNameGeneration;
 import org.junit.jupiter.api.DisplayNameGenerator;

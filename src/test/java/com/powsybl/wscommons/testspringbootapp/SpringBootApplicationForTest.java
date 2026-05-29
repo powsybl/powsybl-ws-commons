@@ -1,4 +1,4 @@
-package com.powsybl.ws_common_spring_test;
+package com.powsybl.wscommons.testspringbootapp;
 
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 

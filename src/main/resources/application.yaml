@@ -65,14 +65,14 @@ spring:
   http:
     client:
       factory: simple
+    codecs:
+      max-in-memory-size: 100MB
 
   # to allow to upload big networks
   servlet:
     multipart:
       max-file-size: 100MB
       max-request-size: 103MB
-  codec:
-    max-in-memory-size: 100MB
 
   mvc:
     async:

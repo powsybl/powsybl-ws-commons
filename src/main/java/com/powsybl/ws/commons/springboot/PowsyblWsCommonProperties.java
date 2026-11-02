@@ -22,6 +22,8 @@ public class PowsyblWsCommonProperties {
      */
     private BaseExceptionHandlerProperties baseExceptionHandler = new BaseExceptionHandlerProperties();
 
+    private AuthorizationCheckerProperties authorizationChecker = new AuthorizationCheckerProperties();
+
     @Data
     public static class TomcatPowsyblProperties {
         /**
@@ -41,5 +43,12 @@ public class PowsyblWsCommonProperties {
          * Enable PowSyBl autoconfiguration of base exception handler
          */
         private boolean enable = true;
+    }
+
+    @Data
+    public static class AuthorizationCheckerProperties {
+        private boolean enable = false;
+        private String directoryServerBaseUri = "http://directory-server/";
+        private String elementsAuthorizedPath = "/v1/elements/authorized";
     }
 }

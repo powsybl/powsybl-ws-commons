@@ -6,6 +6,9 @@
  */
 package com.powsybl.ws.commons.security;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 import java.util.List;
@@ -24,9 +27,9 @@ public class AuthorizationService {
 
     private final RestClient restClient;
 
-    public AuthorizationService(RestClient.Builder restClientBuilder, String directoryServerBaseUri, String elementsAuthorizedPath) {
+    public AuthorizationService(RestClient.Builder restClientBuilder, String directoryServerBaseUri) {
         this.restClient = restClientBuilder
-                .baseUrl(directoryServerBaseUri + elementsAuthorizedPath)
+                .baseUrl(directoryServerBaseUri)
                 .build();
     }
 
@@ -35,8 +38,7 @@ public class AuthorizationService {
     }
 
     public boolean canRead(List<UUID> elementUuids) {
-        checkPermission(elementUuids, null, PermissionType.READ, false);
-        return true;
+        return checkPermission(elementUuids, null, PermissionType.READ, false);
     }
 
     public boolean canWrite(UUID elementUuid) {
@@ -44,8 +46,7 @@ public class AuthorizationService {
     }
 
     public boolean canWrite(List<UUID> elementUuids) {
-        checkPermission(elementUuids, null, PermissionType.WRITE, false);
-        return true;
+        return checkPermission(elementUuids, null, PermissionType.WRITE, false);
     }
 
     public boolean canDuplicateTo(UUID elementUuid, UUID targetDirectoryUuid) {
@@ -61,29 +62,26 @@ public class AuthorizationService {
     }
 
     public boolean canDelete(List<UUID> elementUuids) {
-        checkPermission(elementUuids, null, PermissionType.WRITE, true);
-        return true;
+        return checkPermission(elementUuids, null, PermissionType.WRITE, true);
     }
 
     public boolean canMoveTo(List<UUID> elementUuids, UUID targetDirectoryUuid) {
-        checkPermission(elementUuids, targetDirectoryUuid, PermissionType.WRITE, true);
-        return true;
+        return checkPermission(elementUuids, targetDirectoryUuid, PermissionType.WRITE, true);
     }
 
     public boolean canManage(UUID elementUuid) {
-        checkPermission(List.of(elementUuid), null, PermissionType.MANAGE, false);
-        return true;
+        return checkPermission(List.of(elementUuid), null, PermissionType.MANAGE, false);
     }
 
-    private void checkPermission(List<UUID> elementUuids, UUID targetDirectoryUuid, PermissionType permissionType, boolean recursiveCheck) {
+    private boolean checkPermission(List<UUID> elementUuids, UUID targetDirectoryUuid, PermissionType permissionType, boolean recursiveCheck) {
         String ids = elementUuids.stream().map(UUID::toString).collect(Collectors.joining(","));
 
-        restClient.get()
+        ResponseEntity<Void> response = restClient.get()
                 .uri(uriBuilder -> {
-                    uriBuilder
-                            .queryParam(PARAM_ACCESS_TYPE, permissionType)
-                            .queryParam(PARAM_IDS, ids)
-                            .queryParam(PARAM_RECURSIVE_CHECK, recursiveCheck);
+                    uriBuilder.path("/v1/elements/authorized")
+                        .queryParam(PARAM_ACCESS_TYPE, permissionType)
+                        .queryParam(PARAM_IDS, ids)
+                        .queryParam(PARAM_RECURSIVE_CHECK, recursiveCheck);
 
                     if (targetDirectoryUuid != null) {
                         uriBuilder.queryParam(PARAM_TARGET_DIRECTORY_UUID, targetDirectoryUuid);
@@ -93,5 +91,7 @@ public class AuthorizationService {
                 })
                 .retrieve()
                 .toBodilessEntity();
+
+        return response.getStatusCode() == HttpStatus.OK;
     }
 }

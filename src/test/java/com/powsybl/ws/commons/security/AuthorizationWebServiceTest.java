@@ -18,7 +18,7 @@ import java.security.Principal;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static com.powsybl.ws.commons.security.UserContext.HEADER_USER_ID;
+import static com.powsybl.ws.commons.security.AuthorizationSystemConstants.HEADER_USER_ID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -41,11 +41,7 @@ class AuthorizationWebServiceTest {
         httpServer.createContext("/v1/elements/authorized", this::handleAuthorizationRequest);
         httpServer.start();
 
-        authorizationService = new AuthorizationWebService(
-                WebClient.builder(),
-                "http://localhost:" + port,
-                "/v1/elements/authorized"
-        );
+        authorizationService = new AuthorizationWebService(WebClient.builder(), "http://localhost:" + port);
     }
 
     @AfterEach

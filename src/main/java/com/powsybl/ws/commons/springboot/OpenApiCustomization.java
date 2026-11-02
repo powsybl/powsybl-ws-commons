@@ -12,8 +12,8 @@ import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springdoc.core.customizers.OpenApiCustomizer;
 
-import static com.powsybl.ws.commons.security.UserContext.HEADER_ROLES;
-import static com.powsybl.ws.commons.security.UserContext.HEADER_USER_ID;
+import static com.powsybl.ws.commons.security.AuthorizationSystemConstants.HEADER_ROLES;
+import static com.powsybl.ws.commons.security.AuthorizationSystemConstants.HEADER_USER_ID;
 
 /**
  * @author Caroline Jeandat <caroline.jeandat at rte-france.com>

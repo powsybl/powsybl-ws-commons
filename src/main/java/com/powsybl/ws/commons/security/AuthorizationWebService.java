@@ -9,7 +9,6 @@ package com.powsybl.ws.commons.security;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.socket.WebSocketSession;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -18,7 +17,7 @@ import reactor.core.publisher.Mono;
 import java.time.Duration;
 import java.util.UUID;
 
-import static com.powsybl.ws.commons.security.UserContext.*;
+import static com.powsybl.ws.commons.security.AuthorizationSystemConstants.*;
 
 /**
  * @author Radouane KHOUADRI {@literal <redouane.khouadri_externe at rte-france.com>}
@@ -33,9 +32,9 @@ public class AuthorizationWebService {
 
     private final WebClient webClient;
 
-    public AuthorizationWebService(WebClient.Builder webClientBuilder, String directoryServerBaseUri, String elementsAuthorizedPath) {
+    public AuthorizationWebService(WebClient.Builder webClientBuilder, String directoryServerBaseUri) {
         this.webClient = webClientBuilder
-                .baseUrl(directoryServerBaseUri + elementsAuthorizedPath)
+                .baseUrl(directoryServerBaseUri)
                 .build();
     }
 
@@ -48,22 +47,16 @@ public class AuthorizationWebService {
         return session.getHandshakeInfo().getPrincipal()
                 .filter(Authentication.class::isInstance)
                 .map(Authentication.class::cast)
-                .flatMap(authentication -> {
-                    var authorities = authentication.getAuthorities().stream()
-                            .map(GrantedAuthority::getAuthority)
-                            .toList();
-
-                    return checkReadAccess(authentication.getName(), String.join(ROLES_DELIMITER, authorities), studyUuid);
-                })
+                .flatMap(authentication -> checkReadAccess(authentication.getName(), extractRoles(authentication), studyUuid))
                 .defaultIfEmpty(false);
     }
 
     private Mono<Boolean> checkReadAccess(String userId, String roles, UUID studyUuid) {
         return webClient.get()
                 .uri(uriBuilder -> {
-                    uriBuilder
-                            .queryParam(PARAM_ACCESS_TYPE, PermissionType.READ)
-                            .queryParam(PARAM_IDS, studyUuid);
+                    uriBuilder.path("/v1/elements/authorized")
+                        .queryParam(PARAM_ACCESS_TYPE, PermissionType.READ)
+                        .queryParam(PARAM_IDS, studyUuid);
                     return uriBuilder.build();
                 })
                 .header(HEADER_USER_ID, userId)

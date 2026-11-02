@@ -16,8 +16,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-import static com.powsybl.ws.commons.security.UserContext.HEADER_ROLES;
-import static com.powsybl.ws.commons.security.UserContext.HEADER_USER_ID;
+import static com.powsybl.ws.commons.security.AuthorizationSystemConstants.HEADER_ROLES;
+import static com.powsybl.ws.commons.security.AuthorizationSystemConstants.HEADER_USER_ID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;

@@ -25,7 +25,7 @@ import org.springframework.web.reactive.function.client.WebClient;
  */
 @AutoConfiguration
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.REACTIVE)
-@ConditionalOnProperty(prefix = "powsybl-ws.autoconfigure", name = "user-context.enable")
+@ConditionalOnProperty(prefix = "powsybl-ws.autoconfigure", name = "authorization-system.enable")
 @EnableWebFluxSecurity
 @EnableReactiveMethodSecurity(proxyTargetClass = true) // proxyTargetClass=true is required: WebSocketConfiguration injects the concrete handler classes
 @EnableConfigurationProperties({ PowsyblWsCommonProperties.class })
@@ -38,15 +38,14 @@ public class SecurityWebAutoConfiguration {
 
     @Bean(name = "authorizationService")
     public AuthorizationWebService authorizationService(WebClient.Builder webClientBuilder) {
-        return new AuthorizationWebService(webClientBuilder,
-                properties.getAuthorizationChecker().getDirectoryServerBaseUri(),
-                properties.getAuthorizationChecker().getElementsAuthorizedPath());
+        return new AuthorizationWebService(webClientBuilder, properties.getAuthorizationSystem().getDirectoryServerBaseUri());
     }
 
     @Bean
     @SuppressWarnings("java:S4502")
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
-        return http.addFilterAt(new SecurityWebFilter(), SecurityWebFiltersOrder.AUTHENTICATION)
+        return http.csrf(ServerHttpSecurity.CsrfSpec::disable)
+                .addFilterAt(new SecurityWebFilter(), SecurityWebFiltersOrder.AUTHENTICATION)
                 .authorizeExchange(exchanges -> exchanges.anyExchange().permitAll())
                 .build();
     }

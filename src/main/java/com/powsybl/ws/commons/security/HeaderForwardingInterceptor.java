@@ -10,10 +10,12 @@ import org.springframework.http.HttpRequest;
 import org.springframework.http.client.ClientHttpRequestExecution;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.ClientHttpResponse;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.io.IOException;
 
-import static com.powsybl.ws.commons.security.UserContext.*;
+import static com.powsybl.ws.commons.security.AuthorizationSystemConstants.*;
 
 /**
  * @author Caroline Jeandat <caroline.jeandat at rte-france.com>
@@ -30,11 +32,17 @@ import static com.powsybl.ws.commons.security.UserContext.*;
 public class HeaderForwardingInterceptor implements ClientHttpRequestInterceptor {
 
     @Override
-    public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution) throws IOException {
-        request.getHeaders().set(HEADER_USER_ID, UserContext.getUserId());
-        String roles = UserContext.getRoles();
-        if (roles != null && !roles.isEmpty()) {
-            request.getHeaders().set(HEADER_ROLES, roles);
+    public ClientHttpResponse intercept(HttpRequest request, byte[] body,
+                                        ClientHttpRequestExecution execution) throws IOException {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication != null) {
+            request.getHeaders().set(HEADER_USER_ID, authentication.getName());
+
+            String roles = extractRoles(authentication);
+            if (!roles.isEmpty()) {
+                request.getHeaders().set(HEADER_ROLES, roles);
+            }
         }
 
         return execution.execute(request, body);

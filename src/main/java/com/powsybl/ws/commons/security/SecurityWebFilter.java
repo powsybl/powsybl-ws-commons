@@ -13,7 +13,7 @@ import org.springframework.security.web.server.authentication.AuthenticationWebF
 import org.springframework.security.web.server.authentication.ServerAuthenticationConverter;
 import reactor.core.publisher.Mono;
 
-import static com.powsybl.ws.commons.security.UserContext.*;
+import static com.powsybl.ws.commons.security.AuthorizationSystemConstants.*;
 
 /**
  * @author Caroline Jeandat <caroline.jeandat at rte-france.com>
@@ -30,7 +30,7 @@ public class SecurityWebFilter extends AuthenticationWebFilter {
             }
             String headerRoles = exchange.getRequest().getHeaders().getFirst(HEADER_ROLES);
             Authentication authentication =
-                    new UsernamePasswordAuthenticationToken(userId, null, UserContext.extractRoles(headerRoles));
+                    new UsernamePasswordAuthenticationToken(userId, null, AuthorizationSystemConstants.extractAuthorities(headerRoles));
             return Mono.just(authentication);
         };
         setServerAuthenticationConverter(converter);

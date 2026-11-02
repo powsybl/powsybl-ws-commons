@@ -34,7 +34,7 @@ import org.springframework.web.client.RestClient;
 @EnableMethodSecurity
 @EnableConfigurationProperties({ PowsyblWsCommonProperties.class })
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-@ConditionalOnProperty(prefix = "powsybl-ws.autoconfigure", name = "user-context.enable")
+@ConditionalOnProperty(prefix = "powsybl-ws.autoconfigure", name = "authorization-system.enable")
 public class SecurityAutoConfiguration {
     private final PowsyblWsCommonProperties properties;
 
@@ -42,6 +42,7 @@ public class SecurityAutoConfiguration {
         this.properties = properties;
     }
 
+    // @org.springframework.context.annotation.Configuration(proxyBeanMethods = false)
     @ConditionalOnClass(OpenApiCustomizer.class) // ???
     @Bean(name = "userContextSwaggerConfiguration")
     public OpenApiCustomizer userContextSwaggerConfiguration() {
@@ -50,10 +51,7 @@ public class SecurityAutoConfiguration {
 
     @Bean(name = "authorizationService")
     public AuthorizationService authorizationService(RestClient.Builder restClientBuilder) {
-        return new AuthorizationService(
-                restClientBuilder,
-                properties.getAuthorizationChecker().getDirectoryServerBaseUri(),
-                properties.getAuthorizationChecker().getElementsAuthorizedPath());
+        return new AuthorizationService(restClientBuilder, properties.getAuthorizationSystem().getDirectoryServerBaseUri());
     }
 
     @ConditionalOnClass(RestClient.class)

@@ -41,8 +41,8 @@ class AuthorizationServiceTest {
     @BeforeEach // to delete
     void setUp() {
         RestClient.Builder restClientBuilder = RestClient.builder();
-        directoryServer = MockRestServiceServer.bindTo(restClientBuilder).build();
-        authorizationService = new AuthorizationService(restClientBuilder, BASE_URI, "/v1/elements/authorized"); // à revoir ?
+        directoryServer = MockRestServiceServer.bindTo(restClientBuilder).build(); // TODO remove
+        authorizationService = new AuthorizationService(restClientBuilder, BASE_URI); // à revoir ?
     }
 
     @AfterEach

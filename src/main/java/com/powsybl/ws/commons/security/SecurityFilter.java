@@ -27,13 +27,13 @@ public class SecurityFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        String userId = request.getHeader(UserContext.HEADER_USER_ID);
-        String rolesHeader = request.getHeader(UserContext.HEADER_ROLES);
+        String userId = request.getHeader(AuthorizationSystemConstants.HEADER_USER_ID);
+        String rolesHeader = request.getHeader(AuthorizationSystemConstants.HEADER_ROLES);
 
         if (userId != null && !userId.isEmpty()) {
             // The roles are forwarded in a single header using "|" as a separator,
             // so they must be split back into individual authorities when building the SecurityContext
-            List<SimpleGrantedAuthority> authorities = UserContext.extractRoles(rolesHeader);
+            List<SimpleGrantedAuthority> authorities = AuthorizationSystemConstants.extractAuthorities(rolesHeader);
             SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(userId, null, authorities));
         }
 

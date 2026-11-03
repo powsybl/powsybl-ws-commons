@@ -34,15 +34,14 @@ class AuthorizationServiceTest {
     private static final UUID ELEMENT_UUID_2 = UUID.randomUUID();
     private static final UUID TARGET_DIRECTORY_UUID = UUID.randomUUID();
 
-    //@Autowired
-    private MockRestServiceServer directoryServer; // rename as server
+    private MockRestServiceServer directoryServer;
     private AuthorizationService authorizationService;
 
-    @BeforeEach // to delete
+    @BeforeEach
     void setUp() {
         RestClient.Builder restClientBuilder = RestClient.builder();
-        directoryServer = MockRestServiceServer.bindTo(restClientBuilder).build(); // TODO remove
-        authorizationService = new AuthorizationService(restClientBuilder, BASE_URI); // à revoir ?
+        directoryServer = MockRestServiceServer.bindTo(restClientBuilder).build();
+        authorizationService = new AuthorizationService(restClientBuilder, BASE_URI);
     }
 
     @AfterEach

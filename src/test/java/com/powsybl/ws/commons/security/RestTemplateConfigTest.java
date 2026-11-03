@@ -26,20 +26,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * @author Achour Berrahma {@literal <achour.berrahma at rte-france.com>}
  */
-@ExtendWith(SpringExtension.class) // TODO: check the comment here
+@ExtendWith(SpringExtension.class)
 //NOTE: this surprises given the name AutoConfigureWebClient, but this is not actually web clients,
 // it is builders for webclients, and it's not just webflux webclient,
 // it's also resttemplatebuilder that we need.
 // And other builders are also registered but without consequences, they're just unused.
 // In the future springboot 4.0.0 is supposed to have changed the name to be less surprising
-class RestTemplateConfigTest { // TODO: verify
+class RestTemplateConfigTest {
 
     private RestClient restClient;
 
     private MockRestServiceServer mockServer;
     private static final String TEST_ROLES = "ADMIN|USER";
     private static final String TEST_USER_ID = "user";
-    private static final String TEST_ENDPOINT = "http://test-service/api/resource";
+    private static final String TEST_ENDPOINT = "http://test-service/";
 
     @BeforeEach
     void setUp() {

@@ -20,6 +20,7 @@ It is a plain Java library (not a Spring Boot application): most of its features
 - Embedded Tomcat (`tomcat-embed-core`) for connector customization
 - Micrometer tracing bridge (OpenTelemetry) — trace id propagated into `PowsyblWsProblemDetail.traceId` via SLF4J `MDC`
 - `powsybl-commons` (`ReportResourceBundle` SPI)
+- Optional authorization integrations for Spring Security (servlet and reactive) and Springdoc OpenAPI; their dependencies are not propagated to consuming services
 
 ---
 
@@ -81,6 +82,22 @@ Services with their own error-handling strategy (e.g. a dedicated business excep
 |---|---|---|---|
 | `powsybl-ws.autoconfigure.base-exception-handler.enable` | boolean | `true` | Enable/disable this handler. |
 
+### Authorization system (optional)
+
+The library provides servlet and reactive Spring Security auto-configurations. Both are disabled by default and activate only when the application uses the corresponding web stack and `powsybl-ws.autoconfigure.authorization-system.enable` is set to `true`:
+
+```yaml
+powsybl-ws:
+  autoconfigure:
+    authorization-system:
+      enable: true
+      directory-server-base-uri: http://directory-server/
+```
+
+The servlet integration is for Spring MVC applications; the reactive integration is for Spring WebFlux applications. The selected application stack must be supplied by the consuming service (for example, `spring-boot-starter-web` or `spring-boot-starter-webflux`), together with Spring Security (typically `spring-boot-starter-security`). These integration dependencies are optional in this library so utility-only consumers do not inherit Spring Security or WebFlux. If the service exposes OpenAPI documentation, include the matching Springdoc UI starter (`springdoc-openapi-starter-webmvc-ui` or `springdoc-openapi-starter-webflux-ui`) to enable the generated security schemes for the `userId` and `roles` headers.
+
+Authentication is expected to be performed by a trusted API gateway. The auto-configurations create a security context from the `userId` and `roles` request headers (`roles` are separated by `|`), and enable method-level security.
+
 ---
 
 ## Error Model: `PowsyblWsProblemDetail`
@@ -111,4 +128,3 @@ public class MyExceptionHandler extends AbstractBusinessExceptionHandler<MyBusin
 When a service calls another one and receives an `HttpStatusCodeException`, `BaseExceptionHandler`/`ErrorUtils` transparently extract the upstream `PowsyblWsProblemDetail` from the response body (falling back to a generic one if the body isn't a `PowsyblWsProblemDetail`) and re-wrap it, so that the final response returned to the original caller carries the full chain of services involved.
 
 ---
-

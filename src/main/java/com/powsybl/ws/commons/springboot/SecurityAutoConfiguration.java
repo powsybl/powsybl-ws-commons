@@ -12,6 +12,7 @@ import com.powsybl.ws.commons.security.SecurityFilter;
 import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -49,6 +50,7 @@ public class SecurityAutoConfiguration {
         return new OpenApiCustomization();
     }
 
+    @ConditionalOnMissingBean(AuthorizationService.class)
     @Bean(name = "authorizationService")
     public AuthorizationService authorizationService(RestClient.Builder restClientBuilder) {
         return new AuthorizationService(restClientBuilder, properties.getAuthorizationSystem().getDirectoryServerBaseUri());

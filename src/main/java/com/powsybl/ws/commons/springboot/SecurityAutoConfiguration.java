@@ -43,8 +43,7 @@ public class SecurityAutoConfiguration {
         this.properties = properties;
     }
 
-    // @org.springframework.context.annotation.Configuration(proxyBeanMethods = false)
-    @ConditionalOnClass(OpenApiCustomizer.class) // ???
+    @ConditionalOnClass(OpenApiCustomizer.class)
     @Bean(name = "userContextSwaggerConfiguration")
     public OpenApiCustomizer userContextSwaggerConfiguration() {
         return new OpenApiCustomization();

@@ -4,8 +4,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package com.powsybl.ws.commons.security.restclient;
+package com.powsybl.ws.commons.security;
 
+import com.powsybl.ws.commons.security.restclient.RestClientAuthorizationService;
 import com.powsybl.ws.commons.security.webclient.WebClientAuthorizationService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.test.context.TestConfiguration;

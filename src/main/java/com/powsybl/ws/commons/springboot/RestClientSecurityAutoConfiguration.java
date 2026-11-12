@@ -6,7 +6,6 @@
  */
 package com.powsybl.ws.commons.springboot;
 
-import com.powsybl.ws.commons.security.restclient.HeaderForwardingInterceptor;
 import com.powsybl.ws.commons.security.restclient.RestClientAuthorizationService;
 import com.powsybl.ws.commons.security.restclient.RestClientSecurityFilter;
 import org.springdoc.core.customizers.OpenApiCustomizer;
@@ -16,7 +15,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.boot.web.client.RestClientCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -53,12 +51,6 @@ public class RestClientSecurityAutoConfiguration {
     @Bean(name = "authorizationService")
     public RestClientAuthorizationService authorizationService(RestClient.Builder restClientBuilder) {
         return new RestClientAuthorizationService(restClientBuilder, properties.getAuthorizationSystem().getDirectoryServerBaseUri());
-    }
-
-    @ConditionalOnClass(RestClient.class)
-    @Bean(name = "headerForwardingRestClientCustomizer")
-    public RestClientCustomizer restClientCustomizer() {
-        return builder -> builder.requestInterceptor(new HeaderForwardingInterceptor());
     }
 
     @Bean

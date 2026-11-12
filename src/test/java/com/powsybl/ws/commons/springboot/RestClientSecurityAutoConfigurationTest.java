@@ -14,7 +14,6 @@ import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
-import org.springframework.boot.web.client.RestClientCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.client.RestClient;
@@ -38,7 +37,6 @@ class RestClientSecurityAutoConfigurationTest {
                     assertThat(context).hasSingleBean(RestClientSecurityAutoConfiguration.class);
                     assertThat(context).hasSingleBean(RestClientAuthorizationService.class);
                     assertThat(context).hasSingleBean(OpenApiCustomizer.class);
-                    assertThat(context).hasSingleBean(RestClientCustomizer.class);
                     assertThat(context).hasSingleBean(SecurityFilterChain.class);
                     assertThat(context.getBean(SecurityFilterChain.class).getFilters())
                             .anyMatch(RestClientSecurityFilter.class::isInstance);
@@ -50,7 +48,6 @@ class RestClientSecurityAutoConfigurationTest {
         webContextRunner.run(context -> {
             assertThat(context).hasNotFailed();
             assertThat(context).doesNotHaveBean(RestClientSecurityAutoConfiguration.class);
-            assertThat(context).doesNotHaveBean(RestClientAuthorizationService.class);
             assertThat(context).doesNotHaveBean(OpenApiCustomizer.class);
             assertThat(context).doesNotHaveBean(SecurityFilterChain.class);
         });

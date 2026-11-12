@@ -7,6 +7,7 @@
 package com.powsybl.ws.commons.springboot;
 
 import com.powsybl.ws.commons.error.BaseExceptionHandler;
+import com.powsybl.ws.commons.security.restclient.HeaderForwardingInterceptor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.catalina.startup.Tomcat;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -14,9 +15,11 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.web.client.RestClientCustomizer;
 import org.springframework.boot.web.embedded.tomcat.TomcatConnectorCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
+import org.springframework.web.client.RestClient;
 
 @Slf4j
 @AutoConfiguration
@@ -44,5 +47,12 @@ public class PowsyblWsCommonAutoConfiguration {
     @Bean(name = "powsyblBaseExceptionHandler")
     public BaseExceptionHandler powsyblBaseExceptionHandler() {
         return new BaseExceptionHandler(() -> appName);
+    }
+
+    @ConditionalOnClass(RestClient.class)
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+    @Bean(name = "headerForwardingRestClientCustomizer")
+    public RestClientCustomizer restClientCustomizer() {
+        return builder -> builder.requestInterceptor(new HeaderForwardingInterceptor());
     }
 }

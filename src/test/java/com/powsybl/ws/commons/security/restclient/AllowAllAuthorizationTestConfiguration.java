@@ -4,8 +4,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package com.powsybl.ws.commons.security;
+package com.powsybl.ws.commons.security.restclient;
 
+import com.powsybl.ws.commons.security.webclient.WebClientAuthorizationService;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
@@ -18,11 +20,12 @@ import static org.mockito.Mockito.mock;
 @TestConfiguration
 public class AllowAllAuthorizationTestConfiguration {
 
-    @Bean
+    @Bean(name = "authorizationService")
     @Primary
-    public AuthorizationService authorizationService() {
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+    public RestClientAuthorizationService restClientAuthorizationService() {
         return mock(
-                AuthorizationService.class,
+                RestClientAuthorizationService.class,
                 invocation -> true
         );
     }

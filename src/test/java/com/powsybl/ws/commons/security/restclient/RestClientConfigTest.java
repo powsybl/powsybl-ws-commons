@@ -4,7 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package com.powsybl.ws.commons.security;
+package com.powsybl.ws.commons.security.restclient;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,7 +32,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 // it's also resttemplatebuilder that we need.
 // And other builders are also registered but without consequences, they're just unused.
 // In the future springboot 4.0.0 is supposed to have changed the name to be less surprising
-class RestTemplateConfigTest {
+class RestClientConfigTest {
 
     private RestClient restClient;
 

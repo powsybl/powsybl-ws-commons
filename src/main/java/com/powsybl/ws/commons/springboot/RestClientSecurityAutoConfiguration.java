@@ -6,9 +6,9 @@
  */
 package com.powsybl.ws.commons.springboot;
 
-import com.powsybl.ws.commons.security.AuthorizationService;
-import com.powsybl.ws.commons.security.HeaderForwardingInterceptor;
-import com.powsybl.ws.commons.security.SecurityFilter;
+import com.powsybl.ws.commons.security.restclient.HeaderForwardingInterceptor;
+import com.powsybl.ws.commons.security.restclient.RestClientAuthorizationService;
+import com.powsybl.ws.commons.security.restclient.RestClientSecurityFilter;
 import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -36,10 +36,10 @@ import org.springframework.web.client.RestClient;
 @EnableConfigurationProperties({ PowsyblWsCommonProperties.class })
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 @ConditionalOnProperty(prefix = "powsybl-ws.autoconfigure", name = "authorization-system.enable")
-public class SecurityAutoConfiguration {
+public class RestClientSecurityAutoConfiguration {
     private final PowsyblWsCommonProperties properties;
 
-    public SecurityAutoConfiguration(PowsyblWsCommonProperties properties) {
+    public RestClientSecurityAutoConfiguration(PowsyblWsCommonProperties properties) {
         this.properties = properties;
     }
 
@@ -49,10 +49,10 @@ public class SecurityAutoConfiguration {
         return new OpenApiCustomization();
     }
 
-    @ConditionalOnMissingBean(AuthorizationService.class)
+    @ConditionalOnMissingBean(RestClientAuthorizationService.class)
     @Bean(name = "authorizationService")
-    public AuthorizationService authorizationService(RestClient.Builder restClientBuilder) {
-        return new AuthorizationService(restClientBuilder, properties.getAuthorizationSystem().getDirectoryServerBaseUri());
+    public RestClientAuthorizationService authorizationService(RestClient.Builder restClientBuilder) {
+        return new RestClientAuthorizationService(restClientBuilder, properties.getAuthorizationSystem().getDirectoryServerBaseUri());
     }
 
     @ConditionalOnClass(RestClient.class)
@@ -73,7 +73,7 @@ public class SecurityAutoConfiguration {
                 .authorizeHttpRequests(authorize -> authorize
                         .anyRequest().permitAll()
                 )
-                .addFilterAfter(new SecurityFilter(), SecurityContextHolderFilter.class);
+                .addFilterAfter(new RestClientSecurityFilter(), SecurityContextHolderFilter.class);
 
         return http.build();
     }

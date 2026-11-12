@@ -4,8 +4,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package com.powsybl.ws.commons.security;
+package com.powsybl.ws.commons.security.restclient;
 
+import com.powsybl.ws.commons.security.PermissionType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestClient;
@@ -17,7 +18,7 @@ import java.util.stream.Collectors;
 /**
  * @author Caroline Jeandat <caroline.jeandat at rte-france.com>
  */
-public class AuthorizationService {
+public class RestClientAuthorizationService {
 
     private static final String PARAM_ACCESS_TYPE = "accessType";
     private static final String PARAM_IDS = "ids";
@@ -26,7 +27,7 @@ public class AuthorizationService {
 
     private final RestClient restClient;
 
-    public AuthorizationService(RestClient.Builder restClientBuilder, String directoryServerBaseUri) {
+    public RestClientAuthorizationService(RestClient.Builder restClientBuilder, String directoryServerBaseUri) {
         this.restClient = restClientBuilder
                 .baseUrl(directoryServerBaseUri)
                 .build();

@@ -4,7 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package com.powsybl.ws.commons.security;
+package com.powsybl.ws.commons.security.restclient;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,7 +30,7 @@ public abstract class AbstractEndpointSecurityTest {
     @Qualifier("requestMappingHandlerMapping")
     private RequestMappingHandlerMapping mappings;
 
-    protected abstract String getControllerPackage();
+    protected abstract List<String> getControllerPackages();
 
     protected abstract List<Class<?>> getExcludedControllers();
 
@@ -41,7 +41,7 @@ public abstract class AbstractEndpointSecurityTest {
         mappings.getHandlerMethods().forEach((info, handler) -> {
             Method method = handler.getMethod();
             Class<?> controller = handler.getBeanType();
-            if (!controller.getPackageName().equals(getControllerPackage())
+            if (!getControllerPackages().contains(controller.getPackageName())
                     || getExcludedControllers().contains(controller)) {
                 return;
             }

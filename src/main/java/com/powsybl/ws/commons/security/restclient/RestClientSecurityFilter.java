@@ -4,8 +4,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package com.powsybl.ws.commons.security;
+package com.powsybl.ws.commons.security.restclient;
 
+import com.powsybl.ws.commons.security.AuthorizationSystemConstants;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,7 +22,7 @@ import java.util.List;
 /**
  * @author Caroline Jeandat <caroline.jeandat at rte-france.com>
  */
-public class SecurityFilter extends OncePerRequestFilter {
+public class RestClientSecurityFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)

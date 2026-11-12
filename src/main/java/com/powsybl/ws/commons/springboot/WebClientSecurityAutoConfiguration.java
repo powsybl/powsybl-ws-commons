@@ -6,8 +6,8 @@
  */
 package com.powsybl.ws.commons.springboot;
 
-import com.powsybl.ws.commons.security.AuthorizationWebService;
-import com.powsybl.ws.commons.security.SecurityWebFilter;
+import com.powsybl.ws.commons.security.webclient.WebClientAuthorizationService;
+import com.powsybl.ws.commons.security.webclient.WebClientSecurityFilter;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
@@ -29,23 +29,24 @@ import org.springframework.web.reactive.function.client.WebClient;
 @EnableWebFluxSecurity
 @EnableReactiveMethodSecurity(proxyTargetClass = true) // proxyTargetClass=true is required: WebSocketConfiguration injects the concrete handler classes
 @EnableConfigurationProperties({ PowsyblWsCommonProperties.class })
-public class SecurityWebAutoConfiguration {
+public class WebClientSecurityAutoConfiguration {
     private final PowsyblWsCommonProperties properties;
 
-    public SecurityWebAutoConfiguration(PowsyblWsCommonProperties properties) {
+    public WebClientSecurityAutoConfiguration(PowsyblWsCommonProperties properties) {
         this.properties = properties;
     }
 
-    @Bean(name = "authorizationService")
-    public AuthorizationWebService authorizationService(WebClient.Builder webClientBuilder) {
-        return new AuthorizationWebService(webClientBuilder, properties.getAuthorizationSystem().getDirectoryServerBaseUri());
+    //@ConditionalOnMissingBean(WebClientAuthorizationService.class)
+    // @Bean(name = "authorizationService")
+    public WebClientAuthorizationService authorizationService(WebClient.Builder webClientBuilder) {
+        return new WebClientAuthorizationService(webClientBuilder, properties.getAuthorizationSystem().getDirectoryServerBaseUri());
     }
 
     @Bean
     @SuppressWarnings("java:S4502")
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
         return http.csrf(ServerHttpSecurity.CsrfSpec::disable)
-                .addFilterAt(new SecurityWebFilter(), SecurityWebFiltersOrder.AUTHENTICATION)
+                .addFilterAt(new WebClientSecurityFilter(), SecurityWebFiltersOrder.AUTHENTICATION)
                 .authorizeExchange(exchanges -> exchanges.anyExchange().permitAll())
                 .build();
     }

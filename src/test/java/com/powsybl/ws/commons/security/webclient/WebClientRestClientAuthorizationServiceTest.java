@@ -1,4 +1,4 @@
-package com.powsybl.ws.commons.security;
+package com.powsybl.ws.commons.security.webclient;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -26,10 +26,10 @@ import static org.mockito.Mockito.when;
 /**
  * @author Radouane KHOUADRI {@literal <redouane.khouadri_externe at rte-france.com>}
  */
-class AuthorizationWebServiceTest {
+class WebClientRestClientAuthorizationServiceTest {
 
     private HttpServer httpServer;
-    private AuthorizationWebService authorizationService;
+    private WebClientAuthorizationService authorizationService;
     private final AtomicReference<String> requestPath = new AtomicReference<>();
     private final AtomicReference<String> userIdHeader = new AtomicReference<>();
 
@@ -41,7 +41,7 @@ class AuthorizationWebServiceTest {
         httpServer.createContext("/v1/elements/authorized", this::handleAuthorizationRequest);
         httpServer.start();
 
-        authorizationService = new AuthorizationWebService(WebClient.builder(), "http://localhost:" + port);
+        authorizationService = new WebClientAuthorizationService(WebClient.builder(), "http://localhost:" + port);
     }
 
     @AfterEach

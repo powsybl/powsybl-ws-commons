@@ -4,8 +4,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package com.powsybl.ws.commons.security;
+package com.powsybl.ws.commons.security.webclient;
 
+import com.powsybl.ws.commons.security.AuthorizationSystemConstants;
 import org.springframework.security.authentication.ReactiveAuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -18,9 +19,9 @@ import static com.powsybl.ws.commons.security.AuthorizationSystemConstants.*;
 /**
  * @author Caroline Jeandat <caroline.jeandat at rte-france.com>
  */
-public class SecurityWebFilter extends AuthenticationWebFilter {
+public class WebClientSecurityFilter extends AuthenticationWebFilter {
 
-    public SecurityWebFilter() {
+    public WebClientSecurityFilter() {
         ReactiveAuthenticationManager authenticationManager = Mono::just;
         super(authenticationManager);
         ServerAuthenticationConverter converter = exchange -> {

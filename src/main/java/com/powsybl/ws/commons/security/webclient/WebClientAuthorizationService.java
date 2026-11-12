@@ -4,8 +4,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package com.powsybl.ws.commons.security;
+package com.powsybl.ws.commons.security.webclient;
 
+import com.powsybl.ws.commons.security.PermissionType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
@@ -22,8 +23,8 @@ import static com.powsybl.ws.commons.security.AuthorizationSystemConstants.*;
 /**
  * @author Radouane KHOUADRI {@literal <redouane.khouadri_externe at rte-france.com>}
  */
-public class AuthorizationWebService {
-    private static final Logger LOGGER = LoggerFactory.getLogger(AuthorizationWebService.class);
+public class WebClientAuthorizationService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(WebClientAuthorizationService.class);
 
     private static final String PARAM_IDS = "ids";
     private static final String PARAM_ACCESS_TYPE = "accessType";
@@ -32,7 +33,7 @@ public class AuthorizationWebService {
 
     private final WebClient webClient;
 
-    public AuthorizationWebService(WebClient.Builder webClientBuilder, String directoryServerBaseUri) {
+    public WebClientAuthorizationService(WebClient.Builder webClientBuilder, String directoryServerBaseUri) {
         this.webClient = webClientBuilder
                 .baseUrl(directoryServerBaseUri)
                 .build();

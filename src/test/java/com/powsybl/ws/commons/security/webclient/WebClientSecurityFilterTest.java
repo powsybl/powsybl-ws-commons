@@ -4,7 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package com.powsybl.ws.commons.security;
+package com.powsybl.ws.commons.security.webclient;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,13 +23,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * @author Caroline Jeandat <caroline.jeandat at rte-france.com>
  */
-class WebSecurityFilterTest {
+class WebClientSecurityFilterTest {
 
-    SecurityWebFilter securityWebFilter;
+    WebClientSecurityFilter securityFilter;
 
     @BeforeEach
     void setUp() {
-        securityWebFilter = new SecurityWebFilter();
+        securityFilter = new WebClientSecurityFilter();
     }
 
     @Test
@@ -40,7 +40,7 @@ class WebSecurityFilterTest {
                 .header(HEADER_ROLES, "ROLE_ADMIN|ROLE_USER")
                 .build());
 
-        securityWebFilter.filter(exchange, webExchange -> ReactiveSecurityContextHolder.getContext()
+        securityFilter.filter(exchange, webExchange -> ReactiveSecurityContextHolder.getContext()
                 .doOnNext(context -> authentication.set(context.getAuthentication()))
                 .then()).block();
 
@@ -58,7 +58,7 @@ class WebSecurityFilterTest {
                 .header(HEADER_USER_ID, "user1")
                 .build());
 
-        securityWebFilter.filter(exchange, webExchange -> ReactiveSecurityContextHolder.getContext()
+        securityFilter.filter(exchange, webExchange -> ReactiveSecurityContextHolder.getContext()
                 .doOnNext(context -> authentication.set(context.getAuthentication()))
                 .then()).block();
 
@@ -72,7 +72,7 @@ class WebSecurityFilterTest {
         AtomicReference<Authentication> authentication = new AtomicReference<>();
         MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.get("/").build());
 
-        securityWebFilter.filter(exchange, webExchange -> ReactiveSecurityContextHolder.getContext()
+        securityFilter.filter(exchange, webExchange -> ReactiveSecurityContextHolder.getContext()
                 .doOnNext(context -> authentication.set(context.getAuthentication()))
                 .then()).block();
 
@@ -86,7 +86,7 @@ class WebSecurityFilterTest {
                 .header(HEADER_USER_ID, "")
                 .build());
 
-        securityWebFilter.filter(exchange, webExchange -> ReactiveSecurityContextHolder.getContext()
+        securityFilter.filter(exchange, webExchange -> ReactiveSecurityContextHolder.getContext()
                 .doOnNext(context -> authentication.set(context.getAuthentication()))
                 .then()).block();
 

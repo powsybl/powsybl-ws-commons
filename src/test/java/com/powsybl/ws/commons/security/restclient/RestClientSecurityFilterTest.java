@@ -4,7 +4,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-package com.powsybl.ws.commons.security;
+package com.powsybl.ws.commons.security.restclient;
 
 import jakarta.servlet.FilterChain;
 import org.junit.jupiter.api.AfterEach;
@@ -25,16 +25,16 @@ import static org.mockito.Mockito.verify;
 /**
  * @author Caroline Jeandat <caroline.jeandat at rte-france.com>
  */
-class SecurityFilterTest {
+class RestClientSecurityFilterTest {
 
-    private SecurityFilter securityFilter;
+    private RestClientSecurityFilter securityFilter;
     private FilterChain filterChain;
     private MockHttpServletRequest request;
     private MockHttpServletResponse response;
 
     @BeforeEach
     void setUp() {
-        securityFilter = new SecurityFilter();
+        securityFilter = new RestClientSecurityFilter();
         filterChain = mock(FilterChain.class);
         request = new MockHttpServletRequest();
         response = new MockHttpServletResponse();

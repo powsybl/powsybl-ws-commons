@@ -6,8 +6,8 @@
  */
 package com.powsybl.ws.commons.springboot;
 
-import com.powsybl.ws.commons.security.AuthorizationService;
-import com.powsybl.ws.commons.security.SecurityFilter;
+import com.powsybl.ws.commons.security.restclient.RestClientAuthorizationService;
+import com.powsybl.ws.commons.security.restclient.RestClientSecurityFilter;
 import org.junit.jupiter.api.Test;
 import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
@@ -24,10 +24,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * @author Caroline Jeandat <caroline.jeandat at rte-france.com>
  */
-class SecurityAutoConfigurationTest {
+class RestClientSecurityAutoConfigurationTest {
 
     private final WebApplicationContextRunner webContextRunner = new WebApplicationContextRunner()
-            .withConfiguration(AutoConfigurations.of(SecurityAutoConfiguration.class))
+            .withConfiguration(AutoConfigurations.of(RestClientSecurityAutoConfiguration.class))
             .withUserConfiguration(RestClientBuilderConfiguration.class);
 
     @Test
@@ -35,13 +35,13 @@ class SecurityAutoConfigurationTest {
         webContextRunner.withPropertyValues("powsybl-ws.autoconfigure.authorization-system.enable=true")
                 .run(context -> {
                     assertThat(context).hasNotFailed();
-                    assertThat(context).hasSingleBean(SecurityAutoConfiguration.class);
-                    assertThat(context).hasSingleBean(AuthorizationService.class);
+                    assertThat(context).hasSingleBean(RestClientSecurityAutoConfiguration.class);
+                    assertThat(context).hasSingleBean(RestClientAuthorizationService.class);
                     assertThat(context).hasSingleBean(OpenApiCustomizer.class);
                     assertThat(context).hasSingleBean(RestClientCustomizer.class);
                     assertThat(context).hasSingleBean(SecurityFilterChain.class);
                     assertThat(context.getBean(SecurityFilterChain.class).getFilters())
-                            .anyMatch(SecurityFilter.class::isInstance);
+                            .anyMatch(RestClientSecurityFilter.class::isInstance);
                 });
     }
 
@@ -49,8 +49,8 @@ class SecurityAutoConfigurationTest {
     void shouldNotConfigureServletSecurityWhenDisabled() {
         webContextRunner.run(context -> {
             assertThat(context).hasNotFailed();
-            assertThat(context).doesNotHaveBean(SecurityAutoConfiguration.class);
-            assertThat(context).doesNotHaveBean(AuthorizationService.class);
+            assertThat(context).doesNotHaveBean(RestClientSecurityAutoConfiguration.class);
+            assertThat(context).doesNotHaveBean(RestClientAuthorizationService.class);
             assertThat(context).doesNotHaveBean(OpenApiCustomizer.class);
             assertThat(context).doesNotHaveBean(SecurityFilterChain.class);
         });
@@ -59,12 +59,12 @@ class SecurityAutoConfigurationTest {
     @Test
     void shouldNotConfigureServletSecurityInNonWebContext() {
         new ApplicationContextRunner()
-                .withConfiguration(AutoConfigurations.of(SecurityAutoConfiguration.class))
+                .withConfiguration(AutoConfigurations.of(RestClientSecurityAutoConfiguration.class))
                 .withPropertyValues("powsybl-ws.autoconfigure.authorization-system.enable=true")
                 .run(context -> {
                     assertThat(context).hasNotFailed();
-                    assertThat(context).doesNotHaveBean(SecurityAutoConfiguration.class);
-                    assertThat(context).doesNotHaveBean(AuthorizationService.class);
+                    assertThat(context).doesNotHaveBean(RestClientSecurityAutoConfiguration.class);
+                    assertThat(context).doesNotHaveBean(RestClientAuthorizationService.class);
                     assertThat(context).doesNotHaveBean(SecurityFilterChain.class);
                 });
     }

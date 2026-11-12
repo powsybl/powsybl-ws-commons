@@ -32,6 +32,7 @@ class WebClientRestClientAuthorizationServiceTest {
     private WebClientAuthorizationService authorizationService;
     private final AtomicReference<String> requestPath = new AtomicReference<>();
     private final AtomicReference<String> userIdHeader = new AtomicReference<>();
+    private static final String QUERY_STUDY_UUID = "studyUuid";
 
     @BeforeEach
     void setUp() throws IOException {
@@ -60,7 +61,7 @@ class WebClientRestClientAuthorizationServiceTest {
         );
 
         Boolean result = authorizationService
-                .canReadStudy(websocketSession(studyUuid))
+                .canRead(websocketSession(studyUuid), QUERY_STUDY_UUID)
                 .block();
 
         assertThat(result).isTrue();
@@ -71,7 +72,7 @@ class WebClientRestClientAuthorizationServiceTest {
         UUID studyUuid = UUID.randomUUID();
 
         Boolean result = authorizationService
-                .canReadStudy(websocketSession(studyUuid, authenticatedUser("user-123")))
+                .canRead(websocketSession(studyUuid, authenticatedUser("user-123")), QUERY_STUDY_UUID)
                 .block();
 
         assertThat(result).isTrue();
@@ -91,7 +92,7 @@ class WebClientRestClientAuthorizationServiceTest {
         );
 
         Boolean result = authorizationService
-                .canReadStudy(websocketSession(UUID.randomUUID()))
+                .canRead(websocketSession(UUID.randomUUID()), QUERY_STUDY_UUID)
                 .block();
 
         assertThat(result).isFalse();
@@ -100,7 +101,7 @@ class WebClientRestClientAuthorizationServiceTest {
     @Test
     void shouldReturnFalseWhenPrincipalIsMissing() {
         Boolean result = authorizationService
-                .canReadStudy(websocketSessionWithoutPrincipal(UUID.randomUUID()))
+                .canRead(websocketSessionWithoutPrincipal(UUID.randomUUID()), QUERY_STUDY_UUID)
                 .block();
 
         assertThat(result).isFalse();
@@ -109,9 +110,10 @@ class WebClientRestClientAuthorizationServiceTest {
     @Test
     void shouldReturnFalseWhenStudyUuidIsInvalid() {
         Boolean result = authorizationService
-                .canReadStudy(websocketSession(
-                        "ws://localhost/notifications?studyUuid=invalid"
-                ))
+                .canRead(
+                        websocketSession("ws://localhost/notifications?studyUuid=invalid"),
+                        QUERY_STUDY_UUID
+                )
                 .block();
 
         assertThat(result).isFalse();

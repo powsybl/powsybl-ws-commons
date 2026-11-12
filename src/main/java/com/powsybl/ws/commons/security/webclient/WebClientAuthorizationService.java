@@ -28,7 +28,6 @@ public class WebClientAuthorizationService {
 
     private static final String PARAM_IDS = "ids";
     private static final String PARAM_ACCESS_TYPE = "accessType";
-    private static final String QUERY_STUDY_UUID = "studyUuid";
     private static final Duration TIMEOUT = Duration.ofSeconds(5);
 
     private final WebClient webClient;
@@ -39,16 +38,16 @@ public class WebClientAuthorizationService {
                 .build();
     }
 
-    public Mono<Boolean> canReadStudy(WebSocketSession session) {
-        UUID studyUuid = extractStudyUuid(session);
-        if (studyUuid == null) {
+    public Mono<Boolean> canRead(WebSocketSession session, String queryParamName) {
+        UUID elementUuid = extractElementUuid(session, queryParamName);
+        if (elementUuid == null) {
             return Mono.just(false);
         }
 
         return session.getHandshakeInfo().getPrincipal()
                 .filter(Authentication.class::isInstance)
                 .map(Authentication.class::cast)
-                .flatMap(authentication -> checkReadAccess(authentication.getName(), extractRoles(authentication), studyUuid))
+                .flatMap(authentication -> checkReadAccess(authentication.getName(), extractRoles(authentication), elementUuid))
                 .defaultIfEmpty(false);
     }
 
@@ -79,11 +78,11 @@ public class WebClientAuthorizationService {
                 .defaultIfEmpty(false);
     }
 
-    private static UUID extractStudyUuid(WebSocketSession session) {
+    private static UUID extractElementUuid(WebSocketSession session, String queryParamName) {
         String raw = UriComponentsBuilder.fromUri(session.getHandshakeInfo().getUri())
                 .build()
                 .getQueryParams()
-                .getFirst(QUERY_STUDY_UUID);
+                .getFirst(queryParamName);
         if (raw == null || raw.isBlank()) {
             return null;
         }

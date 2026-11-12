@@ -23,6 +23,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * @author Caroline Jeandat {@literal <caroline.jeandat at rte-france.com>}
  */
+
+/**
+ * Base class for testing REST endpoint security across an application.
+ * This test ensures that every endpoint exposed by the controllers in the configured packages is secured with a {@link PreAuthorize}
+ * annotation. It helps prevent accidentally exposing unsecured endpoints when adding new controllers or endpoints.
+ * To use this test, extend this class.
+ */
 @SpringBootTest
 public abstract class AbstractEndpointSecurityTest {
 
@@ -30,8 +37,17 @@ public abstract class AbstractEndpointSecurityTest {
     @Qualifier("requestMappingHandlerMapping")
     private RequestMappingHandlerMapping mappings;
 
+    /**
+     *  Returns the package names containing controllers whose endpoints must be secured with a {@link PreAuthorize} annotation
+     *  @return the list of controller package names to check
+     */
     protected abstract List<String> getControllerPackages();
 
+    /**
+     *  Returns the controllers to exclude from security annotation checks.
+     *  For example, SupervisionController's endpoints are usually intentionnally not secured
+     *  @return the list of controllers to exclude
+     */
     protected abstract List<Class<?>> getExcludedControllers();
 
     @Test

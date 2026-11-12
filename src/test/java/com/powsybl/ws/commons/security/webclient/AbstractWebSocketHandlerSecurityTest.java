@@ -26,9 +26,20 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * @author Radouane KHOUADRI {@literal <redouane.khouadri_externe at rte-france.com>}
  */
+
+/**
+ * Base class for testing WebSocket handler security across an application.
+ * This test ensures that every WebSocket handler found in the configured package is secured with a {@link PreAuthorize}
+ * annotation. It helps prevent accidentally exposing unsecured WebSocket handlers when adding new ones.
+ * To use this test, extend this class.
+ */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class AbstractWebSocketHandlerSecurityTest {
 
+    /**
+     *  Returns the package name containing WebSocket handlers that must be secured with a {@link PreAuthorize} annotation
+     *  @return the name of the package to check
+     */
     protected abstract String getBasePackage();
 
     Stream<Class<?>> webSocketHandlers() {

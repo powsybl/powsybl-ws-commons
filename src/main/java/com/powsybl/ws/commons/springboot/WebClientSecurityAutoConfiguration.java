@@ -9,6 +9,7 @@ package com.powsybl.ws.commons.springboot;
 import com.powsybl.ws.commons.security.webclient.WebClientAuthorizationService;
 import com.powsybl.ws.commons.security.webclient.WebClientSecurityFilter;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -36,8 +37,8 @@ public class WebClientSecurityAutoConfiguration {
         this.properties = properties;
     }
 
-    //@ConditionalOnMissingBean(WebClientAuthorizationService.class)
-    // @Bean(name = "authorizationService")
+    @ConditionalOnMissingBean(WebClientAuthorizationService.class)
+    @Bean(name = "authorizationService")
     public WebClientAuthorizationService authorizationService(WebClient.Builder webClientBuilder) {
         return new WebClientAuthorizationService(webClientBuilder, properties.getAuthorizationSystem().getDirectoryServerBaseUri());
     }

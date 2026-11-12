@@ -29,4 +29,14 @@ public class AllowAllAuthorizationTestConfiguration {
                 invocation -> true
         );
     }
+
+    @Bean(name = "authorizationService")
+    @Primary
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.REACTIVE)
+    public WebClientAuthorizationService webClientAuthorizationService() {
+        return mock(
+                WebClientAuthorizationService.class,
+                invocation -> true
+        );
+    }
 }

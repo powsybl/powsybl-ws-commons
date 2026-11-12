@@ -11,6 +11,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplicat
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
+import reactor.core.publisher.Mono;
 
 import static org.mockito.Mockito.mock;
 
@@ -36,7 +37,7 @@ public class AllowAllAuthorizationTestConfiguration {
     public WebClientAuthorizationService webClientAuthorizationService() {
         return mock(
                 WebClientAuthorizationService.class,
-                invocation -> true
+                invocation -> Mono.just(true)
         );
     }
 }

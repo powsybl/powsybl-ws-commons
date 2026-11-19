@@ -20,7 +20,7 @@ import static org.mockito.Mockito.mock;
  * @author Caroline Jeandat {@literal <caroline.jeandat at rte-france.com>}
  */
 @TestConfiguration
-public class AllowAllAuthorizationTestConfiguration {
+public class AllowAllAuthTestConfiguration {
 
     @Bean(name = "authorizationService")
     @Primary

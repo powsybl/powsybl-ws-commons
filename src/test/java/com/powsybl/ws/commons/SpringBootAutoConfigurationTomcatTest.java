@@ -7,10 +7,13 @@
 package com.powsybl.ws.commons;
 
 import com.powsybl.ws.commons.springboot.PowsyblWsCommonAutoConfiguration;
+import com.powsybl.ws.commons.springboot.PowsyblWsCommonProperties;
 import com.powsybl.ws.commons.springboot.TomcatCustomization;
 import com.powsybl.wscommons.testspringbootapp.SpringBootApplicationForTest;
 import lombok.NonNull;
+import org.apache.catalina.connector.Connector;
 import org.apache.catalina.startup.Tomcat;
+import org.apache.tomcat.util.buf.EncodedSolidusHandling;
 import org.assertj.core.api.WithAssertions;
 import org.junit.jupiter.api.DisplayNameGeneration;
 import org.junit.jupiter.api.DisplayNameGenerator;
@@ -34,7 +37,13 @@ class SpringBootAutoConfigurationTomcatTest implements WithAssertions {
 
     @Test
     void testNormally() {
-        this.contextRunner.run(context -> assertIsWebAppWithTomcatConfigured(context));
+        this.contextRunner.run(context -> {
+            assertIsWebAppWithTomcatConfigured(context);
+            assertThat(context.getBean(PowsyblWsCommonProperties.class).getTomcatCustomize().isEncodedSolidusHandling()).isFalse();
+            Connector connector = new Connector();
+            context.getBean("powsyblTomcatConnectorCustomizer", TomcatConnectorCustomizer.class).customize(connector);
+            assertThat(connector.getEncodedSolidusHandling()).isEqualTo(EncodedSolidusHandling.REJECT.getValue());
+        });
     }
 
     @Test
@@ -62,7 +71,13 @@ class SpringBootAutoConfigurationTomcatTest implements WithAssertions {
     void testWhenPropertyEncodedSolidusHandlingIsTrue() {
         this.contextRunner
             .withPropertyValues("powsybl-ws.autoconfigure.tomcat-customize.encoded-solidus-handling=true")
-            .run(context -> assertIsWebAppWithTomcatConfigured(context));
+            .run(context -> {
+                assertIsWebAppWithTomcatConfigured(context);
+                assertThat(context.getBean(PowsyblWsCommonProperties.class).getTomcatCustomize().isEncodedSolidusHandling()).isTrue();
+                Connector connector = new Connector();
+                context.getBean("powsyblTomcatConnectorCustomizer", TomcatConnectorCustomizer.class).customize(connector);
+                assertThat(connector.getEncodedSolidusHandling()).isEqualTo(EncodedSolidusHandling.PASS_THROUGH.getValue());
+            });
     }
 
     private void assertIsWebAppWithTomcatConfigured(@NonNull final AssertableWebApplicationContext context) {

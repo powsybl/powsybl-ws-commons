@@ -34,7 +34,7 @@ public class PowsyblWsCommonProperties {
         /**
          * Whether PowSyBl should auto-configure Tomcat connectors' attribute "encodedSolidusHandling"=PASS_THROUGH.
          */
-        private boolean encodedSolidusHandling = true;
+        private boolean encodedSolidusHandling = false;
     }
 
     @Data

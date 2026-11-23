@@ -37,7 +37,7 @@ Add the dependency to the consuming service's `pom.xml` (the version is inherite
 
 That's it — **no code change is required**. As soon as the jar is on the classpath of a Spring Boot application, `PowsyblWsCommonAutoConfiguration` is automatically picked up (via the standard `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports` mechanism), and:
 
-- the Tomcat customization (`encodedSolidusHandling=PASS_THROUGH`) is applied if the service is a web application with an embedded Tomcat,
+- the Tomcat customization is registered if the service is a web application with an embedded Tomcat (`encodedSolidusHandling` can be set to `PASS_THROUGH` via configuration),
 - the default global exception handler (`BaseExceptionHandler`) is registered,
 - the library's own `application.yaml` (default HTTP/JPA/S3/RabbitMQ/Elasticsearch settings shared by GridSuite services) is loaded and merged with the service's own configuration.
 
@@ -62,12 +62,12 @@ A Spring Boot `@AutoConfiguration` (`PowsyblWsCommonAutoConfiguration`) is autom
 
 By default, Tomcat rejects (or mishandles) URL paths containing an encoded slash (`%2F`), as a security measure to avoid path-based filter bypasses. This is a problem for GridSuite/PowSyBl services, since some equipment ids (e.g. CGMES ids) can themselves contain a `/` and are passed as `@PathVariable` in REST URLs — without this customization, such requests would be rejected with an HTTP 400 even when properly encoded by the client.
 
-This library auto-configures the embedded Tomcat connector to set its [`encodedSolidusHandling`](https://tomcat.apache.org/tomcat-10.1-doc/config/http.html#Common_Attributes) attribute to [`PASS_THROUGH`](https://tomcat.apache.org/tomcat-10.1-doc/api/org/apache/tomcat/util/buf/EncodedSolidusHandling.html#PASS_THROUGH), so that `%2F` is decoded to a literal `/` and passed through to Spring MVC instead of being rejected.
+This library can auto-configure the embedded Tomcat connector to set its [`encodedSolidusHandling`](https://tomcat.apache.org/tomcat-10.1-doc/config/http.html#Common_Attributes) attribute to [`PASS_THROUGH`](https://tomcat.apache.org/tomcat-10.1-doc/api/org/apache/tomcat/util/buf/EncodedSolidusHandling.html#PASS_THROUGH), so that `%2F` is decoded to a literal `/` and passed through to Spring MVC instead of being rejected. This behavior is disabled by default and must be explicitly enabled via configuration.
 
 | Property | Type | Default | Description |
 |---|---|---|---|
 | `powsybl-ws.autoconfigure.tomcat-customize.enable` | boolean | `true` | Master switch enabling/disabling this whole Tomcat customization mechanism (no `TomcatConnectorCustomizer` bean is created when `false`). |
-| `powsybl-ws.autoconfigure.tomcat-customize.encoded-solidus-handling` | boolean | `true` | Whether to actually set the connector's `encodedSolidusHandling` attribute to `PASS_THROUGH` (only relevant when the customization is enabled). |
+| `powsybl-ws.autoconfigure.tomcat-customize.encoded-solidus-handling` | boolean | `false` | Whether to actually set the connector's `encodedSolidusHandling` attribute to `PASS_THROUGH` (only relevant when the customization is enabled). |
 
 ### Base exception handler
 
